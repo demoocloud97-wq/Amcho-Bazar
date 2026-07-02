@@ -53,6 +53,12 @@ export function SiteHeader() {
 
           <div className="hidden items-center gap-2 lg:flex">
             <Link
+              to="/login"
+              className="rounded-full px-4 py-2 text-sm font-medium text-foreground/70 hover:text-primary"
+            >
+              Sign in
+            </Link>
+            <Link
               to="/my-registration"
               className="rounded-full border border-primary/20 bg-white/60 px-4 py-2 text-sm font-medium text-primary hover:bg-white"
             >
@@ -89,6 +95,9 @@ export function SiteHeader() {
                 </Link>
               ))}
               <div className="mt-2 grid grid-cols-2 gap-2">
+                <Link to="/login" onClick={() => setOpen(false)} className="col-span-2 rounded-full border border-border px-4 py-2 text-center text-sm font-medium text-foreground/80">
+                  Sign in / Sign up
+                </Link>
                 <Link to="/my-registration" onClick={() => setOpen(false)} className="rounded-full border border-primary/20 px-4 py-2 text-center text-sm font-medium text-primary">
                   My Registration
                 </Link>
