@@ -212,6 +212,23 @@
   -webkit-backdrop-filter: blur(18px) saturate(150%);
   border: 1px solid color-mix(in oklab, white 15%, transparent);
 }
+@utility input-festive {
+  display: block;
+  width: 100%;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, oklch(0.36 0.13 8) 18%, transparent);
+  background: color-mix(in oklab, white 75%, transparent);
+  padding: 0.7rem 1rem;
+  font-size: 0.9rem;
+  color: var(--color-foreground);
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  outline: none;
+}
+@utility input-festive:focus {
+  border-color: oklch(0.71 0.19 45);
+  background: white;
+  box-shadow: 0 0 0 4px oklch(0.71 0.19 45 / 0.18);
+}
 
 /* Festive decorative patterns */
 @utility pattern-dots {
