@@ -13,6 +13,7 @@ import { Route as StallsRouteImport } from './routes/stalls'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as PaymentRouteImport } from './routes/payment'
 import { Route as MyRegistrationRouteImport } from './routes/my-registration'
+import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as DrawRouteImport } from './routes/draw'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as IndexRouteImport } from './routes/index'
@@ -37,6 +38,11 @@ const MyRegistrationRoute = MyRegistrationRouteImport.update({
   path: '/my-registration',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GalleryRoute = GalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DrawRoute = DrawRouteImport.update({
   id: '/draw',
   path: '/draw',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
   '/draw': typeof DrawRoute
+  '/gallery': typeof GalleryRoute
   '/my-registration': typeof MyRegistrationRoute
   '/payment': typeof PaymentRoute
   '/register': typeof RegisterRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
   '/draw': typeof DrawRoute
+  '/gallery': typeof GalleryRoute
   '/my-registration': typeof MyRegistrationRoute
   '/payment': typeof PaymentRoute
   '/register': typeof RegisterRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
   '/draw': typeof DrawRoute
+  '/gallery': typeof GalleryRoute
   '/my-registration': typeof MyRegistrationRoute
   '/payment': typeof PaymentRoute
   '/register': typeof RegisterRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/categories'
     | '/draw'
+    | '/gallery'
     | '/my-registration'
     | '/payment'
     | '/register'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/categories'
     | '/draw'
+    | '/gallery'
     | '/my-registration'
     | '/payment'
     | '/register'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/categories'
     | '/draw'
+    | '/gallery'
     | '/my-registration'
     | '/payment'
     | '/register'
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CategoriesRoute: typeof CategoriesRoute
   DrawRoute: typeof DrawRoute
+  GalleryRoute: typeof GalleryRoute
   MyRegistrationRoute: typeof MyRegistrationRoute
   PaymentRoute: typeof PaymentRoute
   RegisterRoute: typeof RegisterRoute
@@ -151,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MyRegistrationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gallery': {
+      id: '/gallery'
+      path: '/gallery'
+      fullPath: '/gallery'
+      preLoaderRoute: typeof GalleryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/draw': {
       id: '/draw'
       path: '/draw'
@@ -179,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CategoriesRoute: CategoriesRoute,
   DrawRoute: DrawRoute,
+  GalleryRoute: GalleryRoute,
   MyRegistrationRoute: MyRegistrationRoute,
   PaymentRoute: PaymentRoute,
   RegisterRoute: RegisterRoute,
