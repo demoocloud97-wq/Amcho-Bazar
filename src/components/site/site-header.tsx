@@ -4,14 +4,15 @@ import { Menu, X } from "lucide-react";
 import { Logo } from "./logo";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+type NavItem = { to: string; label: string; highlight?: boolean };
+const NAV: NavItem[] = [
   { to: "/", label: "Home" },
   { to: "/categories", label: "Categories" },
   { to: "/stalls", label: "Stall Directory" },
   { to: "/draw", label: "Live Draw", highlight: true },
   { to: "/gallery", label: "Gallery" },
   { to: "/admin", label: "Admin" },
-] as const;
+];
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
