@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StallsRouteImport } from './routes/stalls'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as PaymentRouteImport } from './routes/payment'
 import { Route as MyRegistrationRouteImport } from './routes/my-registration'
 import { Route as DrawRouteImport } from './routes/draw'
 import { Route as CategoriesRouteImport } from './routes/categories'
@@ -24,6 +25,11 @@ const StallsRoute = StallsRouteImport.update({
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentRoute = PaymentRouteImport.update({
+  id: '/payment',
+  path: '/payment',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MyRegistrationRoute = MyRegistrationRouteImport.update({
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/categories': typeof CategoriesRoute
   '/draw': typeof DrawRoute
   '/my-registration': typeof MyRegistrationRoute
+  '/payment': typeof PaymentRoute
   '/register': typeof RegisterRoute
   '/stalls': typeof StallsRoute
 }
@@ -60,6 +67,7 @@ export interface FileRoutesByTo {
   '/categories': typeof CategoriesRoute
   '/draw': typeof DrawRoute
   '/my-registration': typeof MyRegistrationRoute
+  '/payment': typeof PaymentRoute
   '/register': typeof RegisterRoute
   '/stalls': typeof StallsRoute
 }
@@ -69,6 +77,7 @@ export interface FileRoutesById {
   '/categories': typeof CategoriesRoute
   '/draw': typeof DrawRoute
   '/my-registration': typeof MyRegistrationRoute
+  '/payment': typeof PaymentRoute
   '/register': typeof RegisterRoute
   '/stalls': typeof StallsRoute
 }
@@ -79,6 +88,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/draw'
     | '/my-registration'
+    | '/payment'
     | '/register'
     | '/stalls'
   fileRoutesByTo: FileRoutesByTo
@@ -87,6 +97,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/draw'
     | '/my-registration'
+    | '/payment'
     | '/register'
     | '/stalls'
   id:
@@ -95,6 +106,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/draw'
     | '/my-registration'
+    | '/payment'
     | '/register'
     | '/stalls'
   fileRoutesById: FileRoutesById
@@ -104,6 +116,7 @@ export interface RootRouteChildren {
   CategoriesRoute: typeof CategoriesRoute
   DrawRoute: typeof DrawRoute
   MyRegistrationRoute: typeof MyRegistrationRoute
+  PaymentRoute: typeof PaymentRoute
   RegisterRoute: typeof RegisterRoute
   StallsRoute: typeof StallsRoute
 }
@@ -122,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment': {
+      id: '/payment'
+      path: '/payment'
+      fullPath: '/payment'
+      preLoaderRoute: typeof PaymentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/my-registration': {
@@ -160,6 +180,7 @@ const rootRouteChildren: RootRouteChildren = {
   CategoriesRoute: CategoriesRoute,
   DrawRoute: DrawRoute,
   MyRegistrationRoute: MyRegistrationRoute,
+  PaymentRoute: PaymentRoute,
   RegisterRoute: RegisterRoute,
   StallsRoute: StallsRoute,
 }
