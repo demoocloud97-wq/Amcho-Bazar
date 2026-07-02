@@ -337,7 +337,7 @@ function DrawStage({ phase, count, reel, current }: { phase: string; count: numb
 }
 
 /* ==== FULL SCREEN REVEAL ==== */
-function RevealOverlay({ s }: { s: Selected }) {
+function RevealOverlay({ s, target }: { s: Selected; target: number }) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -372,8 +372,8 @@ function RevealOverlay({ s }: { s: Selected }) {
               <div className="mt-1 inline-block rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-medium">{s.category}</div>
             </div>
           </div>
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-teal/20 px-3 py-1 text-xs font-semibold text-white">
-            <Award className="h-4 w-4 text-accent" /> Successfully selected
+          <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-teal/20 px-4 py-1.5 text-xs font-semibold text-white">
+            <Award className="h-4 w-4 text-accent" /> Selection {s.order} / {target}
           </div>
         </div>
       </motion.div>
@@ -381,46 +381,236 @@ function RevealOverlay({ s }: { s: Selected }) {
   );
 }
 
-/* ==== VENUE MAP ==== */
-function VenueMap({ total, usedStalls, selected }: { total: number; usedStalls: Set<number>; selected: Selected[] }) {
+/* ==== STALL ARENA ==== */
+function StallArena({
+  total,
+  usedStalls,
+  selected,
+  current,
+}: {
+  total: number;
+  usedStalls: Set<number>;
+  selected: Selected[];
+  current: Selected | null;
+}) {
   const byStall = new Map(selected.map((s) => [s.stallNo, s]));
+  const leftStalls = Array.from({ length: 38 }, (_, i) => i + 1); // 01-38
+  const rightStalls = Array.from({ length: 37 }, (_, i) => i + 39); // 39-75
+
   return (
-    <div className="rounded-[36px] border border-white/15 bg-black/30 p-6 backdrop-blur-xl md:p-8">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="relative overflow-hidden rounded-[36px] border border-white/15 bg-gradient-to-b from-black/40 via-black/30 to-black/50 p-6 backdrop-blur-xl md:p-8">
+      <div className="pointer-events-none absolute inset-0 pattern-dots opacity-10" />
+
+      {/* Header */}
+      <div className="relative mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.4em] text-white/60">Live Venue Map</div>
-          <div className="mt-1 font-display text-xl font-semibold text-white">Nawait Community Hall</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.4em] text-accent/90">
+            Live Random Stall Allocation
+          </div>
+          <div className="mt-1 font-display text-2xl font-black text-white md:text-3xl">
+            🏪 Amcho Bazar Stall Arena
+          </div>
+          <div className="mt-1 font-script text-lg text-accent">
+            ✨ 75 Available Stalls · 45 Randomly Selected
+          </div>
         </div>
-        <div className="flex items-center gap-3 text-xs text-white/70">
-          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-white/20" /> Empty</span>
-          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-festive shadow-glow" /> Assigned</span>
+        <div className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-white/80 ring-1 ring-white/15">
+          {selected.length} / 45 assigned
         </div>
       </div>
-      <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-10 md:grid-cols-[repeat(15,minmax(0,1fr))]">
-        {Array.from({ length: total }, (_, i) => i + 1).map((n) => {
-          const used = usedStalls.has(n);
-          const info = byStall.get(n);
-          return (
-            <div key={n} className="group relative">
-              <div
-                className={`aspect-square rounded-md border text-[10px] font-bold transition-all duration-500 ${
-                  used
-                    ? "border-transparent bg-festive text-white shadow-[0_0_16px_rgba(242,107,42,0.6)]"
-                    : "border-white/10 bg-white/5 text-white/40"
-                } flex items-center justify-center`}
-              >
-                {n}
-              </div>
-              {info && (
-                <div className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-black/90 px-3 py-2 text-[11px] shadow-glow group-hover:block">
-                  <div className="font-semibold text-white">{info.business}</div>
-                  <div className="text-white/70">{info.seller} · {info.category}</div>
-                </div>
-              )}
+
+      {/* Legend */}
+      <div className="relative mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-semibold uppercase tracking-wider text-white/70">
+        <LegendDot color="rgba(255,255,255,0.15)" label="Empty" ring />
+        {Object.entries(CATEGORY_COLORS).map(([k, v]) => (
+          <LegendDot key={k} color={v.bg} label={v.label} />
+        ))}
+      </div>
+
+      {/* Arena */}
+      <div className="relative rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-4 md:p-6">
+        {/* Front stalls banner */}
+        <div className="mb-4 flex items-center justify-center gap-3">
+          <span className="h-px w-16 bg-gradient-to-r from-transparent to-accent/50" />
+          <span className="rounded-full bg-accent/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.35em] text-accent">
+            🎪 Front Entrance 🎪
+          </span>
+          <span className="h-px w-16 bg-gradient-to-l from-transparent to-accent/50" />
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-3 md:gap-6">
+          {/* Left wing */}
+          <StallColumn
+            stalls={leftStalls}
+            byStall={byStall}
+            usedStalls={usedStalls}
+            current={current}
+          />
+
+          {/* Center walkway */}
+          <div className="relative flex min-h-full flex-col items-center justify-between py-2">
+            <div className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/40 [writing-mode:vertical-rl]">
+              · Walking Aisle ·
             </div>
-          );
-        })}
+            <div className="my-2 flex-1 w-[2px] rounded-full bg-gradient-to-b from-accent/40 via-white/10 to-accent/40" />
+            <div className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/40 [writing-mode:vertical-rl]">
+              · Aisle ·
+            </div>
+          </div>
+
+          {/* Right wing */}
+          <StallColumn
+            stalls={rightStalls}
+            byStall={byStall}
+            usedStalls={usedStalls}
+            current={current}
+          />
+        </div>
+
+        {/* Stage / branding */}
+        <div className="mt-6 overflow-hidden rounded-2xl bg-festive p-4 text-center shadow-glow ring-1 ring-white/20">
+          <div className="text-[10px] font-bold uppercase tracking-[0.4em] text-white/90">
+            🌸 The Grand Stage 🌸
+          </div>
+          <div className="mt-1 font-display text-2xl font-black text-white md:text-3xl">
+            AMCHO BAZAR
+          </div>
+          <div className="font-script text-sm text-white/90">Amchi Market, Amchi Manshay</div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function LegendDot({ color, label, ring = false }: { color: string; label: string; ring?: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className="h-2.5 w-2.5 rounded-sm"
+        style={{
+          background: color,
+          boxShadow: ring ? "inset 0 0 0 1px rgba(255,255,255,0.25)" : `0 0 8px ${color}`,
+        }}
+      />
+      {label}
+    </span>
+  );
+}
+
+function StallColumn({
+  stalls,
+  byStall,
+  usedStalls,
+  current,
+}: {
+  stalls: number[];
+  byStall: Map<number, Selected>;
+  usedStalls: Set<number>;
+  current: Selected | null;
+}) {
+  // 2 per row
+  const rows: number[][] = [];
+  for (let i = 0; i < stalls.length; i += 2) rows.push(stalls.slice(i, i + 2));
+  return (
+    <div className="flex flex-col gap-1.5 md:gap-2">
+      {rows.map((row, idx) => (
+        <div key={idx} className="grid grid-cols-2 gap-1.5 md:gap-2">
+          {row.map((n) => (
+            <StallBooth
+              key={n}
+              n={n}
+              info={byStall.get(n)}
+              assigned={usedStalls.has(n)}
+              isCurrent={current?.stallNo === n}
+            />
+          ))}
+          {row.length === 1 && <div />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StallBooth({
+  n,
+  info,
+  assigned,
+  isCurrent,
+}: {
+  n: number;
+  info?: Selected;
+  assigned: boolean;
+  isCurrent: boolean;
+}) {
+  const palette = info ? CATEGORY_COLORS[info.category] ?? CATEGORY_COLORS.Others : null;
+
+  return (
+    <div className="group relative">
+      <motion.div
+        layout
+        initial={false}
+        animate={
+          isCurrent
+            ? { scale: 1.18, y: -4 }
+            : assigned
+              ? { scale: 1, y: 0 }
+              : { scale: 1, y: 0 }
+        }
+        transition={{ type: "spring", stiffness: 280, damping: 18 }}
+        whileHover={{ y: -2, scale: 1.06 }}
+        className="relative"
+      >
+        {/* Canopy */}
+        <div
+          className="mx-auto h-2 w-[86%] rounded-t-md transition-all duration-500"
+          style={{
+            background: palette
+              ? `repeating-linear-gradient(90deg, ${palette.canopy} 0 6px, ${palette.bg} 6px 12px)`
+              : "repeating-linear-gradient(90deg, rgba(255,255,255,0.18) 0 6px, rgba(255,255,255,0.08) 6px 12px)",
+            boxShadow: isCurrent ? `0 0 22px ${palette?.ring ?? "rgba(255,201,74,0.7)"}` : "none",
+          }}
+        />
+        {/* Booth body */}
+        <div
+          className={`relative flex aspect-square items-center justify-center rounded-b-xl rounded-t-sm text-[10px] font-black transition-all duration-500 ${
+            isCurrent ? "animate-pulse-glow" : ""
+          }`}
+          style={{
+            background: palette
+              ? `linear-gradient(180deg, ${palette.bg} 0%, ${palette.canopy} 100%)`
+              : "rgba(255,255,255,0.06)",
+            color: palette ? "#fff" : "rgba(255,255,255,0.45)",
+            boxShadow: isCurrent
+              ? `0 0 0 2px #FFC94A, 0 0 30px 4px ${palette?.ring ?? "rgba(255,201,74,0.8)"}`
+              : assigned
+                ? `0 4px 14px -4px ${palette?.ring ?? "rgba(0,0,0,0.4)"}, inset 0 -3px 0 rgba(0,0,0,0.2)`
+                : "inset 0 0 0 1px rgba(255,255,255,0.08)",
+          }}
+        >
+          <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+            {n.toString().padStart(2, "0")}
+          </span>
+
+          {/* Sparkle on current */}
+          {isCurrent && (
+            <>
+              <span className="pointer-events-none absolute -right-1 -top-1 h-2 w-2 rounded-full bg-white shadow-[0_0_10px_2px_#FFC94A]" />
+              <span className="pointer-events-none absolute -left-1 top-1/2 h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_10px_2px_#FFC94A]" />
+              <span className="pointer-events-none absolute -bottom-1 right-1/3 h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_10px_2px_#FFC94A]" />
+            </>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Tooltip */}
+      {info && (
+        <div className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-black/90 px-3 py-2 text-[11px] shadow-glow group-hover:block">
+          <div className="font-semibold text-white">{info.business}</div>
+          <div className="text-white/70">
+            {info.seller} · {info.category}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
