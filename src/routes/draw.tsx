@@ -212,7 +212,7 @@ function DrawPage() {
         {/* LEFT — draw machine & venue */}
         <div className="space-y-6">
           <DrawStage phase={phase} count={count} reel={reel} current={current} />
-          <VenueMap total={TOTAL_STALLS} usedStalls={usedStalls} selected={selected} />
+          <StallArena total={TOTAL_STALLS} usedStalls={usedStalls} selected={selected} current={current} />
         </div>
 
         {/* RIGHT — progress ring + selected list */}
@@ -224,7 +224,9 @@ function DrawPage() {
 
       {/* Full-screen reveal overlay */}
       <AnimatePresence>
-        {phase === "reveal" && current && <RevealOverlay s={current} />}
+        {phase === "reveal" && current && (
+          <RevealOverlay s={current} target={TARGET} />
+        )}
       </AnimatePresence>
 
       {phase === "done" && <DoneBanner />}
