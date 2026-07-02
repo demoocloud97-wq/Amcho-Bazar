@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StallsRouteImport } from './routes/stalls'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as DrawRouteImport } from './routes/draw'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as IndexRouteImport } from './routes/index'
@@ -17,6 +18,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const StallsRoute = StallsRouteImport.update({
   id: '/stalls',
   path: '/stalls',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DrawRoute = DrawRouteImport.update({
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
   '/draw': typeof DrawRoute
+  '/register': typeof RegisterRoute
   '/stalls': typeof StallsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
   '/draw': typeof DrawRoute
+  '/register': typeof RegisterRoute
   '/stalls': typeof StallsRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
   '/draw': typeof DrawRoute
+  '/register': typeof RegisterRoute
   '/stalls': typeof StallsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/categories' | '/draw' | '/stalls'
+  fullPaths: '/' | '/categories' | '/draw' | '/register' | '/stalls'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/categories' | '/draw' | '/stalls'
-  id: '__root__' | '/' | '/categories' | '/draw' | '/stalls'
+  to: '/' | '/categories' | '/draw' | '/register' | '/stalls'
+  id: '__root__' | '/' | '/categories' | '/draw' | '/register' | '/stalls'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CategoriesRoute: typeof CategoriesRoute
   DrawRoute: typeof DrawRoute
+  RegisterRoute: typeof RegisterRoute
   StallsRoute: typeof StallsRoute
 }
 
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/stalls'
       fullPath: '/stalls'
       preLoaderRoute: typeof StallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/draw': {
@@ -106,6 +123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CategoriesRoute: CategoriesRoute,
   DrawRoute: DrawRoute,
+  RegisterRoute: RegisterRoute,
   StallsRoute: StallsRoute,
 }
 export const routeTree = rootRouteImport
