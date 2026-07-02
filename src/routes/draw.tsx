@@ -382,7 +382,7 @@ function VenueMap({ total, usedStalls, selected }: { total: number; usedStalls: 
           <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-festive shadow-glow" /> Assigned</span>
         </div>
       </div>
-      <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-10 md:grid-cols-15">
+      <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-10 md:grid-cols-[repeat(15,minmax(0,1fr))]">
         {Array.from({ length: total }, (_, i) => i + 1).map((n) => {
           const used = usedStalls.has(n);
           const info = byStall.get(n);

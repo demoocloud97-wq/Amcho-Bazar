@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StallsRouteImport } from './routes/stalls'
+import { Route as DrawRouteImport } from './routes/draw'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as IndexRouteImport } from './routes/index'
 
 const StallsRoute = StallsRouteImport.update({
   id: '/stalls',
   path: '/stalls',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DrawRoute = DrawRouteImport.update({
+  id: '/draw',
+  path: '/draw',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CategoriesRoute = CategoriesRouteImport.update({
@@ -32,30 +38,34 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
+  '/draw': typeof DrawRoute
   '/stalls': typeof StallsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
+  '/draw': typeof DrawRoute
   '/stalls': typeof StallsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/categories': typeof CategoriesRoute
+  '/draw': typeof DrawRoute
   '/stalls': typeof StallsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/categories' | '/stalls'
+  fullPaths: '/' | '/categories' | '/draw' | '/stalls'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/categories' | '/stalls'
-  id: '__root__' | '/' | '/categories' | '/stalls'
+  to: '/' | '/categories' | '/draw' | '/stalls'
+  id: '__root__' | '/' | '/categories' | '/draw' | '/stalls'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CategoriesRoute: typeof CategoriesRoute
+  DrawRoute: typeof DrawRoute
   StallsRoute: typeof StallsRoute
 }
 
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/stalls'
       fullPath: '/stalls'
       preLoaderRoute: typeof StallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/draw': {
+      id: '/draw'
+      path: '/draw'
+      fullPath: '/draw'
+      preLoaderRoute: typeof DrawRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/categories': {
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CategoriesRoute: CategoriesRoute,
+  DrawRoute: DrawRoute,
   StallsRoute: StallsRoute,
 }
 export const routeTree = rootRouteImport
