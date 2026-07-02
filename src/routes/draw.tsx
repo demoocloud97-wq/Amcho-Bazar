@@ -212,7 +212,13 @@ function DrawPage() {
         {/* LEFT — draw machine & venue */}
         <div className="space-y-6">
           <DrawStage phase={phase} count={count} reel={reel} current={current} />
-          <StallArena total={TOTAL_STALLS} usedStalls={usedStalls} selected={selected} current={current} />
+          <StallArena
+            total={TOTAL_STALLS}
+            usedStalls={usedStalls}
+            selected={selected}
+            current={current}
+            done={phase === "done"}
+          />
         </div>
 
         {/* RIGHT — progress ring + selected list */}
@@ -387,31 +393,33 @@ function StallArena({
   usedStalls,
   selected,
   current,
+  done,
 }: {
   total: number;
   usedStalls: Set<number>;
   selected: Selected[];
   current: Selected | null;
+  done: boolean;
 }) {
   const byStall = new Map(selected.map((s) => [s.stallNo, s]));
   const leftStalls = Array.from({ length: 38 }, (_, i) => i + 1); // 01-38
   const rightStalls = Array.from({ length: 37 }, (_, i) => i + 39); // 39-75
 
   return (
-    <div className="relative overflow-hidden rounded-[36px] border border-white/15 bg-gradient-to-b from-black/40 via-black/30 to-black/50 p-6 backdrop-blur-xl md:p-8">
+    <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-gradient-to-b from-black/40 via-black/30 to-black/50 p-4 backdrop-blur-xl md:p-6">
       <div className="pointer-events-none absolute inset-0 pattern-dots opacity-10" />
 
       {/* Header */}
-      <div className="relative mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div className="relative mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-[0.4em] text-accent/90">
-            Live Random Stall Allocation
+            {done ? "Live Random Stall Allocation" : "Live Venue Map"}
           </div>
-          <div className="mt-1 font-display text-2xl font-black text-white md:text-3xl">
-            🏪 Amcho Bazar Stall Arena
+          <div className="mt-1 font-display text-xl font-black text-white md:text-2xl">
+            {done ? "🏪 Amcho Bazar Stall Arena" : "Venue Map"}
           </div>
-          <div className="mt-1 font-script text-lg text-accent">
-            ✨ 75 Available Stalls · 45 Randomly Selected
+          <div className="mt-1 font-script text-base text-accent">
+            {done ? "✨ 75 Available Stalls · 45 Randomly Selected" : "75 stalls · lighting up as they're assigned"}
           </div>
         </div>
         <div className="rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-white/80 ring-1 ring-white/15">
@@ -419,16 +427,22 @@ function StallArena({
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="relative mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-semibold uppercase tracking-wider text-white/70">
-        <LegendDot color="rgba(255,255,255,0.15)" label="Empty" ring />
-        {Object.entries(CATEGORY_COLORS).map(([k, v]) => (
-          <LegendDot key={k} color={v.bg} label={v.label} />
-        ))}
-      </div>
+      {done && (
+        <div className="relative mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[10px] font-semibold uppercase tracking-wider text-white/70">
+          <LegendDot color="rgba(255,255,255,0.15)" label="Empty" ring />
+          {Object.entries(CATEGORY_COLORS).map(([k, v]) => (
+            <LegendDot key={k} color={v.bg} label={v.label} />
+          ))}
+        </div>
+      )}
 
-      {/* Arena */}
-      <div className="relative rounded-[28px] border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-4 md:p-6">
+      {!done && (
+        <SimpleStallGrid total={total} byStall={byStall} usedStalls={usedStalls} current={current} />
+      )}
+
+      {/* Arena — appears after all 45 stalls are assigned */}
+      {done && (
+      <div className="relative rounded-[24px] border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-3 md:p-5">
         {/* Front stalls banner */}
         <div className="mb-4 flex items-center justify-center gap-3">
           <span className="h-px w-16 bg-gradient-to-r from-transparent to-accent/50" />
@@ -478,6 +492,60 @@ function StallArena({
           <div className="font-script text-sm text-white/90">Amchi Market, Amchi Manshay</div>
         </div>
       </div>
+      )}
+    </div>
+  );
+}
+
+function SimpleStallGrid({
+  total,
+  byStall,
+  usedStalls,
+  current,
+}: {
+  total: number;
+  byStall: Map<number, Selected>;
+  usedStalls: Set<number>;
+  current: Selected | null;
+}) {
+  const stalls = Array.from({ length: total }, (_, i) => i + 1);
+  return (
+    <div className="relative grid grid-cols-10 gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+      {stalls.map((n) => {
+        const info = byStall.get(n);
+        const assigned = usedStalls.has(n);
+        const isCurrent = current?.stallNo === n;
+        return (
+          <div key={n} className="group relative">
+            <motion.div
+              layout
+              initial={false}
+              animate={isCurrent ? { scale: 1.18 } : { scale: 1 }}
+              transition={{ type: "spring", stiffness: 280, damping: 18 }}
+              className={`flex aspect-square items-center justify-center rounded-md text-[10px] font-bold transition-all ${
+                isCurrent ? "animate-pulse-glow" : ""
+              }`}
+              style={{
+                background: assigned ? "var(--gradient-warm)" : "rgba(255,255,255,0.06)",
+                color: assigned ? "#fff" : "rgba(255,255,255,0.4)",
+                boxShadow: isCurrent
+                  ? "0 0 0 2px #FFC94A, 0 0 18px 3px rgba(255,201,74,0.7)"
+                  : assigned
+                    ? "0 4px 10px -4px rgba(0,0,0,0.4)"
+                    : "inset 0 0 0 1px rgba(255,255,255,0.06)",
+              }}
+            >
+              {n.toString().padStart(2, "0")}
+            </motion.div>
+            {info && (
+              <div className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-black/90 px-3 py-2 text-[11px] shadow-glow group-hover:block">
+                <div className="font-semibold text-white">{info.business}</div>
+                <div className="text-white/70">{info.seller} · {info.category}</div>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
