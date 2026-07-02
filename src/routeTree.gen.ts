@@ -9,8 +9,56 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StallsRouteImport } from './routes/stalls'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as PaymentRouteImport } from './routes/payment'
+import { Route as MyRegistrationRouteImport } from './routes/my-registration'
+import { Route as GalleryRouteImport } from './routes/gallery'
+import { Route as DrawRouteImport } from './routes/draw'
+import { Route as CategoriesRouteImport } from './routes/categories'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 
+const StallsRoute = StallsRouteImport.update({
+  id: '/stalls',
+  path: '/stalls',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentRoute = PaymentRouteImport.update({
+  id: '/payment',
+  path: '/payment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyRegistrationRoute = MyRegistrationRouteImport.update({
+  id: '/my-registration',
+  path: '/my-registration',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GalleryRoute = GalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DrawRoute = DrawRouteImport.update({
+  id: '/draw',
+  path: '/draw',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CategoriesRoute = CategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +67,144 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/categories': typeof CategoriesRoute
+  '/draw': typeof DrawRoute
+  '/gallery': typeof GalleryRoute
+  '/my-registration': typeof MyRegistrationRoute
+  '/payment': typeof PaymentRoute
+  '/register': typeof RegisterRoute
+  '/stalls': typeof StallsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/categories': typeof CategoriesRoute
+  '/draw': typeof DrawRoute
+  '/gallery': typeof GalleryRoute
+  '/my-registration': typeof MyRegistrationRoute
+  '/payment': typeof PaymentRoute
+  '/register': typeof RegisterRoute
+  '/stalls': typeof StallsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/categories': typeof CategoriesRoute
+  '/draw': typeof DrawRoute
+  '/gallery': typeof GalleryRoute
+  '/my-registration': typeof MyRegistrationRoute
+  '/payment': typeof PaymentRoute
+  '/register': typeof RegisterRoute
+  '/stalls': typeof StallsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/categories'
+    | '/draw'
+    | '/gallery'
+    | '/my-registration'
+    | '/payment'
+    | '/register'
+    | '/stalls'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/admin'
+    | '/categories'
+    | '/draw'
+    | '/gallery'
+    | '/my-registration'
+    | '/payment'
+    | '/register'
+    | '/stalls'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/categories'
+    | '/draw'
+    | '/gallery'
+    | '/my-registration'
+    | '/payment'
+    | '/register'
+    | '/stalls'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
+  CategoriesRoute: typeof CategoriesRoute
+  DrawRoute: typeof DrawRoute
+  GalleryRoute: typeof GalleryRoute
+  MyRegistrationRoute: typeof MyRegistrationRoute
+  PaymentRoute: typeof PaymentRoute
+  RegisterRoute: typeof RegisterRoute
+  StallsRoute: typeof StallsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stalls': {
+      id: '/stalls'
+      path: '/stalls'
+      fullPath: '/stalls'
+      preLoaderRoute: typeof StallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payment': {
+      id: '/payment'
+      path: '/payment'
+      fullPath: '/payment'
+      preLoaderRoute: typeof PaymentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-registration': {
+      id: '/my-registration'
+      path: '/my-registration'
+      fullPath: '/my-registration'
+      preLoaderRoute: typeof MyRegistrationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gallery': {
+      id: '/gallery'
+      path: '/gallery'
+      fullPath: '/gallery'
+      preLoaderRoute: typeof GalleryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/draw': {
+      id: '/draw'
+      path: '/draw'
+      fullPath: '/draw'
+      preLoaderRoute: typeof DrawRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/categories': {
+      id: '/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof CategoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,6 +217,14 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
+  CategoriesRoute: CategoriesRoute,
+  DrawRoute: DrawRoute,
+  GalleryRoute: GalleryRoute,
+  MyRegistrationRoute: MyRegistrationRoute,
+  PaymentRoute: PaymentRoute,
+  RegisterRoute: RegisterRoute,
+  StallsRoute: StallsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
