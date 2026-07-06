@@ -1,0 +1,31 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Seller images under sellers/{uid}/...
+    // - Anyone can read (product images are public on the site).
+    // - Only the signed-in owner can upload/replace their own images,
+    //   and only images up to 5 MB.
+    match /sellers/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Gallery photos under gallery/{season}/...
+    // - Anyone can read; any signed-in user (admin, gated in UI) can upload images up to 5 MB.
+    match /gallery/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Everything else is locked by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

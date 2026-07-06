@@ -1,26 +1,67 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
+import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, PartyPopper, Sparkles } from "lucide-react";
-import { CATEGORIES } from "@/lib/dummy-data";
+import { CATEGORIES, EVENT, type CategoryKey } from "@/lib/dummy-data";
+import { createRegistration, getRegistrationsBySeasonId } from "@/lib/db";
+import { getCategories, getSubCategories, type Category, type SubCategory } from "@/lib/categories-db";
+import { useSeason } from "@/lib/season-context";
+import { useI18n } from "@/lib/i18n";
+import { friendlyAuthError } from "@/lib/firebase-errors";
+import { useAuth } from "@/lib/auth-context";
+import { RequireAuth } from "@/components/site/require-auth";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
       { title: "Become a Seller · Amcho Bazar" },
-      { name: "description", content: "Register in 5 warm steps to become a seller at Amcho Bazar Season 2 — the Nawait Community's women-only festival." },
+      { name: "description", content: "Register in 5 warm steps to become a seller at Amcho Bazar Season 3 — the Nawait Community's women-only festival." },
       { property: "og:title", content: "Become a Seller · Amcho Bazar" },
       { property: "og:description", content: "Multi-step, joyful seller registration for women entrepreneurs." },
     ],
   }),
-  component: RegisterPage,
+  component: () => (
+    <RequireAuth>
+      <RegisterPage />
+    </RequireAuth>
+  ),
 });
 
-const STEPS = ["Personal", "Business", "Category", "Review", "Submitted"];
+const STEPS = ["reg.step.personal", "reg.step.business", "reg.step.category", "reg.step.review", "reg.step.submitted"];
 
 function RegisterPage() {
+  const { user } = useAuth();
+  const { activeSeason } = useSeason();
+  const { t } = useI18n();
   const [step, setStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [catCounts, setCatCounts] = useState<Record<string, number>>({});
+  const [fsCats, setFsCats] = useState<Category[]>([]);
+  const [subs, setSubs] = useState<SubCategory[]>([]);
+
+  // Firestore categories + sub-categories (to offer a sub-category choice).
+  useEffect(() => {
+    Promise.all([getCategories(), getSubCategories()])
+      .then(([c, s]) => { setFsCats(c); setSubs(s); })
+      .catch(() => {});
+  }, []);
+
+  // Live per-category registration counts for the active season.
+  useEffect(() => {
+    if (!activeSeason?.id) { setCatCounts({}); return; }
+    getRegistrationsBySeasonId(activeSeason.id)
+      .then((regs) => {
+        const m: Record<string, number> = {};
+        regs.forEach((r) => {
+          const cats = r.categories?.length ? r.categories : [r.category];
+          cats.forEach((c) => { if (c) m[c] = (m[c] ?? 0) + 1; });
+        });
+        setCatCounts(m);
+      })
+      .catch(() => {});
+  }, [activeSeason?.id]);
   const [data, setData] = useState({
     fullName: "",
     phone: "",
@@ -32,15 +73,66 @@ function RegisterPage() {
     instagram: "",
     products: "",
     category: "",
+    categoryId: "",
+    categories: [] as string[],
+    categoryIds: [] as string[],
+    subcategory: "",
+    subcategoryId: "",
   });
 
-  function update<K extends keyof typeof data>(k: K, v: string) {
+  function update<K extends keyof typeof data>(k: K, v: (typeof data)[K]) {
     setData((d) => ({ ...d, [k]: v }));
   }
 
-  function next() {
+  // Toggle a category in/out of the multi-select; keep primary = first chosen.
+  function toggleCategory(name: string, id: string) {
+    setData((d) => {
+      const has = d.categories.includes(name);
+      const categories = has ? d.categories.filter((c) => c !== name) : [...d.categories, name];
+      let categoryIds = d.categoryIds.filter(Boolean);
+      if (id) categoryIds = has ? categoryIds.filter((x) => x !== id) : [...categoryIds, id];
+      return {
+        ...d, categories, categoryIds,
+        category: categories[0] ?? "",
+        categoryId: categoryIds[0] ?? "",
+        subcategory: "", subcategoryId: "",
+      };
+    });
+  }
+
+  async function next() {
+    // On the Review step, save the registration to Firestore before advancing.
     if (step === 3) {
-      confetti({ particleCount: 160, spread: 90, origin: { y: 0.4 }, colors: ["#7A1E3D", "#F26B2A", "#FFC94A", "#1FA7A6"] });
+      setSubmitting(true);
+      try {
+        await createRegistration({
+          uid: user?.uid,
+          seasonId: activeSeason?.id,
+          season: activeSeason?.seasonNumber ?? EVENT.seasonNumber,
+          seller: data.fullName,
+          business: data.business,
+          category: (data.categories[0] || "Others") as CategoryKey,
+          categoryId: data.categoryIds[0] || undefined,
+          categories: data.categories.length ? data.categories : undefined,
+          categoryIds: data.categoryIds.length ? data.categoryIds : undefined,
+          subcategoryId: data.subcategoryId || undefined,
+          subcategory: data.subcategory || undefined,
+          phone: data.phone,
+          email: data.email || user?.email || "",
+          products: data.products
+            .split(",")
+            .map((p) => p.trim())
+            .filter(Boolean),
+        });
+        confetti({ particleCount: 160, spread: 90, origin: { y: 0.4 }, colors: ["#7A1E3D", "#F26B2A", "#FFC94A", "#1FA7A6"] });
+        toast.success(t("reg.toast.submitted"));
+        setStep(4);
+      } catch (err) {
+        toast.error(friendlyAuthError(err));
+      } finally {
+        setSubmitting(false);
+      }
+      return;
     }
     setStep((s) => Math.min(4, s + 1));
   }
@@ -51,7 +143,7 @@ function RegisterPage() {
   const canContinue =
     (step === 0 && data.fullName && data.phone) ||
     (step === 1 && data.business) ||
-    (step === 2 && data.category) ||
+    (step === 2 && data.categories.length > 0) ||
     step === 3;
 
   return (
@@ -64,13 +156,13 @@ function RegisterPage() {
       <section className="relative mx-auto max-w-3xl px-4 py-16 md:px-8">
         <div className="text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-primary">
-            <Sparkles className="h-3 w-3" /> Season 2 Seller Registration
+            <Sparkles className="h-3 w-3" /> {t("reg.hero.eyebrow")}
           </div>
           <h1 className="mt-4 font-display text-4xl font-black md:text-6xl">
-            Bring your <span className="text-festive">home business</span> to the bazaar.
+            {t("reg.hero.title")}
           </h1>
           <p className="mx-auto mt-3 max-w-lg text-muted-foreground">
-            Five gentle steps. Save your seat at Nawait's warmest festival.
+            {t("reg.hero.subtitle")}
           </p>
         </div>
 
@@ -97,7 +189,7 @@ function RegisterPage() {
             ))}
           </div>
           <div className="mt-3 flex justify-between text-[10px] font-semibold uppercase tracking-widest text-muted-foreground md:text-xs">
-            {STEPS.map((s) => <span key={s} className="flex-1 text-center">{s}</span>)}
+            {STEPS.map((s) => <span key={s} className="flex-1 text-center">{t(s)}</span>)}
           </div>
         </div>
 
@@ -118,7 +210,7 @@ function RegisterPage() {
                 <StepBusiness data={data} update={update} />
               )}
               {step === 2 && (
-                <StepCategory data={data} update={update} />
+                <StepCategory data={data} update={update} toggleCategory={toggleCategory} counts={catCounts} seasonName={activeSeason?.seasonName} fsCats={fsCats} subs={subs} />
               )}
               {step === 3 && <StepReview data={data} />}
               {step === 4 && <StepSubmitted />}
@@ -132,14 +224,14 @@ function RegisterPage() {
                 disabled={step === 0}
                 className="inline-flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary disabled:opacity-30"
               >
-                <ArrowLeft className="h-4 w-4" /> Back
+                <ArrowLeft className="h-4 w-4" /> {t("reg.back")}
               </button>
               <button
                 onClick={next}
-                disabled={!canContinue}
+                disabled={!canContinue || submitting}
                 className="inline-flex items-center gap-2 rounded-full bg-festive px-6 py-3 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
               >
-                {step === 3 ? "Submit registration" : "Continue"} <ArrowRight className="h-4 w-4" />
+                {step === 3 ? (submitting ? t("reg.submitting") : t("reg.submit")) : t("reg.continue")} <ArrowRight className="h-4 w-4" />
               </button>
             </div>
           )}
@@ -162,24 +254,25 @@ function Field({ label, children, hint }: { label: string; children: React.React
 const inputCls = "w-full rounded-2xl border border-border bg-white/70 px-4 py-3 text-sm outline-none ring-primary/20 transition-all focus:ring-4";
 
 function StepPersonal({ data, update }: any) {
+  const { t } = useI18n();
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-2xl font-bold">Let's get to know you</h2>
-        <p className="mt-1 text-sm text-muted-foreground">A few personal details so we can reach you on the day.</p>
+        <h2 className="font-display text-2xl font-bold">{t("reg.personal.h2")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("reg.personal.sub")}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Full name">
-          <input value={data.fullName} onChange={(e) => update("fullName", e.target.value)} className={inputCls} placeholder="Ayesha Sherif" />
+        <Field label={t("reg.f.fullName")}>
+          <input value={data.fullName} onChange={(e) => update("fullName", e.target.value)} autoComplete="name" className={inputCls} placeholder="Ayesha Sherif" />
         </Field>
-        <Field label="Phone (WhatsApp)">
-          <input value={data.phone} onChange={(e) => update("phone", e.target.value)} className={inputCls} placeholder="+91 98800 12345" />
+        <Field label={t("reg.f.phone")}>
+          <input value={data.phone} onChange={(e) => update("phone", e.target.value)} type="tel" inputMode="tel" autoComplete="tel" className={inputCls} placeholder="+91 98800 12345" />
         </Field>
-        <Field label="Email">
-          <input value={data.email} onChange={(e) => update("email", e.target.value)} className={inputCls} placeholder="ayesha@example.com" />
+        <Field label={t("reg.f.email")}>
+          <input value={data.email} onChange={(e) => update("email", e.target.value)} type="email" inputMode="email" autoComplete="email" className={inputCls} placeholder="ayesha@example.com" />
         </Field>
-        <Field label="City">
-          <input value={data.city} onChange={(e) => update("city", e.target.value)} className={inputCls} />
+        <Field label={t("reg.f.city")}>
+          <input value={data.city} onChange={(e) => update("city", e.target.value)} autoComplete="address-level2" className={inputCls} />
         </Field>
       </div>
     </div>
@@ -187,27 +280,28 @@ function StepPersonal({ data, update }: any) {
 }
 
 function StepBusiness({ data, update }: any) {
+  const { t } = useI18n();
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-2xl font-bold">Tell us about your business</h2>
-        <p className="mt-1 text-sm text-muted-foreground">The name that will greet visitors at your stall.</p>
+        <h2 className="font-display text-2xl font-bold">{t("reg.business.h2")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("reg.business.sub")}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Business name">
+        <Field label={t("reg.f.business")}>
           <input value={data.business} onChange={(e) => update("business", e.target.value)} className={inputCls} placeholder="Ayesha's Kitchen" />
         </Field>
-        <Field label="Tagline" hint="A one-line invitation to your world.">
+        <Field label={t("reg.f.tagline")} hint={t("reg.f.taglineHint")}>
           <input value={data.tagline} onChange={(e) => update("tagline", e.target.value)} className={inputCls} placeholder="Bhatkali biryani, made with love." />
         </Field>
-        <Field label="Years running">
+        <Field label={t("reg.f.years")}>
           <input value={data.yearsRunning} onChange={(e) => update("yearsRunning", e.target.value)} className={inputCls} placeholder="2 years" />
         </Field>
-        <Field label="Instagram (optional)">
+        <Field label={t("reg.f.instagram")}>
           <input value={data.instagram} onChange={(e) => update("instagram", e.target.value)} className={inputCls} placeholder="@ayeshas.kitchen" />
         </Field>
         <div className="md:col-span-2">
-          <Field label="What will you sell?" hint="Comma-separated is perfect.">
+          <Field label={t("reg.f.sell")} hint={t("reg.f.sellHint")}>
             <textarea value={data.products} onChange={(e) => update("products", e.target.value)} className={`${inputCls} min-h-[100px]`} placeholder="Bhatkali biryani, kheema samosa, date rolls…" />
           </Field>
         </div>
@@ -216,18 +310,31 @@ function StepBusiness({ data, update }: any) {
   );
 }
 
-function StepCategory({ data, update }: any) {
+function StepCategory({ data, update, toggleCategory, counts, seasonName, fsCats, subs }: { data: any; update: any; toggleCategory: (name: string, id: string) => void; counts: Record<string, number>; seasonName?: string; fsCats: Category[]; subs: SubCategory[] }) {
+  const { t } = useI18n();
+  // Prefer real Firestore categories (so a chosen category has a known id and its
+  // sub-categories link reliably); fall back to the static list if none exist.
+  const grid = fsCats.length
+    ? fsCats.map((c) => ({ key: c.name, id: c.id ?? "", emoji: c.emoji || "🏷️" }))
+    : CATEGORIES.map((c) => ({ key: c.key as string, id: "", emoji: c.emoji }));
+
+  // Sub-categories belong to any of the chosen categories (by id).
+  const catSubs = data.categoryIds.length ? subs.filter((s) => data.categoryIds.includes(s.categoryId)) : [];
+
   return (
     <div>
-      <h2 className="font-display text-2xl font-bold">Choose your category</h2>
-      <p className="mt-1 text-sm text-muted-foreground">You can pick just one for the main stall.</p>
+      <h2 className="font-display text-2xl font-bold">{t("reg.category.h2")}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {t("reg.category.pick")}{data.categories.length ? ` ${data.categories.length} ${t("reg.category.selected")}` : ""}{seasonName ? ` ${t("reg.category.countsFor")} ${seasonName}.` : ""}
+      </p>
       <div className="mt-6 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-        {CATEGORIES.map((c) => {
-          const active = data.category === c.key;
+        {grid.map((c) => {
+          const active = data.categories.includes(c.key);
+          const count = counts[c.key] ?? 0;
           return (
             <button
               key={c.key}
-              onClick={() => update("category", c.key)}
+              onClick={() => toggleCategory(c.key, c.id)}
               className={`group relative overflow-hidden rounded-2xl border p-4 text-left transition-all ${
                 active ? "border-transparent bg-festive text-white shadow-glow" : "border-border bg-white/70 hover:-translate-y-0.5 hover:shadow-soft"
               }`}
@@ -237,41 +344,72 @@ function StepCategory({ data, update }: any) {
                 {active && <Check className="h-5 w-5" />}
               </div>
               <div className="mt-3 font-display text-lg font-semibold">{c.key}</div>
-              <div className={`mt-1 text-xs ${active ? "text-white/80" : "text-muted-foreground"}`}>{c.sellers} sellers so far</div>
+              <div className={`mt-1 text-xs ${active ? "text-white/80" : "text-muted-foreground"}`}>{count} {count === 1 ? t("reg.seller") : t("reg.sellers")}</div>
             </button>
           );
         })}
       </div>
+
+      {/* Sub-category — shown once a category with sub-categories is chosen */}
+      {data.categories.length > 0 && catSubs.length > 0 && (
+        <div className="mt-8">
+          <h3 className="font-display text-lg font-semibold">
+            {t("reg.sub.h3")} <span className="text-sm font-normal text-muted-foreground">{t("reg.sub.optional")}</span>
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">{t("reg.sub.help")}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {catSubs.map((s) => {
+              const on = data.subcategoryId === s.id;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    if (on) { update("subcategory", ""); update("subcategoryId", ""); }
+                    else { update("subcategory", s.name); update("subcategoryId", s.id!); }
+                  }}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                    on ? "border-transparent bg-festive text-white shadow-soft" : "border-border bg-white/70 hover:border-primary/30 hover:text-primary"
+                  }`}
+                >
+                  {on && <Check className="h-4 w-4" />} {s.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function StepReview({ data }: any) {
+  const { t } = useI18n();
   const rows = [
-    ["Name", data.fullName], ["Phone", data.phone], ["Email", data.email], ["City", data.city],
-    ["Business", data.business], ["Tagline", data.tagline], ["Years", data.yearsRunning], ["Instagram", data.instagram],
-    ["Products", data.products], ["Category", data.category],
+    [t("reg.row.name"), data.fullName], [t("reg.row.phone"), data.phone], [t("reg.row.email"), data.email], [t("reg.row.city"), data.city],
+    [t("reg.row.business"), data.business], [t("reg.row.tagline"), data.tagline], [t("reg.row.years"), data.yearsRunning], [t("reg.row.instagram"), data.instagram],
+    [t("reg.row.products"), data.products], [t("reg.row.categories"), (data.categories || []).join(", ")], [t("reg.row.subcategory"), data.subcategory],
   ];
   return (
     <div>
-      <h2 className="font-display text-2xl font-bold">Review your registration</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Take a last look before submitting — you can edit anything.</p>
+      <h2 className="font-display text-2xl font-bold">{t("reg.review.h2")}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{t("reg.review.sub")}</p>
       <div className="mt-6 divide-y divide-border rounded-2xl border border-border">
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-start justify-between gap-4 px-4 py-3 text-sm">
             <div className="w-28 shrink-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{k}</div>
-            <div className="flex-1 text-right font-medium text-foreground">{v || <span className="italic text-muted-foreground">Not provided</span>}</div>
+            <div className="flex-1 text-right font-medium text-foreground">{v || <span className="italic text-muted-foreground">{t("reg.review.notProvided")}</span>}</div>
           </div>
         ))}
       </div>
       <div className="mt-4 rounded-2xl bg-accent/20 p-4 text-sm text-primary">
-        A ₹1,500 registration fee will be requested only after your registration is approved. Payment can be done from your dashboard.
+        {t("reg.review.fee").replace("{fee}", EVENT.registrationFee.toLocaleString("en-IN"))}
       </div>
     </div>
   );
 }
 
 function StepSubmitted() {
+  const { t } = useI18n();
   return (
     <div className="py-6 text-center">
       <motion.div
@@ -283,17 +421,17 @@ function StepSubmitted() {
         <PartyPopper className="h-10 w-10" />
       </motion.div>
       <h2 className="mt-6 font-display text-3xl font-bold md:text-4xl">
-        You're on the list! <span className="text-festive">Welcome, sister.</span>
+        {t("reg.done.title")} <span className="text-festive">{t("reg.done.welcome")}</span>
       </h2>
       <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-        We've received your details. You'll hear from the Nawait team on WhatsApp within 48 hours, and your stall will be revealed at the live draw ceremony.
+        {t("reg.done.body")}
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Link to="/my-registration" className="inline-flex items-center gap-2 rounded-full bg-festive px-6 py-3 text-sm font-semibold text-white shadow-soft">
-          Go to my registration <ArrowRight className="h-4 w-4" />
+          {t("reg.done.goReg")} <ArrowRight className="h-4 w-4" />
         </Link>
-        <Link to="/draw" className="inline-flex items-center gap-2 rounded-full border border-border bg-white/70 px-6 py-3 text-sm font-semibold text-primary">
-          Watch the draw
+        <Link to="/" className="inline-flex items-center gap-2 rounded-full border border-border bg-white/70 px-6 py-3 text-sm font-semibold text-primary">
+          {t("reg.done.home")}
         </Link>
       </div>
     </div>

@@ -1,12 +1,13 @@
 export const EVENT = {
   name: "Amcho Bazar",
-  season: "Season 2",
+  season: "Season 3",
+  seasonNumber: 3,
   tagline: "Amchi Market, Amchi Manshay",
   organizer: "Nawait Community",
   city: "Bhatkal, Karnataka",
   venue: "Nawait Community Hall, Nawayath Colony",
-  dateISO: "2026-12-19T10:00:00",
-  dateLabel: "December 19, 2026 · 10:00 AM – 9:00 PM",
+  dateISO: "2026-08-02T10:00:00",
+  dateLabel: "August 2, 2026 · 10:00 AM – 9:00 PM",
   registeredSellers: 120,
   totalStalls: 75,
   totalWinners: 45,
@@ -15,7 +16,6 @@ export const EVENT = {
 
 export const STATS = [
   { label: "Women Entrepreneurs", value: 120, suffix: "+" },
-  { label: "Visitors Season 1", value: 6800, suffix: "+" },
   { label: "Local Home Businesses", value: 90, suffix: "" },
   { label: "Community Volunteers", value: 45, suffix: "" },
 ];
@@ -120,7 +120,7 @@ export const GALLERY = Array.from({ length: 14 }, (_, i) => ({
     "1533777857889-4be7c70b33f7",
   ][i]}?auto=format&fit=crop&w=${i % 3 === 0 ? 900 : 700}&q=80`,
   caption: [
-    "Opening ribbon — Season 1",
+    "Opening ribbon — Season 2",
     "Ayesha's biryani stall",
     "Handmade jewellery corner",
     "Little visitors, big smiles",
@@ -133,15 +133,14 @@ export const GALLERY = Array.from({ length: 14 }, (_, i) => ({
     "Sweet treats",
     "The gifting corner",
     "Sisterhood in action",
-    "Season 1 finale",
+    "Season 2 finale",
   ][i],
   span: i % 5 === 0 ? "tall" : i % 4 === 0 ? "wide" : "sq",
 }));
 
 export const HIGHLIGHTS = [
-  { year: "Season 1 · 2024", title: "Where it all began", body: "60 women sellers, 4,200 visitors, one hall filled with joy — Nawait's first women-only market bloomed beyond every expectation." },
-  { year: "Community Pop-up · 2025", title: "Beyond a single day", body: "Monthly weekend pop-ups kept our sisterhood trading, teaching and mentoring through the year." },
-  { year: "Season 2 · 2026", title: "Doubled, elevated, celebrated", body: "120 registered sellers, 75 stalls, one grand community draw ceremony — and a whole festival built around each one of them." },
+  { year: "Season 2 · 2025", title: "Doubled, elevated, celebrated", body: "120 registered sellers, 75 stalls, one grand community draw ceremony — and a whole festival built around each one of them." },
+  { year: "Season 3 · 2026", title: "Bigger, warmer, closer", body: "August 2 — our third season returns to Nawait Community Hall with more sellers, more stalls and the same sisterhood at heart." },
 ];
 
 export const GUIDELINES = [

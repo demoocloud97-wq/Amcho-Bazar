@@ -2,7 +2,11 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import confetti from "canvas-confetti";
+import { toast } from "sonner";
 import { Check, Eye, EyeOff, Heart, Lock, Mail, Phone, Sparkles, User } from "lucide-react";
+import { signUpWithEmail } from "@/lib/auth";
+import { friendlyAuthError } from "@/lib/firebase-errors";
+import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -18,27 +22,36 @@ export const Route = createFileRoute("/signup")({
 
 function SignupPage() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [showPassword, setShowPassword] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [agree, setAgree] = useState(false);
 
-  const strength = scorePassword(password);
+  const strength = scorePassword(password, t);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!agree) return;
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await signUpWithEmail(email, password, fullName);
       confetti({
         particleCount: 120,
         spread: 80,
         origin: { y: 0.4 },
-        colors: ["#B23A48", "#F08A4B", "#E8C547", "#2A9D8F"],
+        colors: ["#7A1E3D", "#F26B2A", "#FFC94A", "#1FA7A6"],
       });
+      toast.success(t("signup.toast"));
+      setTimeout(() => navigate({ to: "/" }), 800);
+    } catch (err) {
+      toast.error(friendlyAuthError(err));
+    } finally {
       setLoading(false);
-      setTimeout(() => navigate({ to: "/register" }), 800);
-    }, 900);
+    }
   }
 
   return (
@@ -60,34 +73,34 @@ function SignupPage() {
             <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-festive text-white shadow-glow">
               <Heart className="h-5 w-5" />
             </div>
-            <h2 className="mt-4 font-display text-3xl text-foreground">Join Amcho Bazar</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Create your account in seconds</p>
+            <h2 className="mt-4 font-display text-3xl text-foreground">{t("signup.heading")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t("signup.sub")}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <Field icon={<User className="h-4 w-4" />} label="Full Name">
-              <input required type="text" placeholder="Your beautiful name" className="input-festive" />
+            <Field icon={<User className="h-4 w-4" />} label={t("signup.fullName")}>
+              <input required type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your beautiful name" className="input-festive" />
             </Field>
-            <Field icon={<Mail className="h-4 w-4" />} label="Email">
-              <input required type="email" placeholder="you@example.com" className="input-festive" />
+            <Field icon={<Mail className="h-4 w-4" />} label={t("auth.email")}>
+              <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="input-festive" />
             </Field>
-            <Field icon={<Phone className="h-4 w-4" />} label="Phone Number">
-              <input required type="tel" placeholder="+91 98xxxxxxxx" className="input-festive" />
+            <Field icon={<Phone className="h-4 w-4" />} label={t("signup.phone")}>
+              <input required type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98xxxxxxxx" className="input-festive" />
             </Field>
-            <Field icon={<Lock className="h-4 w-4" />} label="Password">
+            <Field icon={<Lock className="h-4 w-4" />} label={t("auth.password")}>
               <div className="relative">
                 <input
                   required
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 8 characters"
-                  className="input-festive pr-10"
+                  placeholder={t("signup.pwPlaceholder")}
+                  className="input-festive pe-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
-                  className="absolute inset-y-0 right-3 grid place-items-center text-muted-foreground"
+                  className="absolute inset-y-0 end-3 grid place-items-center text-muted-foreground"
                   aria-label="Toggle password"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -126,8 +139,8 @@ function SignupPage() {
                 className="mt-0.5 h-4 w-4 rounded border-border"
               />
               <span>
-                I agree to the{" "}
-                <span className="font-medium text-primary">Community Guidelines</span> and celebrate the Nawait sisterhood.
+                {t("signup.agree1")}{" "}
+                <span className="font-medium text-primary">{t("signup.guidelines")}</span> {t("signup.agree2")}
               </span>
             </label>
 
@@ -136,14 +149,14 @@ function SignupPage() {
               disabled={loading || !agree}
               className="w-full rounded-full bg-festive px-5 py-3 text-sm font-semibold text-white shadow-glow transition-transform hover:scale-[1.02] disabled:opacity-60"
             >
-              {loading ? "Creating your account…" : "Create Account"}
+              {loading ? t("signup.creating") : t("signup.create")}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Already part of the sisterhood?{" "}
+            {t("signup.already")}{" "}
             <Link to="/login" className="font-semibold text-primary hover:underline">
-              Sign in
+              {t("login.heading")}
             </Link>
           </p>
         </motion.div>
@@ -156,22 +169,22 @@ function SignupPage() {
         >
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5" /> Season 2 is Live
+              <Sparkles className="h-3.5 w-3.5" /> {t("signup.badge")}
             </div>
             <h1 className="mt-6 font-display text-4xl leading-tight lg:text-5xl">
-              A festival made <span className="italic">by women,</span> for women.
+              {t("signup.storyTitle")} <span className="italic">{t("signup.byWomen")}</span> {t("signup.forWomen")}
             </h1>
             <p className="mt-4 max-w-sm text-white/85">
-              Create your Amcho Bazar account and step into a warm circle of entrepreneurs, artists, home chefs and dreamers.
+              {t("signup.storyBody")}
             </p>
           </div>
 
           <ul className="mt-10 space-y-3">
             {[
-              "Register as a seller in 5 warm steps",
-              "Join the live stall draw ceremony",
-              "Showcase your craft to the community",
-              "Celebrate 2 days of joyful shopping",
+              t("signup.feat1"),
+              t("signup.feat2"),
+              t("signup.feat3"),
+              t("signup.feat4"),
             ].map((f) => (
               <li key={f} className="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-3 backdrop-blur">
                 <span className="grid h-6 w-6 place-items-center rounded-full bg-white/25">
@@ -199,12 +212,12 @@ function Field({ icon, label, children }: { icon: React.ReactNode; label: string
   );
 }
 
-function scorePassword(pw: string): { score: number; label: string } {
+function scorePassword(pw: string, t: (k: string) => string): { score: number; label: string } {
   let score = 0;
   if (pw.length >= 8) score++;
   if (/[A-Z]/.test(pw)) score++;
   if (/[0-9]/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
-  const labels = ["Too short", "Weak", "Okay", "Strong", "Excellent"];
+  const labels = [t("signup.pw0"), t("signup.pw1"), t("signup.pw2"), t("signup.pw3"), t("signup.pw4")];
   return { score, label: labels[score] };
 }

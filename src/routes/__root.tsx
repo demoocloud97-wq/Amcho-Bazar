@@ -13,6 +13,11 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
+import { GoogleOneTap } from "@/components/site/google-one-tap";
+import { AuthProvider } from "@/lib/auth-context";
+import { SeasonProvider } from "@/lib/season-context";
+import { I18nProvider } from "@/lib/i18n";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -79,10 +84,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Amcho Bazar Season 2 — Nawait Community Women's Festival" },
+      { title: "Amcho Bazar Season 3 — Nawait Community Women's Festival" },
       { name: "description", content: "Amcho Bazar is a premium women-only community festival by the Nawait Community — celebrating women entrepreneurs, home businesses and joyful shopping." },
       { name: "author", content: "Nawait Community" },
-      { property: "og:title", content: "Amcho Bazar Season 2" },
+      { property: "og:title", content: "Amcho Bazar Season 3" },
       { property: "og:description", content: "A women-only community festival celebrating entrepreneurship, culture & connection." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -127,13 +132,21 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-screen flex-col bg-background">
-        <SiteHeader />
-        <main className="flex-1">
-          <Outlet />
-        </main>
-        <SiteFooter />
-      </div>
+      <I18nProvider>
+        <AuthProvider>
+          <GoogleOneTap />
+          <SeasonProvider>
+            <div className="flex min-h-screen flex-col bg-background">
+              <SiteHeader />
+              <main className="flex-1">
+                <Outlet />
+              </main>
+              <SiteFooter />
+            </div>
+            <Toaster position="top-center" richColors />
+          </SeasonProvider>
+        </AuthProvider>
+      </I18nProvider>
     </QueryClientProvider>
   );
 }

@@ -1,0 +1,114 @@
+// Season 1 (2024) gallery photos — real event archive.
+// Shown as the Season 1 tab fallback in the Gallery page (same pattern as SEASON2_GALLERY).
+const SEASON1_GALLERY_RAW: { src: string; caption: string }[] = [
+  { src: "https://lh3.googleusercontent.com/d/1TGWqpocgAyoDSGx5Y7_O-n_xvWSZn9CH", caption: "Chatkhara" },
+  { src: "https://lh3.googleusercontent.com/d/15nWMQy3Udbz9JYtTG_8fM9i3TFG2Umcn", caption: "Chatkhara" },
+  { src: "https://lh3.googleusercontent.com/d/1B5UCSfRvNpnV1pq-NAABpgaGBJ9z6IrV", caption: "Venue decor — AC corner" },
+  { src: "https://lh3.googleusercontent.com/d/1ODbSFp817wvdvqzxf3X_Crry00aU1CiM", caption: "Mantasha's" },
+  { src: "https://lh3.googleusercontent.com/d/10m6L01OuplxHhX2gngOVlGZDHNQFk0U8", caption: "Home Made Beauty" },
+  { src: "https://lh3.googleusercontent.com/d/17a7wFaRhupk4fFhsvEy_qaN4mHN5-eVg", caption: "Snacks display" },
+  { src: "https://lh3.googleusercontent.com/d/1U-Idx8JJHbqXu6E-CJe-gSFgEUUw_wis", caption: "Venue decor — AC corner" },
+  { src: "https://lh3.googleusercontent.com/d/1Ey0BdpLZLF1ixFvs22F53hKb8tJ4EdCb", caption: "Snacks stall — samosas & pakoras" },
+  { src: "https://lh3.googleusercontent.com/d/1I0xHIhrxIQb3oD-V3be8MskIfQ4imWer", caption: "Masala" },
+  { src: "https://lh3.googleusercontent.com/d/1_KiE_Oz8c3CVi0Mk19ja655v79ToSbUF", caption: "SMJ Jewellers" },
+  { src: "https://lh3.googleusercontent.com/d/1iMbPXm5-f4f-V_-SeRgakeo-cMUy3f8Q", caption: "Jewellery Food Stall" },
+  { src: "https://lh3.googleusercontent.com/d/1izI3C6OKAD8rUjx-QBGzKH6GiWfO7Z1G", caption: "Mantasha's" },
+  { src: "https://lh3.googleusercontent.com/d/1zJ9L4ov6Jq8-ukHy3mN-dtEp2W_wLIZP", caption: "MS Store" },
+  { src: "https://lh3.googleusercontent.com/d/1su8SuDbbjAGpqao39ZqxbT4a22UD_sQM", caption: "Snacks display" },
+  { src: "https://lh3.googleusercontent.com/d/1Wo-eL-15t85l8AA3AyWGLFoJyPGdgsGt", caption: "Chatkhara" },
+  { src: "https://lh3.googleusercontent.com/d/11JbJXfLnzpQWUAGsXE6ggCKBliMjprIL", caption: "Hajar Clothes" },
+  { src: "https://lh3.googleusercontent.com/d/1fDyDmewCOBQSKgmCzyQKm5IfKt8nCV10", caption: "Home Made Beauty" },
+  { src: "https://lh3.googleusercontent.com/d/1d7ChRB9An-lAgUo0Fp4YanfOHoJZXmsi", caption: "SM Tasty Bakers" },
+  { src: "https://lh3.googleusercontent.com/d/17QIZqDtj2uBihY3eav6YDgEKUdw87ujO", caption: "Home Gadgets" },
+  { src: "https://lh3.googleusercontent.com/d/18dECZDHDgcyYEI6MkOkyFrhv5N_qJ0gw", caption: "One Stop Shop – Zainab's" },
+  { src: "https://lh3.googleusercontent.com/d/1erFfK3Dp0urHJARQmCiHyTQ2ZHuDpe2n", caption: "Aiesh Cosmetics" },
+  { src: "https://lh3.googleusercontent.com/d/1QxK7656Y1PJBVKL5L3WKKI5Xj6gEutHm", caption: "Clothing display" },
+  { src: "https://lh3.googleusercontent.com/d/1B906zsCafHLM4wXbDIf5fJYfnuxj70gM", caption: "Food stall — takeaway boxes" },
+  { src: "https://lh3.googleusercontent.com/d/1JUP6Ff6XG1kTDhZ_QiihcYj4c3AJ43E_", caption: "Blissful" },
+  { src: "https://lh3.googleusercontent.com/d/1XG0-I0JG_Uvbd02HJdKiI9N9Ux7r26Ez", caption: "Blissful" },
+  { src: "https://lh3.googleusercontent.com/d/1BuUvxWtJtOxTeYdJlSfCSWPNNl2Csqie", caption: "Crave Corner" },
+  { src: "https://lh3.googleusercontent.com/d/1LgCavvKvfAgFOGLHDigcm0s9rJGnl1uu", caption: "Cosmetics stall display" },
+  { src: "https://lh3.googleusercontent.com/d/10_3AGKluXyLKsQdyXbA7uexjV0JGRJuP", caption: "Hamna's Indian Stall" },
+  { src: "https://lh3.googleusercontent.com/d/1MyMxiKIgj2SNnmMs3CbJ_4F2uS58Bcpt", caption: "Hooriya Jewellers" },
+  { src: "https://lh3.googleusercontent.com/d/1mZfG4p5lMM3kXv2jtluV-Zr2MqryKWfT", caption: "Hamna's Indian Stall" },
+  { src: "https://lh3.googleusercontent.com/d/1JW1wwrGdzs9nd2Gy2yq57n9bcwQKzOcm", caption: "Jewellery stall display" },
+  { src: "https://lh3.googleusercontent.com/d/1EgxS5birswzpG-IRe5Lqx4RGb-mmKHfi", caption: "Handmade jewellery stall" },
+  { src: "https://lh3.googleusercontent.com/d/1BpqLDWeEGP8hy_lE7RvvVErpCs3bmdcg", caption: "Foody" },
+  { src: "https://lh3.googleusercontent.com/d/1zrgFlg95EI0ApOGvAHaJFb3U05Z6mClG", caption: "Jewellery stall display" },
+  { src: "https://lh3.googleusercontent.com/d/1VnYqtqcAIoTBqwXlRr7KQH0_JK2yiffb", caption: "Adan Jewellery" },
+  { src: "https://lh3.googleusercontent.com/d/1FR03q139Q5mjf5Ztry6eHjcgmR7LydqE", caption: "Kids accessories stall" },
+  { src: "https://lh3.googleusercontent.com/d/1u0naZYtZSpM9LXPUyu_vMBprYga4vfP6", caption: "Homemade pickles & jars stall" },
+  { src: "https://lh3.googleusercontent.com/d/1793u988K9kUYmifdhb65MdLZhFYRELUd", caption: "Taste Fusion" },
+  { src: "https://lh3.googleusercontent.com/d/1hwFqcSWreQurwWhM5fVTp0Y1tcPeX2Yi", caption: "Taste Fusion" },
+  { src: "https://lh3.googleusercontent.com/d/1sh1hKbuzn2Kuj4Wurq5B7BiRdsOv11HX", caption: "Hooriya Jewellers" },
+  { src: "https://lh3.googleusercontent.com/d/1WhIvNrZ82hshYH5vlytOCfqd9L8GSLzO", caption: "Sagreeb Bakers" },
+  { src: "https://lh3.googleusercontent.com/d/1sxP-KwCEC82lzXL2rC1f-tZI1xeoW-Pq", caption: "Accessories stall with balloon décor" },
+  { src: "https://lh3.googleusercontent.com/d/1eF3YBCs5dFflmj0gOC_Rnr-4g7-XIEUd", caption: "Amchay Panchay" },
+  { src: "https://lh3.googleusercontent.com/d/1OpxRDL2Gjy-7tapykrlw85c78yXPGQX0", caption: "Jewellery stall display" },
+  { src: "https://lh3.googleusercontent.com/d/1ZOf1z0MplkXIdKKIC8G1qelUQVv4MlCe", caption: "Cosmetics stall display" },
+  { src: "https://lh3.googleusercontent.com/d/1U7KlHgyFWMxjWvAW0KSjQCRy7rq8ZAU-", caption: "Clean and Gleam" },
+  { src: "https://lh3.googleusercontent.com/d/1Yv60pTjoPsv5X4b7ZWKONcd-DAubHcEQ", caption: "Adorn" },
+  { src: "https://lh3.googleusercontent.com/d/1RA0lpXavMkYf2_HbeKmTjJJb3hnApUHM", caption: "Foody" },
+  { src: "https://lh3.googleusercontent.com/d/1nRMwLn9xZWXE6iXOxRcHbNh5Qg6nd30r", caption: "Jewellery stall display" },
+  { src: "https://lh3.googleusercontent.com/d/1uMXbn5Z77bTKcHcBhNNW3B8ZrIyCWoCU", caption: "Accessories stall — packaged items" },
+  { src: "https://lh3.googleusercontent.com/d/14WyLE46kfQOyIFjZx22eXbkZoEiPFCnI", caption: "Abdullah Lawn" },
+  { src: "https://lh3.googleusercontent.com/d/1ZiypcFVOTQQIJSlZZyGCw1vpXdC_0PBD", caption: "Minsa Foods" },
+  { src: "https://lh3.googleusercontent.com/d/1S1VAr3_RIx3T8POT31QEmdfpeI_er-LA", caption: "Atlaan Plastic & Crockery" },
+  { src: "https://lh3.googleusercontent.com/d/1wBzBwKuSRmFkDWYTWTk8TGIA8ppePXMr", caption: "Bangles & accessories display" },
+  { src: "https://lh3.googleusercontent.com/d/1MOYB9Bimk3Z9soQH1I-rxvl3OQyr66lU", caption: "Spicy Bite" },
+  { src: "https://lh3.googleusercontent.com/d/1aoSwhnyF4qNFkHbGeo6w5_Ga4v_XnzE4", caption: "Aizal Games" },
+  { src: "https://lh3.googleusercontent.com/d/1AdFULuqoTrEbIu5rML6X1QvKUFPTPWVC", caption: "Minsa Foods" },
+  { src: "https://lh3.googleusercontent.com/d/1jm2RJvKN7ggUuupznzxL2hCJr_5HCglt", caption: "Clean and Gleam" },
+  { src: "https://lh3.googleusercontent.com/d/1QiCmVqvWDYpx926hT_-sXXp05s606CG1", caption: "Hand Craft" },
+  { src: "https://lh3.googleusercontent.com/d/1VPhEcHRXQirlTLkdRozPJvVL9xx8waa8", caption: "Jewellery stall display" },
+  { src: "https://lh3.googleusercontent.com/d/14p4G2krIquaUcCGN4DvTqYT3x246Gscg", caption: "C se Chatkhara" },
+  { src: "https://lh3.googleusercontent.com/d/11YZTCRW0gq6u-VQJqqgbLFCpTqgbe65e", caption: "Spicy Bite" },
+  { src: "https://lh3.googleusercontent.com/d/1hqQLCLdA_Ks16Fer80XcGh2fPoktGkFu", caption: "Home décor & candles display" },
+  { src: "https://lh3.googleusercontent.com/d/1H-5JCRJBTfgPooLql1pSdukQRf_fVzwx", caption: "Khausay Station" },
+  { src: "https://lh3.googleusercontent.com/d/1LNM4UEq5jd5ObZVJRm1OvmH753lOYMA0", caption: "Foody" },
+  { src: "https://lh3.googleusercontent.com/d/1WuKGyhi67bqhCj7iYK7WP9oJubzGW4Lu", caption: "Adan Jewellery" },
+  { src: "https://lh3.googleusercontent.com/d/1LuvTzBVSrpU1er5JP1dKHeklOTFxYlGj", caption: "Taqreeb Bake" },
+  { src: "https://lh3.googleusercontent.com/d/1o4zeB1M_b81VjERc6qAgvEd8U5w3Rylx", caption: "Accessories stall with balloon décor" },
+  { src: "https://lh3.googleusercontent.com/d/18OgeR8GjBTc0q0HGAK-79jS6CaESRixD", caption: "C se Chatkhara" },
+  { src: "https://lh3.googleusercontent.com/d/1AqznmLX0iXDALaVwtafmTWgEe2xI7sGp", caption: "Kids toy stall" },
+  { src: "https://lh3.googleusercontent.com/d/1lOWFm237tHHK-kwBDMj3yXYiAeEbOF42", caption: "Storage & plasticware display" },
+  { src: "https://lh3.googleusercontent.com/d/1hRZu7K-iKI0zFiYtOkk2H51FlPmgRfSc", caption: "Jewellery stall display" },
+  { src: "https://lh3.googleusercontent.com/d/1Foenjm6_61g8CDbrPqrUPv8pbFDeg8Xk", caption: "Venue decor — AC with outfit" },
+  { src: "https://lh3.googleusercontent.com/d/1gnVB_Sx0c2AdAm7YRdi-mKfo3IuQxIM9", caption: "Win it All — kids game stall" },
+  { src: "https://lh3.googleusercontent.com/d/14oPKApdd1KwLkpod2GZ13ebxWwTLozjH", caption: "Jewellery stall display" },
+  { src: "https://lh3.googleusercontent.com/d/1VT78U8YtrSpG64LuPpDrnxfhp0JLkIWe", caption: "Cosmetics stall display" },
+  { src: "https://lh3.googleusercontent.com/d/1jeynHg1T9Crz4t4NoR5DDqaAzxNTykPE", caption: "Abdullah Lawn" },
+  { src: "https://lh3.googleusercontent.com/d/1xXQh6tD97hFkiV6sAtm2YBYtVmvExVAG", caption: "Hall view — empty setup" },
+  { src: "https://lh3.googleusercontent.com/d/1vOux3K5vykpulduWdCQ7EbiuTHn_fDxG", caption: "Foody stall setup" },
+  { src: "https://lh3.googleusercontent.com/d/1qktCS2uLraX-P5Qj0Ri7qQonxLvoC9lF", caption: "Hall view — Home Made Beauty area" },
+  { src: "https://lh3.googleusercontent.com/d/1jpvI2iRcPp1A4BdWvgEeyDj5ROR5p1nt", caption: "Hall view — Home Made Beauty & snacks stalls" },
+  { src: "https://lh3.googleusercontent.com/d/1FdRhqWHug60IoQdH6MQC0NRpIudPQ0rw", caption: "Kids stall setup" },
+  { src: "https://lh3.googleusercontent.com/d/1m2Rb5MbDlrp0NtTtRi03sA3RQlgikk_W", caption: "Venue interior decor" },
+  { src: "https://lh3.googleusercontent.com/d/1MWGaG-HXOdEW2jsdWeb7hcjh1ObD1bO3", caption: "Hall view — C se Chatkhara stall setup" },
+];
+
+// One photo per stall (deduped by caption; first photo wins). Used by both the
+// Gallery Season 1 tab and the Stall Directory Season 1 fallback.
+const galSeen = new Set<string>();
+export const SEASON1_GALLERY: { src: string; caption: string }[] = SEASON1_GALLERY_RAW
+  .filter((g) => (galSeen.has(g.caption) ? false : (galSeen.add(g.caption), true)));
+
+// Infer a category from the caption/stall name (keyword match, first hit wins).
+function inferCategory(caption: string): string {
+  const c = caption.toLowerCase();
+  if (/jewel|bangle|adorn|adan|hooriya|smj/.test(c)) return "Jewellery";
+  if (/beauty|cosmetic|gleam|aiesh|makeup/.test(c)) return "Beauty";
+  if (/cloth|lawn|outfit|zainab|hajar|abaya/.test(c)) return "Clothing";
+  if (/game|win it|aizal/.test(c)) return "Games";
+  if (/kids|toy/.test(c)) return "Kids";
+  if (/craft|handmade|resin/.test(c)) return "Handmade";
+  if (/blissful|gift/.test(c)) return "Gifts";
+  if (/gadget|plastic|crockery|storage|store|décor|decor|candle/.test(c)) return "Household";
+  if (/food|chatkhara|mantasha|masala|hamna|crave|foody|taste|spicy|amchay|khausay|minsa|baker|bake|snack|samosa|pakora|pickle|takeaway|tasty|khausay/.test(c)) return "Food";
+  return "Others";
+}
+
+// One stall card per distinct stall (SEASON1_GALLERY is already deduped by caption).
+// The Stall Directory uses this as the Season 1 fallback when Firestore has none.
+export const SEASON1_STALLS: { name: string; category: string; imageUrl: string }[] =
+  SEASON1_GALLERY.map((g) => ({ name: g.caption, category: inferCategory(g.caption), imageUrl: g.src }));

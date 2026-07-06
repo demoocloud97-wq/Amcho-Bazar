@@ -57,9 +57,11 @@
   --color-teal: var(--teal);
   --color-cream: var(--cream);
   --color-ink: var(--ink);
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
-  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-script: "Caveat", ui-serif, cursive;
+  /* Latin fonts first; Arabic-capable fallbacks so Urdu/Arabic glyphs render
+     cleanly (per-glyph fallback keeps Latin brand words in the display font). */
+  --font-display: "Fraunces", "Noto Naskh Arabic", "Segoe UI", ui-serif, Georgia, serif;
+  --font-sans: "DM Sans", "Segoe UI", "Noto Sans Arabic", "Tahoma", ui-sans-serif, system-ui, sans-serif;
+  --font-script: "Caveat", "Segoe UI", ui-serif, cursive;
 }
 
 :root {
@@ -156,6 +158,11 @@
     border-color: var(--color-border);
   }
 
+  html {
+    /* Keep anchored/focused content clear of the sticky header (h-~64px). */
+    scroll-padding-top: 5rem;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -199,6 +206,20 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+/* Bright gradient text (orange→gold) for use on DARK surfaces, where the
+   maroon start of --gradient-festive would blend into the background. */
+@utility text-warm {
+  background-image: var(--gradient-warm);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* Fallback: if background-clip:text is unsupported the text would be invisible
+   (color:transparent). Paint it in a solid brand colour instead. */
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .text-festive { color: var(--secondary); background-image: none; }
+  .text-warm { color: var(--accent); background-image: none; }
 }
 @utility glass {
   background: color-mix(in oklab, white 55%, transparent);
@@ -265,3 +286,59 @@
 .animate-pulse-glow { animation: pulse-glow 2.4s ease-in-out infinite; }
 .animate-spin-slow { animation: spin-slow 18s linear infinite; }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
+/* ============================================================
+   RTL (Urdu / Arabic) — flip physical utilities the app uses.
+   Unlayered so these win over Tailwind's @layer utilities.
+   Flexbox / gap / justify already respect dir automatically.
+   ============================================================ */
+[dir="rtl"] .text-left  { text-align: right; }
+[dir="rtl"] .text-right { text-align: left; }
+
+/* Icon-in-input helpers: swap the physical left/right anchors + padding so the
+   search icon, clear button, password toggle and ₹ prefix sit on the correct
+   side when the field text flows right-to-left. */
+[dir="rtl"] .left-2   { left: auto; right: 0.5rem; }
+[dir="rtl"] .left-2\.5{ left: auto; right: 0.625rem; }
+[dir="rtl"] .left-3   { left: auto; right: 0.75rem; }
+[dir="rtl"] .left-3\.5{ left: auto; right: 0.875rem; }
+[dir="rtl"] .left-4   { left: auto; right: 1rem; }
+[dir="rtl"] .right-2   { right: auto; left: 0.5rem; }
+[dir="rtl"] .right-2\.5{ right: auto; left: 0.625rem; }
+[dir="rtl"] .right-3   { right: auto; left: 0.75rem; }
+[dir="rtl"] .pl-6  { padding-left: 0; padding-right: 1.5rem; }
+[dir="rtl"] .pl-9  { padding-left: 0; padding-right: 2.25rem; }
+[dir="rtl"] .pl-10 { padding-left: 0; padding-right: 2.5rem; }
+[dir="rtl"] .pl-11 { padding-left: 0; padding-right: 2.75rem; }
+[dir="rtl"] .pr-2  { padding-right: 0; padding-left: 0.5rem; }
+[dir="rtl"] .pr-4  { padding-right: 0; padding-left: 1rem; }
+[dir="rtl"] .pr-11 { padding-right: 0; padding-left: 2.75rem; }
+
+/* Notification / highlight badges anchored to a corner. */
+[dir="rtl"] .-right-0\.5 { right: auto; left: -0.125rem; }
+[dir="rtl"] .-right-1    { right: auto; left: -0.25rem; }
+[dir="rtl"] .right-1     { right: auto; left: 0.25rem; }
+
+/* Directional margins used for icon spacing / pushers — flip under RTL. */
+[dir="rtl"] .ml-auto { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .mr-auto { margin-right: 0; margin-left: auto; }
+[dir="rtl"] .ml-1 { margin-left: 0; margin-right: 0.25rem; }
+[dir="rtl"] .ml-2 { margin-left: 0; margin-right: 0.5rem; }
+[dir="rtl"] .mr-1 { margin-right: 0; margin-left: 0.25rem; }
+[dir="rtl"] .mr-2 { margin-right: 0; margin-left: 0.5rem; }
+
+/* Flip directional arrow / chevron icons in RTL so button labels, pagers,
+   breadcrumbs and "continue / back" affordances point the correct way. */
+[dir="rtl"] .lucide-arrow-right,
+[dir="rtl"] .lucide-arrow-left,
+[dir="rtl"] .lucide-chevron-right,
+[dir="rtl"] .lucide-chevron-left { transform: scaleX(-1); }

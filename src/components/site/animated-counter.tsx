@@ -27,5 +27,10 @@ export function AnimatedCounter({ value, suffix = "", duration = 1400 }: { value
     return () => io.disconnect();
   }, [value, duration]);
 
+  // After the first reveal animation, reflect later value changes immediately.
+  useEffect(() => {
+    if (started.current) setN(value);
+  }, [value]);
+
   return <span ref={ref}>{n.toLocaleString()}{suffix}</span>;
 }

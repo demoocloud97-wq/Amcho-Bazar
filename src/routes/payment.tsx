@@ -9,7 +9,7 @@ export const Route = createFileRoute("/payment")({
   head: () => ({
     meta: [
       { title: "Payment · Amcho Bazar" },
-      { name: "description", content: "Complete your seller registration payment for Amcho Bazar Season 2." },
+      { name: "description", content: "Complete your seller registration payment for Amcho Bazar Season 3." },
       { property: "og:title", content: "Payment · Amcho Bazar" },
       { property: "og:description", content: "Secure, simple payment for your stall." },
     ],
@@ -41,7 +41,7 @@ function PaymentPage() {
       <h1 className="font-display text-4xl font-black md:text-5xl">
         Complete your <span className="text-festive">registration.</span>
       </h1>
-      <p className="mt-2 text-muted-foreground">A single, gentle payment secures your seat at Season 2.</p>
+      <p className="mt-2 text-muted-foreground">A single, gentle payment secures your seat at Season 3.</p>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="rounded-[32px] border border-border bg-card p-6 shadow-card md:p-8">
@@ -101,7 +101,7 @@ function PaymentPage() {
                   </div>
                   <div>
                     <div className="font-display text-xl font-bold text-primary">Payment successful</div>
-                    <div className="text-sm text-muted-foreground">Your seat at Season 2 is confirmed.</div>
+                    <div className="text-sm text-muted-foreground">Your seat at Season 3 is confirmed.</div>
                   </div>
                 </div>
                 <div className="mt-4 grid gap-2 text-sm">

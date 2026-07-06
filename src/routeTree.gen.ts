@@ -11,15 +11,23 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StallsRouteImport } from './routes/stalls'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SeasonsRouteImport } from './routes/seasons'
+import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PresentRouteImport } from './routes/present'
+import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as PaymentRouteImport } from './routes/payment'
 import { Route as MyRegistrationRouteImport } from './routes/my-registration'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as DrawRouteImport } from './routes/draw'
 import { Route as CategoriesRouteImport } from './routes/categories'
+import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CategoriesIndexRouteImport } from './routes/categories.index'
+import { Route as CategoriesCategoryIdRouteImport } from './routes/categories.$categoryId'
 
 const StallsRoute = StallsRouteImport.update({
   id: '/stalls',
@@ -31,9 +39,34 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SeasonsRoute = SeasonsRouteImport.update({
+  id: '/seasons',
+  path: '/seasons',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PresentRoute = PresentRouteImport.update({
+  id: '/present',
+  path: '/present',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PaymentsRoute = PaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PaymentRoute = PaymentRouteImport.update({
@@ -66,6 +99,11 @@ const CategoriesRoute = CategoriesRouteImport.update({
   path: '/categories',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnnouncementsRoute = AnnouncementsRouteImport.update({
+  id: '/announcements',
+  path: '/announcements',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -76,99 +114,161 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CategoriesIndexRoute = CategoriesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CategoriesRoute,
+} as any)
+const CategoriesCategoryIdRoute = CategoriesCategoryIdRouteImport.update({
+  id: '/$categoryId',
+  path: '/$categoryId',
+  getParentRoute: () => CategoriesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/categories': typeof CategoriesRoute
+  '/announcements': typeof AnnouncementsRoute
+  '/categories': typeof CategoriesRouteWithChildren
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/my-registration': typeof MyRegistrationRoute
   '/payment': typeof PaymentRoute
+  '/payments': typeof PaymentsRoute
+  '/present': typeof PresentRoute
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
+  '/reports': typeof ReportsRoute
+  '/seasons': typeof SeasonsRoute
   '/signup': typeof SignupRoute
   '/stalls': typeof StallsRoute
+  '/categories/$categoryId': typeof CategoriesCategoryIdRoute
+  '/categories/': typeof CategoriesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/categories': typeof CategoriesRoute
+  '/announcements': typeof AnnouncementsRoute
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/my-registration': typeof MyRegistrationRoute
   '/payment': typeof PaymentRoute
+  '/payments': typeof PaymentsRoute
+  '/present': typeof PresentRoute
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
+  '/reports': typeof ReportsRoute
+  '/seasons': typeof SeasonsRoute
   '/signup': typeof SignupRoute
   '/stalls': typeof StallsRoute
+  '/categories/$categoryId': typeof CategoriesCategoryIdRoute
+  '/categories': typeof CategoriesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/categories': typeof CategoriesRoute
+  '/announcements': typeof AnnouncementsRoute
+  '/categories': typeof CategoriesRouteWithChildren
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/my-registration': typeof MyRegistrationRoute
   '/payment': typeof PaymentRoute
+  '/payments': typeof PaymentsRoute
+  '/present': typeof PresentRoute
+  '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
+  '/reports': typeof ReportsRoute
+  '/seasons': typeof SeasonsRoute
   '/signup': typeof SignupRoute
   '/stalls': typeof StallsRoute
+  '/categories/$categoryId': typeof CategoriesCategoryIdRoute
+  '/categories/': typeof CategoriesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/admin'
+    | '/announcements'
     | '/categories'
     | '/draw'
     | '/gallery'
     | '/login'
     | '/my-registration'
     | '/payment'
+    | '/payments'
+    | '/present'
+    | '/profile'
     | '/register'
+    | '/reports'
+    | '/seasons'
     | '/signup'
     | '/stalls'
+    | '/categories/$categoryId'
+    | '/categories/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
-    | '/categories'
+    | '/announcements'
     | '/draw'
     | '/gallery'
     | '/login'
     | '/my-registration'
     | '/payment'
+    | '/payments'
+    | '/present'
+    | '/profile'
     | '/register'
+    | '/reports'
+    | '/seasons'
     | '/signup'
     | '/stalls'
+    | '/categories/$categoryId'
+    | '/categories'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/announcements'
     | '/categories'
     | '/draw'
     | '/gallery'
     | '/login'
     | '/my-registration'
     | '/payment'
+    | '/payments'
+    | '/present'
+    | '/profile'
     | '/register'
+    | '/reports'
+    | '/seasons'
     | '/signup'
     | '/stalls'
+    | '/categories/$categoryId'
+    | '/categories/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
-  CategoriesRoute: typeof CategoriesRoute
+  AnnouncementsRoute: typeof AnnouncementsRoute
+  CategoriesRoute: typeof CategoriesRouteWithChildren
   DrawRoute: typeof DrawRoute
   GalleryRoute: typeof GalleryRoute
   LoginRoute: typeof LoginRoute
   MyRegistrationRoute: typeof MyRegistrationRoute
   PaymentRoute: typeof PaymentRoute
+  PaymentsRoute: typeof PaymentsRoute
+  PresentRoute: typeof PresentRoute
+  ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
+  ReportsRoute: typeof ReportsRoute
+  SeasonsRoute: typeof SeasonsRoute
   SignupRoute: typeof SignupRoute
   StallsRoute: typeof StallsRoute
 }
@@ -189,11 +289,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/seasons': {
+      id: '/seasons'
+      path: '/seasons'
+      fullPath: '/seasons'
+      preLoaderRoute: typeof SeasonsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/present': {
+      id: '/present'
+      path: '/present'
+      fullPath: '/present'
+      preLoaderRoute: typeof PresentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/payments': {
+      id: '/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof PaymentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/payment': {
@@ -238,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CategoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/announcements': {
+      id: '/announcements'
+      path: '/announcements'
+      fullPath: '/announcements'
+      preLoaderRoute: typeof AnnouncementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -252,22 +394,66 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/categories/': {
+      id: '/categories/'
+      path: '/'
+      fullPath: '/categories/'
+      preLoaderRoute: typeof CategoriesIndexRouteImport
+      parentRoute: typeof CategoriesRoute
+    }
+    '/categories/$categoryId': {
+      id: '/categories/$categoryId'
+      path: '/$categoryId'
+      fullPath: '/categories/$categoryId'
+      preLoaderRoute: typeof CategoriesCategoryIdRouteImport
+      parentRoute: typeof CategoriesRoute
+    }
   }
 }
+
+interface CategoriesRouteChildren {
+  CategoriesCategoryIdRoute: typeof CategoriesCategoryIdRoute
+  CategoriesIndexRoute: typeof CategoriesIndexRoute
+}
+
+const CategoriesRouteChildren: CategoriesRouteChildren = {
+  CategoriesCategoryIdRoute: CategoriesCategoryIdRoute,
+  CategoriesIndexRoute: CategoriesIndexRoute,
+}
+
+const CategoriesRouteWithChildren = CategoriesRoute._addFileChildren(
+  CategoriesRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
-  CategoriesRoute: CategoriesRoute,
+  AnnouncementsRoute: AnnouncementsRoute,
+  CategoriesRoute: CategoriesRouteWithChildren,
   DrawRoute: DrawRoute,
   GalleryRoute: GalleryRoute,
   LoginRoute: LoginRoute,
   MyRegistrationRoute: MyRegistrationRoute,
   PaymentRoute: PaymentRoute,
+  PaymentsRoute: PaymentsRoute,
+  PresentRoute: PresentRoute,
+  ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
+  ReportsRoute: ReportsRoute,
+  SeasonsRoute: SeasonsRoute,
   SignupRoute: SignupRoute,
   StallsRoute: StallsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
