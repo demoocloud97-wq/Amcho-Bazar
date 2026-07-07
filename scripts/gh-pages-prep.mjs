@@ -8,4 +8,6 @@ const dir = "dist/client";
 copyFileSync(`${dir}/_shell.html`, `${dir}/index.html`);
 copyFileSync(`${dir}/_shell.html`, `${dir}/404.html`);
 writeFileSync(`${dir}/.nojekyll`, "");
-console.log("gh-pages prep: wrote index.html, 404.html, .nojekyll in", dir);
+// Bind the site to the custom domain (kept in the published branch across deploys).
+writeFileSync(`${dir}/CNAME`, "alfajaryouthwing.com\n");
+console.log("gh-pages prep: wrote index.html, 404.html, .nojekyll, CNAME in", dir);
