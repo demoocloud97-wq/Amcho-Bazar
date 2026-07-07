@@ -21,20 +21,24 @@ const firebaseConfig = {
 const hasConfig = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
 let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
-let db: Firestore | undefined;
-let storage: FirebaseStorage | undefined;
+let _auth: Auth | undefined;
+let _db: Firestore | undefined;
+let _storage: FirebaseStorage | undefined;
 
 if (hasConfig) {
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
+  _auth = getAuth(app);
+  _db = getFirestore(app);
+  _storage = getStorage(app);
 } else if (typeof window !== "undefined") {
   console.warn("[firebase] VITE_FIREBASE_* env vars missing — running in UI-only demo mode.");
 }
 
-export { auth, db, storage };
+// Exported as non-optional to preserve existing call sites; consumers only
+// touch these after user actions, which are no-ops in demo mode.
+export const auth = _auth as Auth;
+export const db = _db as Firestore;
+export const storage = _storage as FirebaseStorage;
 
 // Analytics only works in the browser — guard so it never runs during SSR.
 // Analytics is non-critical — load it lazily so it stays out of the initial bundle.
