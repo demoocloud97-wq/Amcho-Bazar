@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Live Draw Result · Amcho Bazar</title>
+<style>
+  /* ============================================================
+     LIVE LUCKY DRAW RESULT — 1080 × 1920 portrait LED screen
+     Black + Gold luxury theme · single self-contained file
+  ============================================================ */
+
+  :root {
+    --gold:        #f6c945;
+    --gold-soft:   #e9b84a;
+    --gold-deep:   #b8862b;
+    --orange:      #ff7a18;
+    --orange-hi:   #ff9a3d;
+    --ink:         #0a0805;
+    --card:        #141009;
+    --card-line:   rgba(246, 201, 69, 0.28);
+    --white:       #fdfbf4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #000;
+    overflow: hidden;
+    font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Viewport wrapper centres the fixed-size stage and lets JS scale it to fit */
+  .viewport {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(60% 40% at 50% 0%, rgba(246,201,69,0.10), transparent 70%),
+      #000;
+  }
+
+  /* The real canvas — fixed 1080×1920, scaled via transform in JS */
+  .stage {
+    position: relative;
+    width: 1080px; height: 1920px;
+    transform-origin: center center;
+    display: flex; flex-direction: column;
+    align-items: center;
+    padding: 70px 60px 56px;
+    background:
+      radial-gradient(90% 55% at 50% -6%, rgba(246,201,69,0.16), transparent 60%),
+      radial-gradient(70% 50% at 50% 108%, rgba(255,122,24,0.10), transparent 60%),
+      linear-gradient(180deg, #0c0a06 0%, #060504 55%, #000 100%);
+    overflow: hidden;
+    border: 1px solid rgba(246,201,69,0.12);
+  }
+
+  /* soft golden bokeh — kept subtle & non-busy */
+  .bokeh { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+  .bokeh span {
+    position: absolute; border-radius: 50%;
+    background: radial-gradient(circle, rgba(246,201,69,0.5), transparent 70%);
+    filter: blur(6px); opacity: .35;
+    animation: drift 14s ease-in-out infinite;
+  }
+  .bokeh span:nth-child(1){ width:180px;height:180px; left:8%;  top:22%; animation-delay:0s; }
+  .bokeh span:nth-child(2){ width:120px;height:120px; right:10%;top:16%; animation-delay:-3s; opacity:.25;}
+  .bokeh span:nth-child(3){ width:220px;height:220px; left:-4%; bottom:20%;animation-delay:-6s; opacity:.20;}
+  .bokeh span:nth-child(4){ width:140px;height:140px; right:-2%;bottom:26%;animation-delay:-9s; opacity:.28;}
+  @keyframes drift {
+    0%,100% { transform: translate3d(0,0,0) scale(1); }
+    50%     { transform: translate3d(0,-26px,0) scale(1.08); }
+  }
+
+  /* confetti / sparkle particle canvas sits above the stage content */
+  #fx { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+
+  /* every layer above the bokeh */
+  .stage > *:not(.bokeh):not(#fx) { position: relative; z-index: 2; }
+
+  /* ---------- TITLE ---------- */
+  .title {
+    text-align: center;
+    font-weight: 800;
+    font-size: 74px;
+    letter-spacing: 2px;
+    line-height: 1.05;
+    text-transform: uppercase;
+    background: linear-gradient(180deg, #fff4cf 0%, var(--gold) 45%, var(--gold-deep) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 26px rgba(246,201,69,0.55));
+  }
+  .title .emoji { -webkit-text-fill-color: initial; filter: drop-shadow(0 0 14px rgba(255,150,40,.6)); }
+  .title-rule {
+    margin: 22px auto 0;
+    width: 320px; height: 3px; border-radius: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    box-shadow: 0 0 18px rgba(246,201,69,.7);
+  }
+
+  /* ---------- SECTION LABELS ---------- */
+  .labels {
+    margin-top: 40px;
+    width: 100%; max-width: 720px;
+    display: flex; justify-content: space-between;
+    font-size: 26px; font-weight: 700; letter-spacing: 5px;
+    text-transform: uppercase;
+    color: var(--gold-soft);
+  }
+  .labels span { text-shadow: 0 0 14px rgba(246,201,69,.35); }
+
+  /* ---------- SEATING GRID ---------- */
+  .seating {
+    margin-top: 26px;
+    display: flex; align-items: flex-start; gap: 96px; /* the aisle */
+  }
+  .group { display: grid; grid-template-columns: repeat(2, 120px); gap: 16px; }
+
+  .cell {
+    position: relative;
+    width: 120px; height: 96px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 46px; font-weight: 800; color: var(--white);
+    letter-spacing: 1px;
+    border-radius: 18px;
+    background: linear-gradient(160deg, #17120a, #0e0b06);
+    border: 2px solid var(--card-line);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 10px 22px -14px rgba(0,0,0,.9);
+    transition: transform .2s ease;
+  }
+  .cell .num { position: relative; z-index: 2; }
+
+  /* single centred 45 */
+  .row45 { margin-top: 22px; display: flex; justify-content: center; }
+
+  /* ---------- WINNER ---------- */
+  .cell.winner {
+    color: #2a1400;
+    background: linear-gradient(165deg, var(--orange-hi), var(--orange));
+    border-color: #ffe08a;
+    z-index: 6;
+    transform: scale(1.15);
+    box-shadow:
+      0 0 0 3px rgba(255,224,138,.9),
+      0 0 34px 6px rgba(255,150,40,.85),
+      0 0 70px 18px rgba(246,201,69,.55);
+    animation: winnerPulse 1.35s ease-in-out infinite;
+    overflow: hidden;
+  }
+  .cell.winner .num {
+    text-shadow: 0 1px 0 rgba(255,255,255,.5);
+    font-weight: 900;
+  }
+  @keyframes winnerPulse {
+    0%,100% {
+      transform: scale(1.13);
+      box-shadow: 0 0 0 3px rgba(255,224,138,.9), 0 0 30px 5px rgba(255,150,40,.75), 0 0 60px 14px rgba(246,201,69,.45);
+    }
+    50% {
+      transform: scale(1.185);
+      box-shadow: 0 0 0 4px rgba(255,224,138,1), 0 0 46px 10px rgba(255,150,40,1), 0 0 96px 26px rgba(246,201,69,.7);
+    }
+  }
+  /* soft diagonal shine sweeping across the winner */
+  .cell.winner::after {
+    content: ""; position: absolute; inset: 0; z-index: 1;
+    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.55) 48%, transparent 66%);
+    transform: translateX(-120%);
+    animation: shine 2.2s ease-in-out infinite;
+  }
+  @keyframes shine { 0% { transform: translateX(-120%); } 60%,100% { transform: translateX(120%); } }
+
+  /* twinkling sparkles pinned around the winner */
+  .spark {
+    position: absolute; z-index: 7; pointer-events: none;
+    color: #fff6d6; font-size: 26px; line-height: 1;
+    filter: drop-shadow(0 0 8px rgba(255,220,120,.9));
+    animation: twinkle 1.4s ease-in-out infinite;
+  }
+  @keyframes twinkle {
+    0%,100% { opacity: 0; transform: scale(.5) rotate(0deg); }
+    50%     { opacity: 1; transform: scale(1) rotate(25deg); }
+  }
+
+  /* ---------- FOOTER ---------- */
+  .footer {
+    margin-top: auto;
+    display: inline-flex; align-items: center; gap: 16px;
+    padding: 16px 40px;
+    font-size: 34px; font-weight: 800; letter-spacing: 1px;
+    color: #fff6da;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(246,201,69,.14), rgba(246,201,69,.05));
+    border: 2px solid var(--card-line);
+    box-shadow: 0 0 30px -6px rgba(246,201,69,.5);
+  }
+  .footer .star { color: var(--gold); filter: drop-shadow(0 0 10px rgba(246,201,69,.8)); }
+
+  /* Respect users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .bokeh span, .cell.winner, .cell.winner::after, .spark { animation: none !important; }
+    .cell.winner { transform: scale(1.15); }
+  }
+</style>
+</head>
+<body>
+  <div class="viewport">
+    <div class="stage" id="stage">
+      <!-- subtle golden bokeh -->
+      <div class="bokeh"><span></span><span></span><span></span><span></span></div>
+
+      <!-- confetti / sparkle particles -->
+      <canvas id="fx" width="1080" height="1920"></canvas>
+
+      <!-- title -->
+      <h1 class="title"><span class="emoji">🎉</span> Live Draw Result <span class="emoji">🎉</span></h1>
+      <div class="title-rule"></div>
+
+      <!-- section labels -->
+      <div class="labels"><span>Front</span><span>Stalls</span><span>Banner</span></div>
+
+      <!-- seating (built by JS) -->
+      <div class="seating">
+        <div class="group" id="groupLeft"></div>
+        <div class="group" id="groupRight"></div>
+      </div>
+      <div class="row45" id="row45"></div>
+
+      <!-- footer banner -->
+      <div class="footer"><span class="star">⭐</span> Amcho Bazar Banner S3 <span class="star">⭐</span></div>
+    </div>
+  </div>
+
+<script>
+/* ============================================================
+   CONFIG — set the winning number here.
+   In a live system, replace the {{WINNER_NUMBER}} token
+   (e.g. server-side) with the drawn number, or just edit
+   the fallback below. Accepts 1–45.
+============================================================ */
+const RAW_WINNER = "{{WINNER_NUMBER}}";
+const WINNER = /^\d+$/.test(RAW_WINNER) ? parseInt(RAW_WINNER, 10) : 7; // fallback for preview
+
+const pad = (n) => String(n).padStart(2, "0");
+
+/* ---- Build the seating layout ----
+   Left group  : 01..22 in two columns (row-by-row)
+   Right group : 23..44 in two columns (row-by-row)
+   45          : centred below                                  */
+function makeCell(n) {
+  const el = document.createElement("div");
+  el.className = "cell" + (n === WINNER ? " winner" : "");
+  el.innerHTML = `<span class="num">${pad(n)}</span>`;
+  if (n === WINNER) addSparkles(el);
+  return el;
+}
+function fillGroup(id, start, end) {
+  const g = document.getElementById(id);
+  for (let n = start; n <= end; n++) g.appendChild(makeCell(n));
+}
+fillGroup("groupLeft", 1, 22);
+fillGroup("groupRight", 23, 44);
+document.getElementById("row45").appendChild(makeCell(45));
+
+/* ---- Sparkles pinned to the winner cell ---- */
+function addSparkles(cell) {
+  const positions = [
+    { t: "-18px", l: "-14px", d: "0s" },
+    { t: "-22px", r: "-10px", d: ".4s" },
+    { b: "-18px", l: "-8px",  d: ".7s" },
+    { b: "-20px", r: "-16px", d: "1s" },
+  ];
+  positions.forEach((p) => {
+    const s = document.createElement("span");
+    s.className = "spark"; s.textContent = "✦";
+    if (p.t) s.style.top = p.t; if (p.b) s.style.bottom = p.b;
+    if (p.l) s.style.left = p.l; if (p.r) s.style.right = p.r;
+    s.style.animationDelay = p.d;
+    cell.appendChild(s);
+  });
+}
+
+/* ============================================================
+   SCALE the 1080×1920 stage to fit any screen while keeping ratio
+============================================================ */
+const stage = document.getElementById("stage");
+function fitStage() {
+  const scale = Math.min(window.innerWidth / 1080, window.innerHeight / 1920);
+  stage.style.transform = `scale(${scale})`;
+}
+window.addEventListener("resize", fitStage);
+fitStage();
+
+/* ============================================================
+   CONFETTI + celebration burst (canvas, no libraries, ~60fps)
+============================================================ */
+const canvas = document.getElementById("fx");
+const ctx = canvas.getContext("2d");
+const W = 1080, H = 1920;
+const COLORS = ["#FFD36E", "#FFB23E", "#FF7A18", "#FFFFFF", "#F5C542"];
+let particles = [];
+
+function rand(a, b) { return a + Math.random() * (b - a); }
+
+/* one celebratory burst from a point */
+function burst(x, y, count) {
+  for (let i = 0; i < count; i++) {
+    const a = rand(0, Math.PI * 2), sp = rand(6, 20);
+    particles.push({
+      x, y,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp - rand(2, 8),
+      g: rand(0.18, 0.32),
+      size: rand(7, 14),
+      rot: rand(0, Math.PI), vr: rand(-0.3, 0.3),
+      color: COLORS[(Math.random() * COLORS.length) | 0],
+      life: rand(90, 150),
+    });
+  }
+}
+
+/* gentle continuous fall from the top */
+function rain() {
+  particles.push({
+    x: rand(0, W), y: -20,
+    vx: rand(-1.2, 1.2), vy: rand(2.5, 5.5), g: 0.03,
+    size: rand(6, 12), rot: rand(0, Math.PI), vr: rand(-0.15, 0.15),
+    color: COLORS[(Math.random() * COLORS.length) | 0],
+    life: 400,
+  });
+}
+
+function tick() {
+  ctx.clearRect(0, 0, W, H);
+  if (particles.length < 90 && Math.random() < 0.6) rain();
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.vy += p.g; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life--;
+
+    if (p.life <= 0 || p.y > H + 30) { particles.splice(i, 1); continue; }
+
+    ctx.save();
+    ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = Math.min(1, p.life / 40);
+    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+    ctx.restore();
+  }
+  requestAnimationFrame(tick);
+}
+
+/* fire the winner burst from the winning cell's centre */
+function celebrate() {
+  const win = document.querySelector(".cell.winner");
+  if (win) {
+    const r = win.getBoundingClientRect(), s = stage.getBoundingClientRect();
+    const scale = s.width / W;                       // current visual scale
+    const cx = (r.left - s.left + r.width / 2) / scale;
+    const cy = (r.top - s.top + r.height / 2) / scale;
+    burst(cx, cy, 160);
+    setTimeout(() => burst(cx, cy, 90), 600);        // second pop
+  } else {
+    burst(W / 2, H / 3, 160);
+  }
+}
+
+tick();
+window.addEventListener("load", () => setTimeout(celebrate, 300));
+</script>
+</body>
+</html>
