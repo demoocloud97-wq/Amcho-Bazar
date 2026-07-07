@@ -1,7 +1,7 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 // Config values come from your Firebase Console → Project settings → "Your apps".
 // They are read from environment variables (.env). All VITE_ vars are exposed
@@ -16,18 +16,35 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Avoid re-initializing during hot-reload / SSR.
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+// Frontend-only demo: if Firebase env vars are missing, skip initialization
+// so the UI still renders instead of crashing with auth/invalid-api-key.
+const hasConfig = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+let app: FirebaseApp | undefined;
+let _auth: Auth | undefined;
+let _db: Firestore | undefined;
+let _storage: FirebaseStorage | undefined;
+
+if (hasConfig) {
+  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  _auth = getAuth(app);
+  _db = getFirestore(app);
+  _storage = getStorage(app);
+} else if (typeof window !== "undefined") {
+  console.warn("[firebase] VITE_FIREBASE_* env vars missing — running in UI-only demo mode.");
+}
+
+// Exported as non-optional to preserve existing call sites; consumers only
+// touch these after user actions, which are no-ops in demo mode.
+export const auth = _auth as Auth;
+export const db = _db as Firestore;
+export const storage = _storage as FirebaseStorage;
 
 // Analytics only works in the browser — guard so it never runs during SSR.
 // Analytics is non-critical — load it lazily so it stays out of the initial bundle.
-if (typeof window !== "undefined") {
+if (typeof window !== "undefined" && app) {
   import("firebase/analytics")
-    .then(({ getAnalytics, isSupported }) => isSupported().then((ok) => { if (ok) getAnalytics(app); }))
+    .then(({ getAnalytics, isSupported }) => isSupported().then((ok) => { if (ok && app) getAnalytics(app); }))
     .catch(() => {});
 }
 
