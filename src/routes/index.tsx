@@ -44,7 +44,8 @@ function Hero({ season }: { season: import("@/lib/seasons-db").Season | null }) 
   const { isAdmin } = useAuth();
   const { t } = useI18n();
   const [heroImg, setHeroImg] = useState(DEFAULT_HERO_IMAGE);
-  useEffect(() => { getHeroImage().then(setHeroImg).catch(() => {}); }, []);
+  const [heroFailed, setHeroFailed] = useState(false);
+  useEffect(() => { getHeroImage().then((u) => { setHeroImg(u); setHeroFailed(false); }).catch(() => {}); }, []);
   const seasonName = season?.seasonName ?? EVENT.season;
   const eventDate = season?.eventDate ?? EVENT.dateLabel;
   return (
@@ -123,7 +124,8 @@ function Hero({ season }: { season: import("@/lib/seasons-db").Season | null }) 
             {/* Rotating festive ring around the poster */}
             <div className="pointer-events-none absolute -inset-3 animate-spin-slow rounded-[40px] border-2 border-dashed border-accent/40" />
             <img
-              src={normalizeImageUrl(heroImg)}
+              src={heroFailed ? DEFAULT_HERO_IMAGE : normalizeImageUrl(heroImg)}
+              onError={() => setHeroFailed(true)}
               alt="Amcho Bazar Season 3 — Amchi Market, Amchi Manshay"
               referrerPolicy="no-referrer"
               loading="eager"

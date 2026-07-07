@@ -7,6 +7,7 @@ import { EVENT } from "@/lib/dummy-data";
 import { useSeason } from "@/lib/season-context";
 import { watchDrawResultsBySeasonId, type DrawResult } from "@/lib/draw-results-db";
 import { colorFor } from "@/lib/category-colors";
+import { Dartboard, RedDart } from "@/components/site/dartboard";
 import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/present")({
@@ -85,9 +86,8 @@ function PresentationPage() {
     const at = (fn: () => void, ms: number) => timers.current.push(window.setTimeout(fn, ms));
 
     setCurrent(pick);
-    setPhase("prep"); setCount(3);
-    at(() => setCount(2), t.prep / 3);
-    at(() => setCount(1), (t.prep / 3) * 2);
+    setPhase("prep"); setCount(5);
+    for (let n = 4; n >= 1; n--) at(() => setCount(n), (t.prep / 5) * (5 - n));
     at(() => setPhase("spin"), t.prep);
     at(() => setPhase("seller"), t.prep + t.spin);
     at(() => setPhase("stall"), t.prep + t.spin + t.seller);
@@ -213,12 +213,17 @@ function Stage({ phase, count, current, complete, target }: { phase: Phase; coun
           </motion.div>
         ) : phase === "spin" ? (
           <motion.div key="spin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
-            <div className="relative mx-auto h-40 w-40 md:h-56 md:w-56">
-              <div className="absolute inset-0 rounded-full border-[8px] border-accent/40" />
-              <div className="absolute inset-3 animate-spin-slow rounded-full border-2 border-dashed border-white/30" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Sparkles className="h-14 w-14 animate-pulse text-accent md:h-20 md:w-20" />
-              </div>
+            <div className="relative mx-auto h-52 w-52 md:h-72 md:w-72">
+              <Dartboard spinning className="absolute inset-0" />
+              {/* Thrown red dart sticks into the upper board at an angle */}
+              <motion.div
+                initial={{ x: 76, y: -130, rotate: 58, opacity: 0 }}
+                animate={{ x: 0, y: 0, rotate: 34, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 320, damping: 13, delay: 0.2 }}
+                className="pointer-events-none absolute left-[57%] top-[30%] z-30 origin-bottom -translate-x-1/2 -translate-y-full"
+              >
+                <RedDart />
+              </motion.div>
             </div>
             <div className="mt-8 font-display text-2xl font-bold text-white/90 md:text-4xl">{t("present.selecting")}</div>
           </motion.div>

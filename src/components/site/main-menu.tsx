@@ -15,12 +15,20 @@ import { useSeason } from "@/lib/season-context";
 import { useI18n } from "@/lib/i18n";
 import { logout } from "@/lib/auth";
 
+const ROW = "cursor-pointer gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium";
+
+// Consistent icon chip used across every menu row.
+function Chip({ children, tone = "muted" }: { children: React.ReactNode; tone?: "muted" | "danger" | "primary" }) {
+  const cls = tone === "danger" ? "bg-destructive/10 text-destructive" : tone === "primary" ? "bg-festive text-white" : "bg-muted/70 text-muted-foreground";
+  return <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${cls}`}>{children}</span>;
+}
+
 // A link row inside the dropdown.
 function NavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
   return (
-    <DropdownMenuItem asChild className="gap-2.5">
+    <DropdownMenuItem asChild className={ROW}>
       <Link to={to}>
-        <span className="text-muted-foreground">{icon}</span>
+        <Chip>{icon}</Chip>
         {label}
       </Link>
     </DropdownMenuItem>
@@ -56,6 +64,23 @@ export function MainMenu() {
         sideOffset={8}
         className="w-64 rounded-2xl p-1.5 shadow-glow"
       >
+        {/* Signed-in identity */}
+        {user && (
+          <>
+            <div className="flex items-center gap-3 px-1.5 pb-1.5 pt-1">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-festive text-sm font-bold text-white shadow-soft ring-2 ring-accent/40">
+                {(user.displayName || user.email || "?").charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-foreground">{user.displayName || t("menu.profile")}</div>
+                <div className="truncate text-xs text-muted-foreground">{user.email}</div>
+              </div>
+              {isAdmin && <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">{t("nav.admin")}</span>}
+            </div>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
         {/* Season indicator + switcher (admins manage seasons) */}
         {isAdmin && season && (
           <>
@@ -75,8 +100,8 @@ export function MainMenu() {
             </div>
             {seasons.length > 1 && (
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="gap-2.5">
-                  <ArrowLeftRight className="h-4 w-4 text-muted-foreground" /> {t("menu.switchSeason")}
+                <DropdownMenuSubTrigger className={ROW}>
+                  <Chip><ArrowLeftRight className="h-4 w-4" /></Chip> {t("menu.switchSeason")}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="rounded-xl">
                   <DropdownMenuRadioGroup value={seasonId ?? ""} onValueChange={setSeasonId}>
@@ -98,8 +123,8 @@ export function MainMenu() {
             <DropdownMenuGroup>
               <NavItem to="/admin" icon={<LayoutDashboard className="h-4 w-4" />} label={t("menu.adminDashboard")} />
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="gap-2.5">
-                  <ListTree className="h-4 w-4 text-muted-foreground" /> {t("menu.seasons")}
+                <DropdownMenuSubTrigger className={ROW}>
+                  <Chip><ListTree className="h-4 w-4" /></Chip> {t("menu.seasons")}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="rounded-xl">
                   <NavItem to="/seasons" icon={<ListTree className="h-4 w-4" />} label={t("menu.allSeasons")} />
@@ -107,8 +132,8 @@ export function MainMenu() {
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <DropdownMenuSub>
-                <DropdownMenuSubTrigger className="gap-2.5">
-                  <Store className="h-4 w-4 text-muted-foreground" /> {t("menu.amchoBazar")}
+                <DropdownMenuSubTrigger className={ROW}>
+                  <Chip><Store className="h-4 w-4" /></Chip> {t("menu.amchoBazar")}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="rounded-xl">
                   <NavItem to="/admin" icon={<ClipboardList className="h-4 w-4" />} label={t("menu.registrations")} />
@@ -124,8 +149,8 @@ export function MainMenu() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <NavItem to="/profile" icon={<UserCircle className="h-4 w-4" />} label={t("menu.profile")} />
-            <DropdownMenuItem onSelect={handleLogout} className="gap-2.5 text-destructive focus:text-destructive">
-              <LogOut className="h-4 w-4" /> {t("menu.signOut")}
+            <DropdownMenuItem onSelect={handleLogout} className={`${ROW} text-destructive focus:bg-destructive/10 focus:text-destructive`}>
+              <Chip tone="danger"><LogOut className="h-4 w-4" /></Chip> {t("menu.signOut")}
             </DropdownMenuItem>
           </>
         ) : user ? (
@@ -138,17 +163,24 @@ export function MainMenu() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <NavItem to="/profile" icon={<UserCircle className="h-4 w-4" />} label={t("menu.profile")} />
-            <DropdownMenuItem onSelect={handleLogout} className="gap-2.5 text-destructive focus:text-destructive">
-              <LogOut className="h-4 w-4" /> {t("menu.signOut")}
+            <DropdownMenuItem onSelect={handleLogout} className={`${ROW} text-destructive focus:bg-destructive/10 focus:text-destructive`}>
+              <Chip tone="danger"><LogOut className="h-4 w-4" /></Chip> {t("menu.signOut")}
             </DropdownMenuItem>
           </>
         ) : (
           <>
-            <DropdownMenuLabel className="text-muted-foreground">{t("menu.amchoBazar")}</DropdownMenuLabel>
+            <DropdownMenuLabel className="px-2.5 pt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("footer.explore")}</DropdownMenuLabel>
             <NavItem to="/" icon={<LayoutDashboard className="h-4 w-4" />} label={t("nav.home")} />
             <NavItem to="/gallery" icon={<ImageIcon className="h-4 w-4" />} label={t("nav.gallery")} />
+            <NavItem to="/stalls" icon={<Store className="h-4 w-4" />} label={t("nav.stalls")} />
             <DropdownMenuSeparator />
-            <NavItem to="/register" icon={<Ticket className="h-4 w-4" />} label={t("menu.becomeSeller")} />
+            {/* Primary CTA */}
+            <DropdownMenuItem asChild className={`${ROW} bg-festive font-semibold text-white shadow-soft focus:bg-festive focus:text-white`}>
+              <Link to="/register">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/20 text-white"><Ticket className="h-4 w-4" /></span>
+                {t("menu.becomeSeller")}
+              </Link>
+            </DropdownMenuItem>
             <NavItem to="/login" icon={<LogIn className="h-4 w-4" />} label={t("menu.signIn")} />
           </>
         )}

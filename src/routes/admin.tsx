@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { Activity, CheckCircle2, ClipboardList, HelpCircle, Hourglass, Image as ImageIcon, LayoutGrid, ListChecks, Loader2, MonitorPlay, MoreVertical, Plus, Receipt, SlidersHorizontal, Sparkles, Store, Trash2, TrendingUp, Users, Zap } from "lucide-react";
+import { Activity, BarChart3, CheckCircle2, ClipboardList, HelpCircle, Hourglass, Image as ImageIcon, LayoutGrid, ListChecks, Loader2, MonitorPlay, MoreVertical, Plus, Receipt, SlidersHorizontal, Sparkles, Store, Trash2, TrendingUp, Users, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { EVENT } from "@/lib/dummy-data";
 import { AnimatedCounter } from "@/components/site/animated-counter";
@@ -219,12 +219,6 @@ function AdminPage() {
             <Sparkles className="h-4 w-4" /> {t("adm.openDraw")}
           </Link>
           {/* Secondary actions — unified style */}
-          <button
-            onClick={() => window.open(`/present${seasonId ? `?season=${seasonId}` : ""}`, "_blank", "noopener")}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <MonitorPlay className="h-4 w-4" /> {t("adm.presentation")}
-          </button>
           <Link to="/stalls" className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <LayoutGrid className="h-4 w-4" /> {t("adm.stallDir")}
           </Link>
@@ -262,13 +256,16 @@ function AdminPage() {
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         {/* Analytics */}
         <div className="rounded-3xl border border-border bg-card p-6 shadow-card">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("adm.byCategory")}</div>
-              <div className="mt-1 font-display text-xl font-semibold">{t("adm.liveBreakdown")}</div>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><BarChart3 className="h-4 w-4" /></span>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{t("adm.byCategory")}</div>
+                <div className="font-display text-lg font-semibold leading-tight">{t("adm.liveBreakdown")}</div>
+              </div>
             </div>
             {trendPct != null && (
-              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${trendPct >= 0 ? "bg-teal/15 text-teal" : "bg-destructive/15 text-destructive"}`}>
+              <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${trendPct >= 0 ? "bg-teal/15 text-teal" : "bg-destructive/15 text-destructive"}`}>
                 <TrendingUp className={`h-3 w-3 ${trendPct < 0 ? "rotate-180" : ""}`} /> {trendPct >= 0 ? "+" : ""}{trendPct}%
               </span>
             )}
@@ -276,10 +273,10 @@ function AdminPage() {
           <BarChart data={breakdown} />
           <div className="mt-6 grid grid-cols-3 gap-3 text-center">
             {breakdown.slice(0, 6).map((c) => (
-              <div key={c.name} className="rounded-2xl bg-muted/60 p-3">
+              <div key={c.name} className="rounded-2xl bg-muted/50 p-3 ring-1 ring-transparent transition-colors hover:bg-muted hover:ring-border">
                 <div className="text-2xl">{c.emoji}</div>
                 <div className="mt-1 truncate text-xs font-semibold text-foreground">{c.name}</div>
-                <div className="text-[11px] text-muted-foreground">{c.count} {t("adm.sellersWord")}</div>
+                <div className="text-[11px] tabular-nums text-muted-foreground">{c.count} {t("adm.sellersWord")}</div>
               </div>
             ))}
           </div>
@@ -287,9 +284,9 @@ function AdminPage() {
 
         {/* Recent activity */}
         <div className="rounded-3xl border border-border bg-card p-6 shadow-card">
-          <div className="mb-4 flex items-center gap-2">
-            <Activity className="h-4 w-4 text-primary" />
-            <div className="font-display text-xl font-semibold">{t("adm.recentActivity")}</div>
+          <div className="mb-4 flex items-center gap-2.5">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Activity className="h-4 w-4" /></span>
+            <div className="font-display text-lg font-semibold">{t("adm.recentActivity")}</div>
           </div>
           {activity.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">{t("adm.noActivity")}</div>
@@ -326,12 +323,15 @@ function AdminPage() {
 
       {/* Recent registrations table */}
       <div className="mt-8 rounded-3xl border border-border bg-card p-6 shadow-card">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("adm.recentRegs")}</div>
-            <div className="mt-1 font-display text-xl font-semibold">{t("adm.readyReview")}</div>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><ClipboardList className="h-4 w-4" /></span>
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{t("adm.recentRegs")}</div>
+              <div className="font-display text-lg font-semibold leading-tight">{t("adm.readyReview")}</div>
+            </div>
           </div>
-          <span className="text-xs text-muted-foreground">
+          <span className="rounded-full bg-muted/60 px-3 py-1 text-xs font-medium tabular-nums text-muted-foreground">
             {loading ? t("common.loading") : `${t("adm.showing")} ${Math.min(8, registrations.length)} ${t("adm.of")} ${registrations.length}`}
           </span>
         </div>
@@ -687,20 +687,22 @@ function FaqEditor() {
 
 function Metric({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number; tone: "primary" | "teal" | "orange" | "gold" }) {
   const tones = {
-    primary: "from-primary/20 to-primary/5 text-primary",
-    teal: "from-teal/25 to-teal/5 text-teal",
-    orange: "from-secondary/25 to-secondary/5 text-secondary",
-    gold: "from-accent/40 to-accent/5 text-primary",
+    primary: { glow: "from-primary/20 to-primary/5 text-primary", bar: "bg-primary" },
+    teal: { glow: "from-teal/25 to-teal/5 text-teal", bar: "bg-teal" },
+    orange: { glow: "from-secondary/25 to-secondary/5 text-secondary", bar: "bg-secondary" },
+    gold: { glow: "from-accent/40 to-accent/5 text-primary", bar: "bg-accent" },
   } as const;
+  const tn = tones[tone];
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 shadow-card">
-      <div className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br opacity-70 blur-2xl ${tones[tone]}`} />
+    <div className="group relative overflow-hidden rounded-3xl border border-border bg-card p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-glow">
+      <div className={`pointer-events-none absolute inset-x-0 top-0 h-1 opacity-80 ${tn.bar}`} />
+      <div className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br opacity-70 blur-2xl transition-opacity group-hover:opacity-100 ${tn.glow}`} />
       <div className="relative flex items-center gap-3">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br ${tones[tone]}`}>
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ring-1 ring-inset ring-white/30 ${tn.glow}`}>
           <div className="h-5 w-5">{icon}</div>
         </div>
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</div>
+        <div className="min-w-0">
+          <div className="truncate text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</div>
           <div className="mt-0.5 font-display text-3xl font-black tabular-nums text-foreground">
             <AnimatedCounter value={value} />
           </div>

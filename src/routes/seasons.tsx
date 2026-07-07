@@ -115,7 +115,7 @@ function SeasonsPage() {
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   {s.eventDate && <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {s.eventDate}</span>}
                   <span>{s.maximumStalls} {t("sea.stalls")} · {s.maximumSelectedStalls} {t("sea.winners")}</span>
-                  <span>₹{s.registrationFee} {t("sea.fee")}</span>
+                  <span>Rs {s.registrationFee} {t("sea.fee")}</span>
                 </div>
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   {!s.isActive && s.status !== "Archived" && (

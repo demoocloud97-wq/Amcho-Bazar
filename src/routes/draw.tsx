@@ -3,13 +3,16 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, Flower2, Zap, MonitorPlay } from "lucide-react";
+import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, Flower2, Zap, ListChecks, Target, Search, Trophy, Radio } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { EVENT } from "@/lib/dummy-data";
-import { getDrawNonStop } from "@/lib/settings-db";
+import { getDrawNonStop, getDrawLive, setDrawLive } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
 import { getRegistrationsBySeasonId } from "@/lib/db";
 import { getDrawResultsBySeasonId, saveDrawResult, clearDrawResultsBySeasonId } from "@/lib/draw-results-db";
 import { RequireAdmin } from "@/components/site/require-admin";
+import { Dartboard, RedDart } from "@/components/site/dartboard";
 import { useI18n } from "@/lib/i18n";
 import { CATEGORY_COLORS } from "@/lib/category-colors";
 
@@ -61,14 +64,33 @@ function DrawPage() {
   const [count, setCount] = useState(3);
   const [reel, setReel] = useState<{ seller: string; business: string } | null>(null);
   const [current, setCurrent] = useState<Selected | null>(null);
+  const [showWinner, setShowWinner] = useState(false); // delay the name until the dart has visibly landed
+  const [confirmReset, setConfirmReset] = useState(false);
   const [running, setRunning] = useState(false);
   const [nonStop, setNonStop] = useState(false); // admin toggle: show one-click Non-Stop button
+  const [live, setLive] = useState(false); // broadcast the draw live to everyone (view-only)
+  const [liveBusy, setLiveBusy] = useState(false);
   const [speed, setSpeed] = useState<"slow" | "medium" | "fast">("medium"); // presentation reveal speed
   const timers = useRef<number[]>([]);
   const selectedRef = useRef<Selected[]>([]); // latest picks for the fast loop (avoids stale closures)
   const candidatesRef = useRef<Candidate[]>([]); // latest candidates for the fast loop
 
   useEffect(() => { getDrawNonStop().then(setNonStop).catch(() => {}); }, []);
+  useEffect(() => { getDrawLive().then(setLive).catch(() => {}); }, []);
+
+  async function toggleLive() {
+    const next = !live;
+    setLiveBusy(true);
+    try {
+      await setDrawLive(next);
+      setLive(next);
+      toast.success(next ? t("draw.liveOn") : t("draw.liveOff"));
+    } catch (e) {
+      toast.error(t("draw.liveErr"));
+    } finally {
+      setLiveBusy(false);
+    }
+  }
   useEffect(() => { selectedRef.current = selected; }, [selected]);
   useEffect(() => { candidatesRef.current = candidates; }, [candidates]);
 
@@ -141,9 +163,9 @@ function DrawPage() {
       return;
     }
     setPhase("countdown");
-    setCount(3);
-    addTimer(() => setCount(2), 900);
-    addTimer(() => setCount(1), 1800);
+    const STEPS = 5, STEP_MS = 800;
+    setCount(STEPS);
+    for (let n = STEPS - 1; n >= 1; n--) addTimer(() => setCount(n), (STEPS - n) * STEP_MS);
     addTimer(() => {
       setPhase("spinning");
       // spin reel
@@ -176,18 +198,21 @@ function DrawPage() {
         };
         setCurrent(s);
         setReel(null);
-        setPhase("reveal");
+        setPhase("reveal");   // dart lands + board shows the stall it hit
         persist(s);
-        fireConfetti();
 
+        // Hold on the landed dart so everyone sees where it struck, THEN name.
+        const HOLD = 1400;
+        addTimer(() => { fireConfetti(); setShowWinner(true); }, HOLD);
         addTimer(() => {
           setSelected((prev) => [s, ...prev]);
           setCurrent(null);
+          setShowWinner(false);
           setPhase("idle");
           if (running) addTimer(runOne, 800);
-        }, 3400);
+        }, HOLD + 3400);
       }, 2000);
-    }, 2700);
+    }, STEPS * STEP_MS);
   }
 
   function startCeremony() {
@@ -258,6 +283,7 @@ function DrawPage() {
     selectedRef.current = [];
     setSelected([]);
     setCurrent(null);
+    setShowWinner(false);
     setReel(null);
     setPhase("idle");
     setRunning(false);
@@ -322,35 +348,38 @@ function DrawPage() {
             </button>
           )}
           <button
-            onClick={reset}
-            className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-5 py-3 text-sm font-medium text-white/80 backdrop-blur transition-transform hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-95 touch-manipulation"
+            onClick={() => setConfirmReset(true)}
+            disabled={selected.length === 0 && phase === "idle"}
+            title={t("draw.reset")}
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-red-400/40 bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-200 backdrop-blur transition-colors hover:border-red-400/60 hover:bg-red-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 touch-manipulation"
           >
             <RotateCcw className="h-4 w-4" /> {t("draw.reset")}
           </button>
         </div>
 
-        {/* Presentation mode — opens the audience/projector screen (mirrors live) */}
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+        {/* Broadcast: when ON, every visitor sees a "watch live" banner → /present */}
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
           <button
-            onClick={() => window.open(`/present?speed=${speed}${seasonId ? `&season=${seasonId}` : ""}`, "_blank", "noopener")}
-            className="inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/15 px-5 py-2.5 text-sm font-semibold text-accent backdrop-blur transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-95"
+            onClick={toggleLive}
+            disabled={liveBusy}
+            aria-pressed={live}
+            title={live ? t("draw.liveHint") : t("draw.goLiveHint")}
+            className={`group inline-flex min-h-11 items-center gap-2.5 rounded-full px-6 py-3 text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-95 disabled:opacity-50 touch-manipulation ${
+              live
+                ? "bg-festive text-white shadow-glow ring-2 ring-white/25"
+                : "border border-white/25 bg-white/5 text-white/85 hover:border-white/40 hover:bg-white/10 hover:shadow-glow"
+            }`}
           >
-            <MonitorPlay className="h-4 w-4" /> {t("adm.presentation")}
+            {live ? (
+              <span className="relative flex h-3 w-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/80" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-white" />
+              </span>
+            ) : (
+              <Radio className="h-4 w-4 transition-transform group-hover:scale-110" />
+            )}
+            {live ? t("draw.liveOnBtn") : t("draw.goLive")}
           </button>
-          <label className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm text-white/80 backdrop-blur">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-white/60">{t("draw.speed")}</span>
-            <select
-              value={speed}
-              onChange={(e) => setSpeed(e.target.value as typeof speed)}
-              aria-label="Presentation draw speed"
-              className="cursor-pointer bg-transparent font-semibold text-white outline-none [&>option]:text-black"
-            >
-              <option value="slow">{t("draw.slow")}</option>
-              <option value="medium">{t("draw.medium")}</option>
-              <option value="fast">{t("draw.fast")}</option>
-            </select>
-          </label>
-          <span className="text-xs text-white/50">{t("draw.presentHint")}</span>
         </div>
       </section>
 
@@ -376,14 +405,23 @@ function DrawPage() {
         </div>
       </section>
 
-      {/* Full-screen reveal overlay */}
+      {/* Full-screen reveal overlay — only after the dart has landed */}
       <AnimatePresence>
-        {phase === "reveal" && current && (
+        {showWinner && current && (
           <RevealOverlay s={current} target={TARGET} />
         )}
       </AnimatePresence>
 
       {phase === "done" && <DoneBanner target={TARGET} seasonName={season?.seasonName ?? EVENT.season} />}
+
+      <ConfirmDialog
+        open={confirmReset}
+        onOpenChange={setConfirmReset}
+        title={t("draw.resetTitle")}
+        description={t("draw.resetDesc")}
+        confirmLabel={t("draw.reset")}
+        onConfirm={reset}
+      />
     </div>
   );
 }
@@ -398,104 +436,113 @@ function StatChip({ label, value, accent = false }: { label: string; value: numb
   );
 }
 
-/* ==== DRAW STAGE: lottery drum ==== */
+/* ==== DRAW STAGE: dartboard ==== */
 function DrawStage({ phase, count, reel, current }: { phase: string; count: number; reel: { seller: string; business: string } | null; current: Selected | null }) {
   const { t } = useI18n();
+  const spinning = phase === "spinning";
   return (
-    <div className="relative overflow-hidden rounded-[36px] border border-white/15 bg-black/30 p-6 backdrop-blur-xl md:p-10">
+    <div className="relative overflow-hidden rounded-[36px] border border-white/15 bg-gradient-to-b from-black/40 to-black/20 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl md:p-10">
       <div className="pointer-events-none absolute inset-0 pattern-dots opacity-10" />
       <div className="relative flex flex-col items-center gap-6">
-        <div className="text-xs font-semibold uppercase tracking-[0.4em] text-white/60">{t("draw.lotteryDrum")}</div>
-
-        {/* Drum */}
-        <div className="relative h-64 w-64 md:h-80 md:w-80">
-          {/* Outer decorative ring */}
-          <div className="absolute inset-0 rounded-full border-[6px] border-accent/40" />
-          <div className={`absolute inset-2 rounded-full border-2 border-dashed border-white/20 ${phase === "spinning" ? "animate-spin-slow" : ""}`} />
-
-          {/* Glass ball */}
-          <div className="absolute inset-6 overflow-hidden rounded-full bg-gradient-to-br from-white/30 via-white/5 to-transparent shadow-[inset_0_10px_40px_rgba(255,255,255,0.15)]">
-            {/* Bouncing capsules */}
-            <div className={`absolute inset-0 ${phase === "spinning" ? "animate-spin-slow" : ""}`}>
-              {Array.from({ length: 20 }).map((_, i) => {
-                const angle = (i / 20) * Math.PI * 2;
-                const r = 90 + (i % 3) * 8;
-                const x = 50 + Math.cos(angle) * (r / 3);
-                const y = 50 + Math.sin(angle) * (r / 3);
-                const colors = ["bg-secondary", "bg-accent", "bg-primary", "bg-teal/80"];
-                return (
-                  <span
-                    key={i}
-                    className={`absolute h-5 w-5 rounded-full shadow ${colors[i % colors.length]}`}
-                    style={{ left: `${x}%`, top: `${y}%`, transform: "translate(-50%, -50%)" }}
-                  />
-                );
-              })}
-            </div>
-
-            {/* Center label */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              {phase === "idle" && (
-                <div className="text-center">
-                  <Sparkles className="mx-auto h-8 w-8 text-accent" />
-                  <div className="mt-2 text-sm font-semibold text-white/80">{t("draw.readyToDraw")}</div>
-                </div>
-              )}
-              {phase === "countdown" && (
-                <motion.div
-                  key={count}
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 1.6, opacity: 0 }}
-                  className="font-display text-8xl font-black text-white drop-shadow-[0_0_30px_rgba(255,201,74,0.7)]"
-                >
-                  {count}
-                </motion.div>
-              )}
-              {phase === "spinning" && reel && (
-                <div className="text-center">
-                  <div className="text-[10px] font-semibold uppercase tracking-widest text-white/60">{t("draw.selecting")}</div>
-                  <div className="mt-2 font-display text-xl font-bold text-white">{reel.business}</div>
-                  <div className="text-xs text-white/70">{t("home.by")} {reel.seller}</div>
-                </div>
-              )}
-              {phase === "reveal" && current && (
-                <motion.div
-                  initial={{ scale: 0.6, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-center"
-                >
-                  <div className="text-[10px] font-semibold uppercase tracking-widest text-accent">{t("draw.stall")}</div>
-                  <div className="font-display text-6xl font-black text-white drop-shadow-[0_0_30px_rgba(255,201,74,0.9)]">
-                    #{current.stallNo.toString().padStart(2, "0")}
-                  </div>
-                </motion.div>
-              )}
-            </div>
+        {/* Header */}
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="inline-flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-accent/15 text-accent ring-1 ring-accent/30"><Target className="h-4 w-4" /></span>
+            <span className="text-xs font-semibold uppercase tracking-[0.32em] text-white/70">{t("draw.dartboard")}</span>
           </div>
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ring-1 ${
+            phase === "idle" ? "bg-white/5 text-white/60 ring-white/15"
+              : phase === "reveal" ? "bg-teal/20 text-teal ring-teal/40"
+              : "bg-accent/20 text-accent ring-accent/40"
+          }`}>
+            <span className="relative flex h-1.5 w-1.5">
+              {phase !== "idle" && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-70" />}
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current" />
+            </span>
+            {phase === "idle" ? t("draw.chipReady") : phase === "reveal" ? t("draw.chipWinner") : t("draw.chipDrawing")}
+          </span>
+        </div>
 
-          {/* Glow ring while spinning */}
+        {/* Dartboard */}
+        <div className="relative h-64 w-64 md:h-80 md:w-80">
+          {/* Spotlight — intensifies while drawing */}
+          <div className={`pointer-events-none absolute -inset-10 rounded-full blur-3xl transition-all duration-500 ${spinning || phase === "reveal" ? "bg-accent/30 opacity-100" : "bg-accent/10 opacity-70"}`} />
+          {/* Cabinet frame the board sits in */}
+          <div className="absolute -inset-3 rounded-full bg-gradient-to-b from-[#2a1d12] to-[#120c07] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.7)] ring-1 ring-accent/25" />
+          <div className="pointer-events-none absolute -inset-[3px] rounded-full ring-1 ring-white/10" />
+          <Dartboard spinning={spinning} className="absolute inset-0">
+            {phase !== "idle" && (
+              <div className="flex h-[44%] w-[44%] items-center justify-center overflow-hidden rounded-full border-2 border-[#d32b2b]/55 bg-[#2a0a10]/90 p-2 text-center backdrop-blur-sm">
+                {phase === "countdown" && (
+                  <motion.div key={count} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 1.6, opacity: 0 }} className="font-display text-5xl font-black text-white drop-shadow-[0_0_30px_rgba(255,201,74,0.7)] md:text-6xl">
+                    {count}
+                  </motion.div>
+                )}
+                {phase === "spinning" && reel && (
+                  <div>
+                    <div className="text-[9px] font-semibold uppercase tracking-widest text-white/60">{t("draw.selecting")}</div>
+                    <div className="mt-1 line-clamp-2 font-display text-sm font-bold leading-tight text-white">{reel.business}</div>
+                    <div className="truncate text-[10px] text-white/70">{t("home.by")} {reel.seller}</div>
+                  </div>
+                )}
+                {phase === "reveal" && current && (
+                  <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                    <div className="text-[9px] font-semibold uppercase tracking-widest text-accent">{t("draw.stall")}</div>
+                    <div className="font-display text-4xl font-black text-white drop-shadow-[0_0_30px_rgba(255,201,74,0.9)]">#{current.stallNo.toString().padStart(2, "0")}</div>
+                  </motion.div>
+                )}
+              </div>
+            )}
+          </Dartboard>
+
+          {/* Thrown red dart — sticks into the upper board at an angle (clear of the
+              centre result), pivoting on its tip. */}
+          <AnimatePresence>
+            {phase === "reveal" && current && (
+              <motion.div
+                key={`dart-${current.order}`}
+                initial={{ x: 70, y: -120, rotate: 58, opacity: 0 }}
+                animate={{ x: 0, y: 0, rotate: 34, opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ type: "spring", stiffness: 340, damping: 13 }}
+                className="pointer-events-none absolute left-[57%] top-[30%] z-30 origin-bottom -translate-x-1/2 -translate-y-full"
+              >
+                <RedDart />
+              </motion.div>
+            )}
+            {phase === "reveal" && current && (
+              <motion.span
+                key={`spark-${current.order}`}
+                initial={{ scale: 0, opacity: 0.9 }}
+                animate={{ scale: 2.6, opacity: 0 }}
+                transition={{ duration: 0.5, delay: 0.22, ease: "easeOut" }}
+                className="pointer-events-none absolute left-[57%] top-[30%] z-20 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent"
+              />
+            )}
+          </AnimatePresence>
+
           {(phase === "spinning" || phase === "reveal") && (
             <div className="pointer-events-none absolute inset-0 rounded-full animate-pulse-glow" />
           )}
         </div>
 
-        <div className="relative h-5 text-center text-sm text-white/70">
+        <div className="flex h-9 w-full items-center justify-center">
           <AnimatePresence mode="wait">
-            <motion.p
+            <motion.div
               key={phase}
-              initial={{ opacity: 0, y: 4 }}
+              initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
+              exit={{ opacity: 0, y: -5 }}
               transition={{ duration: 0.25 }}
-              className="absolute inset-x-0"
+              className="inline-flex max-w-full items-center gap-2 whitespace-nowrap rounded-full border border-[#d32b2b]/55 bg-[#d32b2b]/22 px-4 py-1.5 text-xs font-medium text-white backdrop-blur"
             >
+              {phase === "idle" ? <Target className="h-3.5 w-3.5 text-accent" /> : phase === "reveal" || phase === "done" ? <PartyPopper className="h-3.5 w-3.5 text-accent" /> : <Sparkles className="h-3.5 w-3.5 animate-pulse text-accent" />}
               {phase === "idle" && t("draw.msgIdle")}
               {phase === "countdown" && t("draw.msgCountdown")}
               {phase === "spinning" && t("draw.msgSpinning")}
               {phase === "reveal" && t("draw.msgReveal")}
               {phase === "done" && t("draw.msgDone")}
-            </motion.p>
+            </motion.div>
           </AnimatePresence>
         </div>
       </div>
@@ -939,9 +986,20 @@ function ProgressRing({ value, selected, target }: { value: number; selected: nu
 /* ==== SELECTED PANEL ==== */
 function SelectedPanel({ selected, target }: { selected: Selected[]; target: number }) {
   const { t } = useI18n();
+  const [showAll, setShowAll] = useState(false);
+  const [q, setQ] = useState("");
+  const [cat, setCat] = useState<string | null>(null);
+  // Category chips with counts (draw order preserved elsewhere).
+  const catCounts = selected.reduce<Record<string, number>>((m, s) => { m[s.category] = (m[s.category] ?? 0) + 1; return m; }, {});
+  const cats = Object.keys(catCounts).sort();
+  const rows = [...selected]
+    .sort((a, b) => a.order - b.order)
+    .filter((s) => (!cat || s.category === cat))
+    .filter((s) => { const n = q.trim().toLowerCase(); return !n || `${s.business} ${s.seller} ${s.category} ${s.stallNo}`.toLowerCase().includes(n); });
+  const pct = target > 0 ? Math.min(100, Math.round((selected.length / target) * 100)) : 0;
   return (
     <div className="rounded-[36px] border border-white/15 bg-black/30 p-6 backdrop-blur-xl md:p-8">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-[0.4em] text-white/60">{t("draw.selectedSellers")}</div>
           <div className="mt-1 flex items-center gap-2 font-display text-xl font-semibold text-white">
@@ -952,10 +1010,113 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
             {t("draw.liveFeed")}
           </div>
         </div>
-        <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold tabular-nums text-white/80 ring-1 ring-white/15">
-          {selected.length} / {target}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {selected.length > 0 && (
+            <button
+              onClick={() => setShowAll(true)}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            >
+              <ListChecks className="h-3.5 w-3.5" /> {t("draw.viewSelected")}
+            </button>
+          )}
+          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold tabular-nums text-white/80 ring-1 ring-white/15">
+            {selected.length} / {target}
+          </span>
+        </div>
       </div>
+
+      <Dialog open={showAll} onOpenChange={setShowAll}>
+        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-2xl">
+          {/* Header band */}
+          <div className="relative overflow-hidden bg-hero px-6 py-5 text-white">
+            <div className="pointer-events-none absolute inset-0 pattern-dots opacity-15" />
+            <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-warm opacity-30 blur-2xl" />
+            <div className="relative flex items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/15 text-accent ring-1 ring-white/20"><Trophy className="h-5 w-5" /></span>
+              <div className="min-w-0 flex-1">
+                <DialogHeader className="space-y-0 text-left">
+                  <DialogTitle className="font-display text-xl font-bold text-white">{t("draw.selectedTitle")}</DialogTitle>
+                </DialogHeader>
+                <div className="mt-0.5 text-xs text-white/70">{t("draw.selectedSub")}</div>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="font-display text-2xl font-black tabular-nums leading-none">{selected.length}<span className="text-base font-bold text-white/60">/{target}</span></div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-white/60">{pct}%</div>
+              </div>
+            </div>
+            <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-white/15">
+              <div className="h-full rounded-full bg-gradient-to-r from-accent via-secondary to-accent transition-[width] duration-500" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+
+          {/* Search + category filter */}
+          <div className="space-y-2.5 border-b border-border px-6 py-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("draw.searchSelected")}
+                aria-label={t("draw.searchSelected")}
+                className="w-full rounded-full border border-border bg-muted/40 py-2 ps-9 pe-4 text-sm outline-none ring-primary/20 focus:ring-4"
+              />
+            </div>
+            {cats.length > 1 && (
+              <div className="flex flex-wrap gap-1.5">
+                <button onClick={() => setCat(null)} className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${!cat ? "bg-festive text-white" : "bg-muted/60 text-foreground/70 hover:bg-muted"}`}>
+                  {t("stalls.allCategories")} · {selected.length}
+                </button>
+                {cats.map((c) => {
+                  const p = CATEGORY_COLORS[c] ?? CATEGORY_COLORS.Others;
+                  const on = cat === c;
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => setCat(on ? null : c)}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${on ? "text-white" : "text-foreground/70 hover:opacity-90"}`}
+                      style={on ? { background: p.bg } : { backgroundColor: `${p.bg}1f` }}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: on ? "#fff" : p.bg }} /> {c} · {catCounts[c]}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* List */}
+          <div className="max-h-[48vh] overflow-y-auto px-3 py-3">
+            {rows.length === 0 ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">{t("draw.noMatch")}</div>
+            ) : (
+              <ul className="space-y-1.5">
+                {rows.map((s) => {
+                  const palette = CATEGORY_COLORS[s.category] ?? CATEGORY_COLORS.Others;
+                  return (
+                    <li key={s.id} className="flex items-center gap-3 rounded-2xl px-3 py-2 transition-colors hover:bg-muted/50">
+                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl font-display text-sm font-black tabular-nums text-white shadow-soft" style={{ background: `linear-gradient(180deg, ${palette.bg} 0%, ${palette.canopy} 100%)` }}>
+                        #{s.stallNo.toString().padStart(2, "0")}
+                      </div>
+                      <img src={s.avatar} loading="lazy" alt={s.seller} className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-border" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-semibold text-foreground">{s.business}</div>
+                        <div className="truncate text-xs text-muted-foreground">{s.seller}</div>
+                      </div>
+                      <span className="hidden shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium text-primary sm:inline-flex" style={{ backgroundColor: `${palette.bg}22` }}>
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: palette.bg }} /> {s.category}
+                      </span>
+                      <div className="shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
+                        <div className="font-semibold text-foreground/70">#{s.order}</div>
+                        <div>{s.at}</div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {selected.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center text-sm text-white/75">

@@ -45,43 +45,47 @@ export function useHomeData(): HomeData {
     (async () => {
       setLoading(true);
       try {
-        const categories = await getCategories();
         const past = seasons.filter((s) => PAST.has(s.status)).sort((a, b) => b.seasonNumber - a.seasonNumber);
+
+        // Everything the home page needs, fetched in one parallel wave (was partly
+        // sequential — categories, then active season, then a per-season loop).
+        const active = activeSeason?.id;
+        const [categories, activeReads, pastRegs] = await Promise.all([
+          getCategories(),
+          active
+            ? Promise.all([
+                getRegistrationsBySeasonId(active).catch(() => []),
+                getStallsBySeasonId(active).catch(() => []),
+                getGalleryItemsBySeasonId(active).catch(() => []),
+              ])
+            : Promise.resolve(null),
+          Promise.all(past.map((s) => (s.id ? getRegistrationsBySeasonId(s.id).catch(() => []) : Promise.resolve([])))),
+        ]);
 
         let entrepreneurs = 0, availableStalls = 0;
         const categoryCounts: Record<string, number> = {};
         let galleryPreview: { src: string; caption: string }[] = [];
-        if (activeSeason?.id) {
-          // Registrations are admin-only readable — guard so the public home page
-          // still loads (falls back to the public stall count).
-          const [regs, stalls, gallery] = await Promise.all([
-            getRegistrationsBySeasonId(activeSeason.id).catch(() => []),
-            getStallsBySeasonId(activeSeason.id).catch(() => []),
-            getGalleryItemsBySeasonId(activeSeason.id).catch(() => []),
-          ]);
+        if (activeReads) {
+          const [regs, stalls, gallery] = activeReads;
           entrepreneurs = regs.length || stalls.length;
-          availableStalls = Math.max(0, activeSeason.maximumStalls - stalls.length);
+          availableStalls = Math.max(0, (activeSeason?.maximumStalls ?? 0) - stalls.length);
           for (const s of stalls) categoryCounts[s.categoryId] = (categoryCounts[s.categoryId] ?? 0) + 1;
           galleryPreview = gallery.slice(0, 6).map((g) => ({ src: g.src, caption: g.caption }));
         }
 
-        // Per past season: real registration counts for admins; falls back to the
-        // season config for the public (registrations are not publicly readable).
-        const highlights: SeasonHighlight[] = [];
-        for (const s of past) {
-          let registered = 0, selected = 0;
-          if (s.id) {
-            const regs = await getRegistrationsBySeasonId(s.id).catch(() => []);
-            registered = regs.length;
-            selected = regs.filter((r) => r.status === "approved" || r.status === "paid").length;
-          }
-          highlights.push({
+        // Real registration counts for admins; falls back to season config for the
+        // public (registrations are not publicly readable).
+        const highlights: SeasonHighlight[] = past.map((s, i) => {
+          const regs = pastRegs[i];
+          const registered = regs.length;
+          const selected = regs.filter((r) => r.status === "approved" || r.status === "paid").length;
+          return {
             season: s,
             registered: registered || s.maximumStalls,
             selected: selected || s.maximumSelectedStalls,
             stalls: s.maximumStalls,
-          });
-        }
+          };
+        });
 
         if (!alive) return;
         setData({ entrepreneurs, categories, categoryCounts, availableStalls, completedSeasons: past.length, highlights, galleryPreview });

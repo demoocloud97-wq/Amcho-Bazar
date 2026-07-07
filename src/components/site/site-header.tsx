@@ -6,6 +6,7 @@ import { NotificationBell } from "./notification-bell";
 import { LanguageSwitcher } from "./language-switcher";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
+import { watchDrawLive } from "@/lib/settings-db";
 import { useI18n } from "@/lib/i18n";
 
 type Vis = "all" | "auth" | "admin";
@@ -22,9 +23,13 @@ const PRIMARY_NAV: NavItem[] = [
 
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
+  const [drawLive, setDrawLive] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, isAdmin } = useAuth();
   const { t } = useI18n();
+
+  // When the admin broadcasts the draw, everyone gets a "Live Draw" header link.
+  useEffect(() => watchDrawLive(setDrawLive), []);
 
   // Strengthen the header (shadow + border) once the page scrolls.
   useEffect(() => {
@@ -35,7 +40,14 @@ export function SiteHeader() {
   }, []);
 
   const canSee = (v: Vis) => v === "all" || (v === "auth" && !!user) || (v === "admin" && isAdmin);
-  const nav = PRIMARY_NAV.filter((n) => canSee(n.show));
+  const nav: NavItem[] = [];
+  for (const n of PRIMARY_NAV) {
+    if (!canSee(n.show)) continue;
+    nav.push(n);
+    // Insert the public "Live Draw" link right after Stalls while broadcasting —
+    // audience only; admins already run the draw from /draw.
+    if (n.to === "/stalls" && drawLive && !isAdmin) nav.push({ to: "/present", tKey: "nav.watchLive", show: "all", highlight: true });
+  }
   const isActive = (to: string) => pathname === to || (to !== "/" && pathname.startsWith(to));
 
   return (

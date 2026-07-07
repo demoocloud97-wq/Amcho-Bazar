@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { IndianRupee, Loader2, Receipt, Trash2, Wallet, TrendingUp } from "lucide-react";
+import { Banknote, Loader2, Receipt, Trash2, Wallet, TrendingUp } from "lucide-react";
 import { PageHeader } from "@/components/site/page-header";
 import { RequireAdmin } from "@/components/site/require-admin";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/payments")({
   ),
 });
 
-const rupee = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+const rupee = (n: number) => `Rs ${n.toLocaleString("en-PK")}`;
 
 function PaymentsPage() {
   const { season, seasonId } = useSeason();
@@ -98,7 +98,7 @@ function PaymentsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryCard icon={<Wallet className="h-5 w-5" />} label={t("pay.collected")} value={rupee(collected)} tone="green" />
           <SummaryCard icon={<TrendingUp className="h-5 w-5" />} label={t("pay.outstanding")} value={rupee(outstanding.length * fee)} tone="orange" />
-          <SummaryCard icon={<IndianRupee className="h-5 w-5" />} label={t("pay.expected")} value={rupee(expected)} tone="primary" />
+          <SummaryCard icon={<Banknote className="h-5 w-5" />} label={t("pay.expected")} value={rupee(expected)} tone="primary" />
           <SummaryCard icon={<Receipt className="h-5 w-5" />} label={t("pay.payments")} value={`${payments.length}`} tone="gold" />
         </div>
 
@@ -192,14 +192,14 @@ function OutstandingRow({ reg, fee, onRecord }: { reg: Registration; fee: number
         <div className="truncate text-xs text-muted-foreground">{reg.seller} · {reg.category}</div>
       </div>
       <div className="relative">
-        <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
+        <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">Rs</span>
         <input
           type="number"
           min={0}
           value={amount}
           onChange={(e) => setAmount(Number(e.target.value))}
           aria-label="Amount"
-          className="w-24 rounded-full border border-border bg-background py-2 ps-6 pe-2 text-sm outline-none ring-primary/20 focus:ring-2"
+          className="w-28 rounded-full border border-border bg-background py-2 ps-9 pe-2 text-sm outline-none ring-primary/20 focus:ring-2"
         />
       </div>
       <select

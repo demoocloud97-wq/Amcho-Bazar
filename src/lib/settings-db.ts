@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
 
 const SETTINGS = "settings";
@@ -48,6 +48,33 @@ export async function setDrawNonStop(enabled: boolean): Promise<void> {
     doc(db, SETTINGS, SITE),
     { drawNonStopEnabled: enabled, updatedAt: serverTimestamp() },
     { merge: true }
+  );
+}
+
+/* ---- Live Draw broadcast: when ON, everyone sees a "watch live" link ---- */
+export async function getDrawLive(): Promise<boolean> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS, SITE));
+    return snap.exists() ? Boolean(snap.data().drawLiveEnabled) : false;
+  } catch {
+    return false;
+  }
+}
+
+export async function setDrawLive(enabled: boolean): Promise<void> {
+  await setDoc(
+    doc(db, SETTINGS, SITE),
+    { drawLiveEnabled: enabled, updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+}
+
+// Real-time subscription so the audience banner appears/disappears instantly.
+export function watchDrawLive(cb: (on: boolean) => void) {
+  return onSnapshot(
+    doc(db, SETTINGS, SITE),
+    (snap) => cb(snap.exists() ? Boolean(snap.data().drawLiveEnabled) : false),
+    () => cb(false)
   );
 }
 

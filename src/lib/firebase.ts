@@ -2,7 +2,6 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { getAnalytics, isSupported } from "firebase/analytics";
 
 // Config values come from your Firebase Console → Project settings → "Your apps".
 // They are read from environment variables (.env). All VITE_ vars are exposed
@@ -25,9 +24,10 @@ export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 // Analytics only works in the browser — guard so it never runs during SSR.
+// Analytics is non-critical — load it lazily so it stays out of the initial bundle.
 if (typeof window !== "undefined") {
-  isSupported()
-    .then((ok) => { if (ok) getAnalytics(app); })
+  import("firebase/analytics")
+    .then(({ getAnalytics, isSupported }) => isSupported().then((ok) => { if (ok) getAnalytics(app); }))
     .catch(() => {});
 }
 

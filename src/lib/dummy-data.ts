@@ -97,7 +97,7 @@ export const FAQS = [
   { q: "Is there an entry fee for visitors?", a: "Entry for visitors is completely free. Come with your friends, family and neighbours." },
   { q: "Where is the event held?", a: "Nawait Community Hall, Nawayath Colony, Bhatkal — with ample parking and prayer facilities on site." },
   { q: "How do I register as a seller?", a: "Head to Become a Seller, complete the 5-step registration and wait for confirmation. A live draw assigns stalls fairly." },
-  { q: "What is the registration fee?", a: "₹1,500 covers the stall, table, chair, décor kit and marketing for the day. Payment is only after your registration is approved." },
+  { q: "What is the registration fee?", a: "Rs 1,500 covers the stall, table, chair, décor kit and marketing for the day. Payment is only after your registration is approved." },
   { q: "What if my registration is on the waiting list?", a: "You'll be automatically upgraded if a stall opens up. Waiting-list sellers are also invited to the community pop-up in Season 3." },
 ];
 
