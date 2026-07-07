@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { getRegistrationsForAdmin, getRegistrationsBySeasonId, createRegistration, updateRegistration, deleteRegistration, type Registration } from "@/lib/db";
 import { getCategories, getSubCategories, fillDefaultSubcategories, type Category } from "@/lib/categories-db";
 import { setStallForRegistration, deleteStallForRegistration } from "@/lib/stalls-db";
+import { seedApprovedRegistrations } from "@/lib/seed-registrations";
 import { getHeroImage, setHeroImage, normalizeImageUrl, DEFAULT_HERO_IMAGE, getDrawNonStop, setDrawNonStop, getFillSubcatsEnabled, setFillSubcatsEnabled, getFaqs, saveFaqs, type Faq } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
 import { friendlyAuthError } from "@/lib/firebase-errors";
@@ -125,6 +126,31 @@ function AdminPage() {
     }
   }
 
+  // Multi-select + bulk delete for the review table.
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [confirmBulk, setConfirmBulk] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  useEffect(() => { setSel(new Set()); }, [seasonId]);
+  function toggleSel(id: string) {
+    setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  async function bulkDelete() {
+    const ids = [...sel];
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    try {
+      await Promise.all(ids.map(async (id) => { await deleteRegistration(id); await deleteStallForRegistration(id).catch(() => {}); }));
+      toast.success(`${ids.length} ${t("adm.bulkDeleted")}`);
+      setSel(new Set());
+      setConfirmBulk(false);
+      await reload();
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   const [fillingSubs, setFillingSubs] = useState(false);
   async function fillSubcategories() {
     setFillingSubs(true);
@@ -160,6 +186,21 @@ function AdminPage() {
       toast.error(friendlyAuthError(e));
     } finally {
       setAddingTest(false);
+    }
+  }
+
+  const [seeding, setSeeding] = useState(false);
+  async function seedSellers() {
+    if (!seasonId || season?.seasonNumber == null) { toast.error(t("adm.selectFirst")); return; }
+    setSeeding(true);
+    try {
+      const n = await seedApprovedRegistrations(seasonId, season.seasonNumber, 48);
+      toast.success(t("adm.seeded").replace("{n}", String(n)));
+      await reload();
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setSeeding(false);
     }
   }
 
@@ -199,6 +240,10 @@ function AdminPage() {
       .slice(0, 6);
   }, [registrations]);
 
+  const shown = registrations.slice(0, 12);
+  const allSel = shown.length > 0 && shown.every((r) => sel.has(r.id!));
+  function toggleAll() { setSel(allSel ? new Set() : new Set(shown.map((r) => r.id!))); }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 md:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -231,7 +276,15 @@ function AdminPage() {
               {fillingSubs ? <Loader2 className="h-4 w-4 animate-spin" /> : <LayoutGrid className="h-4 w-4" />} {t("cat.fill")}
             </button>
           )}
-          {/* Dev utility — visually de-emphasised */}
+          {/* Dev utilities — visually de-emphasised */}
+          <button
+            onClick={seedSellers}
+            disabled={seeding}
+            title={t("adm.seedTitle")}
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-dashed border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />} {seeding ? t("adm.seeding") : t("adm.seedBtn")}
+          </button>
           <button
             onClick={addTestSeller}
             disabled={addingTest}
@@ -335,6 +388,18 @@ function AdminPage() {
             {loading ? t("common.loading") : `${t("adm.showing")} ${Math.min(8, registrations.length)} ${t("adm.of")} ${registrations.length}`}
           </span>
         </div>
+        {/* Bulk action bar */}
+        {sel.size > 0 && (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-2.5">
+            <span className="text-sm font-semibold text-foreground">{sel.size} {t("adm.bulkSelected")}</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setSel(new Set())} className="rounded-full px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted">{t("adm.bulkClear")}</button>
+              <button onClick={() => setConfirmBulk(true)} className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-4 py-1.5 text-xs font-bold text-white shadow-soft transition-transform hover:scale-[1.03]">
+                <Trash2 className="h-3.5 w-3.5" /> {t("adm.bulkDelete")} ({sel.size})
+              </button>
+            </div>
+          </div>
+        )}
         <div className="overflow-x-auto">
           {loading ? (
             <div className="space-y-2 py-2">
@@ -347,9 +412,12 @@ function AdminPage() {
               {t("adm.noRegs")}
             </div>
           ) : (
-            <table className="w-full min-w-[820px] text-left text-sm">
+            <table className="w-full min-w-[860px] text-left text-sm">
               <thead>
                 <tr className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <th className="pb-3 pl-1 pr-2 w-8">
+                    <input type="checkbox" checked={allSel} onChange={toggleAll} aria-label={t("adm.bulkSelectAll")} className="h-4 w-4 cursor-pointer rounded border-border accent-[color:var(--color-primary)]" />
+                  </th>
                   <th className="pb-3">{t("adm.thSeller")}</th>
                   <th className="pb-3">{t("adm.thBusiness")}</th>
                   <th className="pb-3">{t("adm.thCategory")}</th>
@@ -359,9 +427,12 @@ function AdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {registrations.slice(0, 12).map((r) => (
-                  <tr key={r.id} className="text-foreground/90 transition-colors hover:bg-muted/40">
-                    <td className="py-3 pl-2">
+                {shown.map((r) => (
+                  <tr key={r.id} className={`text-foreground/90 transition-colors ${sel.has(r.id!) ? "bg-primary/5" : "hover:bg-muted/40"}`}>
+                    <td className="py-3 pl-1 pr-2">
+                      <input type="checkbox" checked={sel.has(r.id!)} onChange={() => toggleSel(r.id!)} aria-label={`Select ${r.seller}`} className="h-4 w-4 cursor-pointer rounded border-border accent-[color:var(--color-primary)]" />
+                    </td>
+                    <td className="py-3">
                       <div className="flex items-center gap-2">
                         <span className="grid h-8 w-8 place-items-center rounded-full bg-festive text-xs font-bold text-white ring-2 ring-accent/40">
                           {(r.seller || "?").charAt(0).toUpperCase()}
@@ -444,6 +515,15 @@ function AdminPage() {
         description={delTarget ? t("adm.deleteRegDesc") : ""}
         confirmLabel={t("adm.delete")}
         onConfirm={removeRegistration}
+      />
+
+      <ConfirmDialog
+        open={confirmBulk}
+        onOpenChange={(o) => !o && !bulkBusy && setConfirmBulk(false)}
+        title={t("adm.bulkDeleteTitle")}
+        description={t("adm.bulkDeleteDesc").replace("{n}", String(sel.size))}
+        confirmLabel={t("adm.bulkDelete")}
+        onConfirm={bulkDelete}
       />
     </div>
   );

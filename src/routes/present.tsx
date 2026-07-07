@@ -85,20 +85,19 @@ function PresentationPage() {
     const t = SPEEDS[speed];
     const at = (fn: () => void, ms: number) => timers.current.push(window.setTimeout(fn, ms));
 
+    // No countdown — straight into the spin (every registered applicant cycles).
     setCurrent(pick);
-    setPhase("prep"); setCount(5);
-    for (let n = 4; n >= 1; n--) at(() => setCount(n), (t.prep / 5) * (5 - n));
-    at(() => setPhase("spin"), t.prep);
-    at(() => setPhase("seller"), t.prep + t.spin);
-    at(() => setPhase("stall"), t.prep + t.spin + t.seller);
-    at(() => { setPhase("celebrate"); fireConfetti(); }, t.prep + t.spin + t.seller + t.stall);
+    setPhase("spin");
+    at(() => setPhase("seller"), t.spin);
+    at(() => setPhase("stall"), t.spin + t.seller);
+    at(() => { setPhase("celebrate"); fireConfetti(); }, t.spin + t.seller + t.stall);
     at(() => {
       setShownCount((c) => c + 1);
       setCurrent(null);
       setPhase("idle");
       playingRef.current = false;
       setTick((x) => x + 1); // re-run driver for the next pick
-    }, t.prep + t.spin + t.seller + t.stall + t.celebrate);
+    }, t.spin + t.seller + t.stall + t.celebrate);
   }, [results, shownCount, tick, speed]);
 
   const revealing = phase === "stall" || phase === "celebrate";

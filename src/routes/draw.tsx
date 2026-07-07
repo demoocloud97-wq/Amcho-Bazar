@@ -9,10 +9,10 @@ import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { EVENT } from "@/lib/dummy-data";
 import { getDrawNonStop, getDrawLive, setDrawLive } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
-import { getRegistrationsBySeasonId } from "@/lib/db";
+import { getRegistrationsBySeasonId, getRegistrations, type Registration } from "@/lib/db";
 import { getDrawResultsBySeasonId, saveDrawResult, clearDrawResultsBySeasonId } from "@/lib/draw-results-db";
 import { RequireAdmin } from "@/components/site/require-admin";
-import { Dartboard, RedDart } from "@/components/site/dartboard";
+import { RedDart } from "@/components/site/dartboard";
 import { useI18n } from "@/lib/i18n";
 import { CATEGORY_COLORS } from "@/lib/category-colors";
 
@@ -55,8 +55,8 @@ type Candidate = { id: string; seller: string; business: string; category: strin
 function DrawPage() {
   const { season, seasonId } = useSeason();
   const { t } = useI18n();
-  const TARGET = season?.maximumSelectedStalls ?? DEFAULT_TARGET;
-  const TOTAL_STALLS = season?.maximumStalls ?? DEFAULT_TOTAL_STALLS;
+  const TARGET = season?.maximumSelectedStalls || DEFAULT_TARGET;
+  const TOTAL_STALLS = season?.maximumStalls || DEFAULT_TOTAL_STALLS;
 
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [selected, setSelected] = useState<Selected[]>([]);
@@ -65,6 +65,7 @@ function DrawPage() {
   const [reel, setReel] = useState<{ seller: string; business: string } | null>(null);
   const [current, setCurrent] = useState<Selected | null>(null);
   const [showWinner, setShowWinner] = useState(false); // delay the name until the dart has visibly landed
+  const [spinStall, setSpinStall] = useState<number | null>(null); // stall cell lit up while the picker runs
   const [confirmReset, setConfirmReset] = useState(false);
   const [running, setRunning] = useState(false);
   const [nonStop, setNonStop] = useState(false); // admin toggle: show one-click Non-Stop button
@@ -74,6 +75,7 @@ function DrawPage() {
   const timers = useRef<number[]>([]);
   const selectedRef = useRef<Selected[]>([]); // latest picks for the fast loop (avoids stale closures)
   const candidatesRef = useRef<Candidate[]>([]); // latest candidates for the fast loop
+  const spinStallRef = useRef<number | null>(null); // cell the picker is currently on → where the dart lands
 
   useEffect(() => { getDrawNonStop().then(setNonStop).catch(() => {}); }, []);
   useEffect(() => { getDrawLive().then(setLive).catch(() => {}); }, []);
@@ -104,11 +106,21 @@ function DrawPage() {
     setCurrent(null);
     setReel(null);
     if (!seasonId) { setCandidates([]); setSelected([]); selectedRef.current = []; return; }
-    Promise.all([getRegistrationsBySeasonId(seasonId), getDrawResultsBySeasonId(seasonId)])
-      .then(([regs, results]) => {
-        // The draw pool is every applicant for this season — the ceremony itself
-        // selects the winners (so pending registrations must be included too).
-        const cands = regs
+    const num = season?.seasonNumber;
+    Promise.all([
+      getRegistrationsBySeasonId(seasonId),
+      num != null ? getRegistrations(num).catch(() => []) : Promise.resolve([] as Registration[]),
+      getDrawResultsBySeasonId(seasonId),
+    ])
+      .then(([byId, byNum, results]) => {
+        // Merge this season's registrations matched by seasonId AND by numeric
+        // season (legacy), so every current-season applicant is included — and
+        // nothing from other seasons.
+        const map = new Map<string, Registration>();
+        [...byId, ...byNum].forEach((r) => { if (r.id) map.set(r.id, r); });
+        // Only admin-approved applicants enter the draw (approved or already paid).
+        const cands = [...map.values()]
+          .filter((r) => r.status === "approved" || r.status === "paid")
           .map((r) => ({ id: r.id!, seller: r.seller, business: r.business, category: r.category as string, avatar: avatarFor(r.id!) }));
         setCandidates(cands);
         const picks: Selected[] = results.map((r) => ({
@@ -120,7 +132,8 @@ function DrawPage() {
         if (picks.length >= (season?.maximumSelectedStalls ?? DEFAULT_TARGET) && picks.length > 0) setPhase("done");
       })
       .catch(() => {});
-  }, [seasonId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seasonId, season?.seasonNumber]);
 
   const available = useMemo(() => {
     const usedIds = new Set(selected.map((s) => s.id));
@@ -162,57 +175,63 @@ function DrawPage() {
       setRunning(false);
       return;
     }
-    setPhase("countdown");
-    const STEPS = 5, STEP_MS = 800;
-    setCount(STEPS);
-    for (let n = STEPS - 1; n >= 1; n--) addTimer(() => setCount(n), (STEPS - n) * STEP_MS);
+    // No countdown — go straight into the spin so every registered applicant cycles.
+    setPhase("spinning");
+    let ticks = 0;
+    const spinId = window.setInterval(() => {
+      const pick = available[Math.floor(Math.random() * available.length)];
+      if (pick) setReel({ seller: pick.seller, business: pick.business });
+      // Light up a random free stall on the venue map so the picker visibly "runs".
+      const rem: number[] = [];
+      for (let i = 1; i <= TOTAL_STALLS; i++) if (!usedStalls.has(i)) rem.push(i);
+      if (rem.length) {
+        const hop = rem[Math.floor(Math.random() * rem.length)];
+        spinStallRef.current = hop;
+        setSpinStall(hop);
+      }
+      ticks++;
+      if (ticks > 14) window.clearInterval(spinId);
+    }, 300);
+    timers.current.push(spinId as unknown as number);
+
     addTimer(() => {
-      setPhase("spinning");
-      // spin reel
-      let ticks = 0;
-      const spinId = window.setInterval(() => {
-        const pick = available[Math.floor(Math.random() * available.length)];
-        if (pick) setReel({ seller: pick.seller, business: pick.business });
-        ticks++;
-        if (ticks > 18) window.clearInterval(spinId);
-      }, 90);
-      timers.current.push(spinId as unknown as number);
+      // final pick
+      const winner = available[Math.floor(Math.random() * available.length)];
+      // The dart lands on the exact stall the spin came to rest on.
+      const remaining: number[] = [];
+      for (let i = 1; i <= TOTAL_STALLS; i++) if (!usedStalls.has(i)) remaining.push(i);
+      const landed = spinStallRef.current;
+      const stallNo = landed != null && !usedStalls.has(landed)
+        ? landed
+        : remaining[Math.floor(Math.random() * remaining.length)];
+      const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const s: Selected = {
+        order: selected.length + 1,
+        stallNo,
+        seller: winner.seller,
+        business: winner.business,
+        category: winner.category,
+        avatar: winner.avatar,
+        id: winner.id,
+        at: nowStr,
+      };
+      setSpinStall(null);
+      setCurrent(s);        // dart now strikes this stall on the venue map
+      setReel(null);
+      setPhase("reveal");
+      persist(s);
 
+      // Hold on the landed dart so everyone sees where it struck, THEN name.
+      const HOLD = 1400;
+      addTimer(() => { fireConfetti(); setShowWinner(true); }, HOLD);
       addTimer(() => {
-        // final pick
-        const winner = available[Math.floor(Math.random() * available.length)];
-        // pick a random unused stall
-        const remaining: number[] = [];
-        for (let i = 1; i <= TOTAL_STALLS; i++) if (!usedStalls.has(i)) remaining.push(i);
-        const stallNo = remaining[Math.floor(Math.random() * remaining.length)];
-        const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-        const s: Selected = {
-          order: selected.length + 1,
-          stallNo,
-          seller: winner.seller,
-          business: winner.business,
-          category: winner.category,
-          avatar: winner.avatar,
-          id: winner.id,
-          at: nowStr,
-        };
-        setCurrent(s);
-        setReel(null);
-        setPhase("reveal");   // dart lands + board shows the stall it hit
-        persist(s);
-
-        // Hold on the landed dart so everyone sees where it struck, THEN name.
-        const HOLD = 1400;
-        addTimer(() => { fireConfetti(); setShowWinner(true); }, HOLD);
-        addTimer(() => {
-          setSelected((prev) => [s, ...prev]);
-          setCurrent(null);
-          setShowWinner(false);
-          setPhase("idle");
-          if (running) addTimer(runOne, 800);
-        }, HOLD + 3400);
-      }, 2000);
-    }, STEPS * STEP_MS);
+        setSelected((prev) => [s, ...prev]);
+        setCurrent(null);
+        setShowWinner(false);
+        setPhase("idle");
+        if (running) addTimer(runOne, 800);
+      }, HOLD + 3400);
+    }, 4700);
   }
 
   function startCeremony() {
@@ -285,6 +304,8 @@ function DrawPage() {
     setCurrent(null);
     setShowWinner(false);
     setReel(null);
+    setSpinStall(null);
+    spinStallRef.current = null;
     setPhase("idle");
     setRunning(false);
     if (seasonId) clearDrawResultsBySeasonId(seasonId).catch(() => {}); // wipe this season's saved draw
@@ -387,7 +408,6 @@ function DrawPage() {
       <section className="relative mx-auto mt-14 grid max-w-7xl gap-6 px-4 md:px-8 lg:grid-cols-[1.4fr_1fr]">
         {/* LEFT — draw machine & venue */}
         <div className="space-y-6">
-          <DrawStage phase={phase} count={count} reel={reel} current={current} />
           <StallArena
             total={TOTAL_STALLS}
             target={TARGET}
@@ -395,12 +415,17 @@ function DrawPage() {
             selected={selected}
             current={current}
             done={phase === "done"}
+            reveal={phase === "reveal"}
+            phase={phase}
+            reel={reel}
+            spinStall={spinStall}
           />
         </div>
 
-        {/* RIGHT — progress ring + selected list */}
-        <div className="space-y-6">
+        {/* RIGHT — one card: progress ring + live feed */}
+        <div className="space-y-6 rounded-[36px] border border-white/15 bg-black/30 p-6 backdrop-blur-xl md:p-8">
           <ProgressRing value={progress} selected={selected.length} target={TARGET} />
+          <div className="h-px bg-white/10" />
           <SelectedPanel selected={selected} target={TARGET} />
         </div>
       </section>
@@ -432,120 +457,6 @@ function StatChip({ label, value, accent = false }: { label: string; value: numb
     <div className={`rounded-2xl border p-4 backdrop-blur-xl ${accent ? "border-accent/40 bg-festive/30 shadow-soft" : "border-white/15 bg-white/10"}`}>
       <div className="text-[10px] font-semibold uppercase tracking-widest text-white/70">{label}</div>
       <div className="mt-1 font-display text-2xl font-bold tabular-nums text-white md:text-3xl">{value}</div>
-    </div>
-  );
-}
-
-/* ==== DRAW STAGE: dartboard ==== */
-function DrawStage({ phase, count, reel, current }: { phase: string; count: number; reel: { seller: string; business: string } | null; current: Selected | null }) {
-  const { t } = useI18n();
-  const spinning = phase === "spinning";
-  return (
-    <div className="relative overflow-hidden rounded-[36px] border border-white/15 bg-gradient-to-b from-black/40 to-black/20 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl md:p-10">
-      <div className="pointer-events-none absolute inset-0 pattern-dots opacity-10" />
-      <div className="relative flex flex-col items-center gap-6">
-        {/* Header */}
-        <div className="flex w-full items-center justify-between gap-3">
-          <div className="inline-flex items-center gap-2">
-            <span className="grid h-7 w-7 place-items-center rounded-full bg-accent/15 text-accent ring-1 ring-accent/30"><Target className="h-4 w-4" /></span>
-            <span className="text-xs font-semibold uppercase tracking-[0.32em] text-white/70">{t("draw.dartboard")}</span>
-          </div>
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ring-1 ${
-            phase === "idle" ? "bg-white/5 text-white/60 ring-white/15"
-              : phase === "reveal" ? "bg-teal/20 text-teal ring-teal/40"
-              : "bg-accent/20 text-accent ring-accent/40"
-          }`}>
-            <span className="relative flex h-1.5 w-1.5">
-              {phase !== "idle" && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-70" />}
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current" />
-            </span>
-            {phase === "idle" ? t("draw.chipReady") : phase === "reveal" ? t("draw.chipWinner") : t("draw.chipDrawing")}
-          </span>
-        </div>
-
-        {/* Dartboard */}
-        <div className="relative h-64 w-64 md:h-80 md:w-80">
-          {/* Spotlight — intensifies while drawing */}
-          <div className={`pointer-events-none absolute -inset-10 rounded-full blur-3xl transition-all duration-500 ${spinning || phase === "reveal" ? "bg-accent/30 opacity-100" : "bg-accent/10 opacity-70"}`} />
-          {/* Cabinet frame the board sits in */}
-          <div className="absolute -inset-3 rounded-full bg-gradient-to-b from-[#2a1d12] to-[#120c07] shadow-[0_24px_60px_-12px_rgba(0,0,0,0.7)] ring-1 ring-accent/25" />
-          <div className="pointer-events-none absolute -inset-[3px] rounded-full ring-1 ring-white/10" />
-          <Dartboard spinning={spinning} className="absolute inset-0">
-            {phase !== "idle" && (
-              <div className="flex h-[44%] w-[44%] items-center justify-center overflow-hidden rounded-full border-2 border-[#d32b2b]/55 bg-[#2a0a10]/90 p-2 text-center backdrop-blur-sm">
-                {phase === "countdown" && (
-                  <motion.div key={count} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 1.6, opacity: 0 }} className="font-display text-5xl font-black text-white drop-shadow-[0_0_30px_rgba(255,201,74,0.7)] md:text-6xl">
-                    {count}
-                  </motion.div>
-                )}
-                {phase === "spinning" && reel && (
-                  <div>
-                    <div className="text-[9px] font-semibold uppercase tracking-widest text-white/60">{t("draw.selecting")}</div>
-                    <div className="mt-1 line-clamp-2 font-display text-sm font-bold leading-tight text-white">{reel.business}</div>
-                    <div className="truncate text-[10px] text-white/70">{t("home.by")} {reel.seller}</div>
-                  </div>
-                )}
-                {phase === "reveal" && current && (
-                  <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-                    <div className="text-[9px] font-semibold uppercase tracking-widest text-accent">{t("draw.stall")}</div>
-                    <div className="font-display text-4xl font-black text-white drop-shadow-[0_0_30px_rgba(255,201,74,0.9)]">#{current.stallNo.toString().padStart(2, "0")}</div>
-                  </motion.div>
-                )}
-              </div>
-            )}
-          </Dartboard>
-
-          {/* Thrown red dart — sticks into the upper board at an angle (clear of the
-              centre result), pivoting on its tip. */}
-          <AnimatePresence>
-            {phase === "reveal" && current && (
-              <motion.div
-                key={`dart-${current.order}`}
-                initial={{ x: 70, y: -120, rotate: 58, opacity: 0 }}
-                animate={{ x: 0, y: 0, rotate: 34, opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ type: "spring", stiffness: 340, damping: 13 }}
-                className="pointer-events-none absolute left-[57%] top-[30%] z-30 origin-bottom -translate-x-1/2 -translate-y-full"
-              >
-                <RedDart />
-              </motion.div>
-            )}
-            {phase === "reveal" && current && (
-              <motion.span
-                key={`spark-${current.order}`}
-                initial={{ scale: 0, opacity: 0.9 }}
-                animate={{ scale: 2.6, opacity: 0 }}
-                transition={{ duration: 0.5, delay: 0.22, ease: "easeOut" }}
-                className="pointer-events-none absolute left-[57%] top-[30%] z-20 h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-accent"
-              />
-            )}
-          </AnimatePresence>
-
-          {(phase === "spinning" || phase === "reveal") && (
-            <div className="pointer-events-none absolute inset-0 rounded-full animate-pulse-glow" />
-          )}
-        </div>
-
-        <div className="flex h-9 w-full items-center justify-center">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={phase}
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -5 }}
-              transition={{ duration: 0.25 }}
-              className="inline-flex max-w-full items-center gap-2 whitespace-nowrap rounded-full border border-[#d32b2b]/55 bg-[#d32b2b]/22 px-4 py-1.5 text-xs font-medium text-white backdrop-blur"
-            >
-              {phase === "idle" ? <Target className="h-3.5 w-3.5 text-accent" /> : phase === "reveal" || phase === "done" ? <PartyPopper className="h-3.5 w-3.5 text-accent" /> : <Sparkles className="h-3.5 w-3.5 animate-pulse text-accent" />}
-              {phase === "idle" && t("draw.msgIdle")}
-              {phase === "countdown" && t("draw.msgCountdown")}
-              {phase === "spinning" && t("draw.msgSpinning")}
-              {phase === "reveal" && t("draw.msgReveal")}
-              {phase === "done" && t("draw.msgDone")}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
     </div>
   );
 }
@@ -604,6 +515,10 @@ function StallArena({
   selected,
   current,
   done,
+  reveal = false,
+  phase = "idle",
+  reel = null,
+  spinStall = null,
 }: {
   total: number;
   target: number;
@@ -611,6 +526,10 @@ function StallArena({
   selected: Selected[];
   current: Selected | null;
   done: boolean;
+  reveal?: boolean;
+  phase?: string;
+  reel?: { seller: string; business: string } | null;
+  spinStall?: number | null;
 }) {
   const { t } = useI18n();
   const byStall = new Map(selected.map((s) => [s.stallNo, s]));
@@ -643,7 +562,35 @@ function StallArena({
           <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold tabular-nums text-white/80 ring-1 ring-white/15">
             {selected.length} / {target} {t("draw.assignedWord")}
           </span>
+          <span className={`ms-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ring-1 ${
+            phase === "idle" || done ? "bg-white/5 text-white/60 ring-white/15"
+              : phase === "reveal" ? "bg-teal/20 text-teal ring-teal/40"
+              : "bg-accent/20 text-accent ring-accent/40"
+          }`}>
+            <span className="relative flex h-1.5 w-1.5">
+              {phase !== "idle" && !done && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-70" />}
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-current" />
+            </span>
+            {done ? t("draw.chipReady") : phase === "idle" ? t("draw.chipReady") : phase === "reveal" ? t("draw.chipWinner") : t("draw.chipDrawing")}
+          </span>
         </div>
+        {/* Live picker readout — the business being drawn as the map runs */}
+        <AnimatePresence mode="wait">
+          {phase === "spinning" && reel && (
+            <motion.div
+              key={reel.business}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.12 }}
+              className="mt-1.5 flex items-baseline gap-2"
+            >
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-white/50">{t("draw.selecting")}</span>
+              <span className="truncate font-display text-sm font-bold text-white">{reel.business}</span>
+              <span className="truncate text-[10px] text-white/60">{t("home.by")} {reel.seller}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="relative mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[9px] font-semibold uppercase tracking-wider text-white/70">
@@ -654,7 +601,7 @@ function StallArena({
       </div>
 
       {!done && (
-        <SimpleStallGrid total={total} byStall={byStall} usedStalls={usedStalls} current={current} />
+        <SimpleStallGrid total={total} byStall={byStall} usedStalls={usedStalls} current={current} throwing={reveal} spinStall={spinStall} />
       )}
 
       {/* Arena — appears after all 45 stalls are assigned */}
@@ -749,11 +696,15 @@ function SimpleStallGrid({
   byStall,
   usedStalls,
   current,
+  throwing = false,
+  spinStall = null,
 }: {
   total: number;
   byStall: Map<number, Selected>;
   usedStalls: Set<number>;
   current: Selected | null;
+  throwing?: boolean;
+  spinStall?: number | null;
 }) {
   const stalls = Array.from({ length: total }, (_, i) => i + 1);
   return (
@@ -762,13 +713,14 @@ function SimpleStallGrid({
         const info = byStall.get(n);
         const assigned = usedStalls.has(n);
         const isCurrent = current?.stallNo === n;
+        const isSpin = !isCurrent && spinStall === n; // stall lit up as the picker runs
         const palette = info ? CATEGORY_COLORS[info.category] ?? CATEGORY_COLORS.Others : null;
         return (
           <div key={n} className="group relative">
             <motion.div
               layout
               initial={false}
-              animate={isCurrent ? { scale: 1.18 } : { scale: 1 }}
+              animate={isCurrent ? { scale: 1.18 } : isSpin ? { scale: 1.1 } : { scale: 1 }}
               transition={{ type: "spring", stiffness: 280, damping: 18 }}
               className={`flex aspect-square items-center justify-center rounded-lg text-[10px] font-black transition-all ${
                 isCurrent ? "animate-pulse-glow" : ""
@@ -776,17 +728,36 @@ function SimpleStallGrid({
               style={{
                 background: palette
                   ? `linear-gradient(180deg, ${palette.bg} 0%, ${palette.canopy} 100%)`
-                  : "rgba(255,255,255,0.05)",
-                color: assigned ? "#fff" : "rgba(255,255,255,0.5)",
+                  : isSpin
+                    ? "rgba(255,201,74,0.22)"
+                    : "rgba(255,255,255,0.05)",
+                color: assigned ? "#fff" : isSpin ? "#fff" : "rgba(255,255,255,0.5)",
                 boxShadow: isCurrent
                   ? `0 0 0 2px #FFC94A, 0 0 18px 3px ${palette?.ring ?? "rgba(255,201,74,0.7)"}`
-                  : assigned
-                    ? `0 4px 10px -4px ${palette?.ring ?? "rgba(0,0,0,0.4)"}, inset 0 -2px 0 rgba(0,0,0,0.18)`
-                    : "inset 0 0 0 1px rgba(255,255,255,0.07)",
+                  : isSpin
+                    ? "0 0 0 2px rgba(255,201,74,0.8), 0 0 14px 2px rgba(255,201,74,0.5)"
+                    : assigned
+                      ? `0 4px 10px -4px ${palette?.ring ?? "rgba(0,0,0,0.4)"}, inset 0 -2px 0 rgba(0,0,0,0.18)`
+                      : "inset 0 0 0 1px rgba(255,255,255,0.07)",
               }}
             >
               <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">{n.toString().padStart(2, "0")}</span>
             </motion.div>
+            {/* Thrown dart — strikes the randomly-selected stall number */}
+            <AnimatePresence>
+              {isCurrent && throwing && (
+                <motion.div
+                  key="dart"
+                  initial={{ y: -60, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 340, damping: 14 }}
+                  className="pointer-events-none absolute bottom-full left-1/2 z-40 -mb-1 -translate-x-1/2"
+                >
+                  <RedDart className="h-12 w-[18px]" />
+                </motion.div>
+              )}
+            </AnimatePresence>
             {info && (
               <div className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-black/90 px-3 py-2 text-[11px] shadow-glow group-hover:block">
                 <div className="font-semibold text-white">{info.business}</div>
@@ -938,7 +909,7 @@ function ProgressRing({ value, selected, target }: { value: number; selected: nu
   const C = 2 * Math.PI * R;
   const dash = C * value;
   return (
-    <div className="rounded-[36px] border border-white/15 bg-black/30 p-6 backdrop-blur-xl md:p-8">
+    <div>
       <div className="flex flex-col items-center gap-5 sm:flex-row sm:gap-6">
         <div className="relative h-36 w-36 shrink-0 sm:h-40 sm:w-40">
           <svg viewBox="0 0 160 160" className="h-full w-full -rotate-90">
@@ -967,11 +938,7 @@ function ProgressRing({ value, selected, target }: { value: number; selected: nu
           <div className="text-[10px] font-semibold uppercase tracking-[0.4em] text-white/60">{t("draw.drawProgress")}</div>
           <div className="mt-1 font-display text-xl font-semibold text-white">{t("draw.liveCounter")}</div>
           <div className="mt-2 text-sm text-white/70">{t("draw.fairRandom")}</div>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-xl bg-white/5 p-2 text-center">
-              <div className="text-white/60">{t("draw.selectedWord")}</div>
-              <div className="font-display text-lg font-bold tabular-nums text-accent">{selected}</div>
-            </div>
+          <div className="mt-4 text-xs">
             <div className="rounded-xl bg-white/5 p-2 text-center">
               <div className="text-white/60">{t("draw.remaining")}</div>
               <div className="font-display text-lg font-bold tabular-nums text-white">{target - selected}</div>
@@ -997,8 +964,11 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
     .filter((s) => (!cat || s.category === cat))
     .filter((s) => { const n = q.trim().toLowerCase(); return !n || `${s.business} ${s.seller} ${s.category} ${s.stallNo}`.toLowerCase().includes(n); });
   const pct = target > 0 ? Math.min(100, Math.round((selected.length / target) * 100)) : 0;
+  // Live feed shows draw order (first winner first); the latest pick is highlighted.
+  const feed = [...selected].sort((a, b) => a.order - b.order);
+  const latestOrder = selected.length ? Math.max(...selected.map((s) => s.order)) : 0;
   return (
-    <div className="rounded-[36px] border border-white/15 bg-black/30 p-6 backdrop-blur-xl md:p-8">
+    <div className="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/10 md:p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-[0.4em] text-white/60">{t("draw.selectedSellers")}</div>
@@ -1019,9 +989,6 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
               <ListChecks className="h-3.5 w-3.5" /> {t("draw.viewSelected")}
             </button>
           )}
-          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold tabular-nums text-white/80 ring-1 ring-white/15">
-            {selected.length} / {target}
-          </span>
         </div>
       </div>
 
@@ -1126,8 +1093,9 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
         <div className="relative">
           <div className="max-h-[520px] space-y-2.5 overflow-y-auto pr-1">
             <AnimatePresence initial={false}>
-              {selected.map((s, i) => {
+              {feed.map((s) => {
                 const palette = CATEGORY_COLORS[s.category] ?? CATEGORY_COLORS.Others;
+                const isNew = s.order === latestOrder;
                 return (
                   <motion.div
                     key={s.id}
@@ -1137,7 +1105,7 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
                     exit={{ opacity: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 24 }}
                     className={`flex items-center gap-3 rounded-2xl p-3 ring-1 transition-colors ${
-                      i === 0 ? "bg-accent/10 ring-accent/50 shadow-[0_0_24px_-8px_rgba(255,201,74,0.6)]" : "bg-white/5 ring-white/10"
+                      isNew ? "bg-accent/10 ring-accent/50 shadow-[0_0_24px_-8px_rgba(255,201,74,0.6)]" : "bg-white/5 ring-white/10"
                     }`}
                   >
                     <div
@@ -1150,7 +1118,7 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <span className="truncate font-semibold text-white">{s.business}</span>
-                        {i === 0 && <span className="shrink-0 rounded-full bg-accent/25 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-accent">{t("draw.new")}</span>}
+                        {isNew && <span className="shrink-0 rounded-full bg-accent/25 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-accent">{t("draw.new")}</span>}
                       </div>
                       <div className="mt-0.5 flex items-center gap-1.5 text-xs text-white/75">
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: palette.bg }} />

@@ -5,8 +5,10 @@ const NUMBERS = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9,
 
 const BLACK = "#1b1b1b";
 const CREAM = "#efe4c4";
-const RED = "#d32b2b";
-const GREEN = "#1f9e57";
+// Ring tones — monochrome (no colour): dark grey + muted cream so the ring
+// structure stays visible but the board has no hue.
+const RED = "#3d3a34";   // dark grey (rings on black sectors)
+const GREEN = "#d6c9a6";  // muted cream (rings on cream sectors)
 
 const C = 100; // centre
 // Ring radii (viewBox 200).
@@ -31,33 +33,33 @@ function sector(rIn: number, rOut: number, a0: number, a1: number): string {
   return `M${x1} ${y1} A${rOut} ${rOut} 0 0 1 ${x2} ${y2} L${x3} ${y3} A${rIn} ${rIn} 0 0 0 ${x4} ${y4} Z`;
 }
 
-export function Dartboard({ spinning = false, className = "", children }: { spinning?: boolean; className?: string; children?: ReactNode }) {
-  const sectors = NUMBERS.map((n, i) => {
-    const a0 = i * 18 - 9;
-    const a1 = i * 18 + 9;
+export function Dartboard({ spinning = false, className = "", children, labels, highlightIndex, highlightLabel, doneLabels }: { spinning?: boolean; className?: string; children?: ReactNode; labels?: string[]; highlightIndex?: number; highlightLabel?: string; doneLabels?: Set<string> }) {
+  // Number mode: classic 20-wedge dartboard. Labels mode: one wedge PER applicant
+  // (a raffle wheel) so every registration shows; names run radially along the spoke.
+  const useLabels = !!labels && labels.length > 0;
+  const N = useLabels ? labels!.length : 20;
+  const per = 360 / N;
+  const nameFont = Math.max(2.6, Math.min(5, 240 / N));
+  const sectors = Array.from({ length: N }, (_, i) => {
+    const a0 = i * per - per / 2;
+    const a1 = i * per + per / 2;
     const isBlack = i % 2 === 0;
-    const wedge = isBlack ? BLACK : CREAM;
-    const ring = isBlack ? RED : GREEN;
-    return { n, i, a0, a1, wedge, ring };
+    return { i, a0, a1, wedge: isBlack ? BLACK : CREAM, ring: isBlack ? RED : GREEN };
   });
 
   return (
     <div className={`relative ${className}`}>
       <svg viewBox="0 0 200 200" className={`h-full w-full drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)] ${spinning ? "animate-spin-slow" : ""}`}>
-        {/* Number band */}
+        {/* Name/number band */}
         <circle cx={C} cy={C} r={(R_NUM_OUT + R_NUM_IN) / 2} fill="none" stroke="#0d0d0d" strokeWidth={R_NUM_OUT - R_NUM_IN} />
         {/* Outer wire ring */}
         <circle cx={C} cy={C} r={R_NUM_OUT} fill="none" stroke="#7a6a3a" strokeWidth="1" />
 
         {sectors.map((s) => (
-          <g key={s.n}>
-            {/* outer single */}
+          <g key={s.i}>
             <path d={sector(R_OUT_IN, R_DBL_IN, s.a0, s.a1)} fill={s.wedge} />
-            {/* inner single */}
             <path d={sector(R_IN_IN, R_TRP_IN, s.a0, s.a1)} fill={s.wedge} />
-            {/* double ring */}
             <path d={sector(R_DBL_IN, R_DBL_OUT, s.a0, s.a1)} fill={s.ring} />
-            {/* treble ring */}
             <path d={sector(R_TRP_IN, R_TRP_OUT, s.a0, s.a1)} fill={s.ring} />
           </g>
         ))}
@@ -65,19 +67,61 @@ export function Dartboard({ spinning = false, className = "", children }: { spin
         {/* Spider wires between wedges */}
         {sectors.map((s) => {
           const [x, y] = polar(R_DBL_OUT, s.a0);
-          return <line key={`w${s.n}`} x1={C} y1={C} x2={x} y2={y} stroke="#00000055" strokeWidth="0.5" />;
+          return <line key={`w${s.i}`} x1={C} y1={C} x2={x} y2={y} stroke="#00000055" strokeWidth="0.5" />;
         })}
+
+        {/* Winning wedge highlight */}
+        {highlightIndex != null && highlightIndex >= 0 && (
+          <path d={sector(R_IN_IN, R_DBL_OUT, highlightIndex * per - per / 2, highlightIndex * per + per / 2)} fill="#ffd24a" opacity="0.28" stroke="#ffd24a" strokeWidth="1.2" />
+        )}
 
         {/* Bull */}
         <circle cx={C} cy={C} r={R_BULL_OUT} fill={GREEN} stroke="#0d0d0d" strokeWidth="0.6" />
         <circle cx={C} cy={C} r={R_BULL_IN} fill={RED} stroke="#0d0d0d" strokeWidth="0.6" />
+        <ellipse cx={C - 2} cy={C - 2.5} rx="2.4" ry="1.6" fill="#fff" opacity="0.35" />
 
-        {/* Numbers */}
+        {/* Names (radial) — or numbers (upright) */}
         {sectors.map((s) => {
+          const full = useLabels ? (labels![s.i] || "") : String(NUMBERS[s.i]);
+          const isWin = highlightIndex === s.i && !!highlightLabel;
+          const isDone = !isWin && !!doneLabels && doneLabels.has(full);
+          const fill = isWin ? "#ffd24a" : isDone ? "#9a9a9a" : "#fff";
+          if (useLabels) {
+            // Radial name (first word; full on hover), flipped on the lower half.
+            const source = isWin ? (highlightLabel || full) : full;
+            const disp = (source.split(" ")[0] || source).slice(0, 12);
+            const deg = s.i * per;
+            const flip = deg > 90 && deg < 270;
+            const py = C - 72;
+            return (
+              <g key={`n${s.i}`} transform={`rotate(${deg} ${C} ${C})`}>
+                <text
+                  x={C}
+                  y={py}
+                  transform={`rotate(${flip ? 90 : -90} ${C} ${py})`}
+                  fill={fill}
+                  fillOpacity={isDone ? 0.65 : 1}
+                  fontSize={isWin ? nameFont + 1.4 : nameFont}
+                  fontWeight={isWin ? "900" : "700"}
+                  textDecoration={isDone ? "line-through" : undefined}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontFamily="system-ui, sans-serif"
+                  style={{ paintOrder: "stroke" }}
+                  stroke="#000"
+                  strokeWidth="0.35"
+                  strokeOpacity="0.6"
+                >
+                  <title>{isWin ? highlightLabel : full}</title>
+                  {disp}
+                </text>
+              </g>
+            );
+          }
           const [x, y] = polar((R_NUM_OUT + R_NUM_IN) / 2, s.i * 18);
           return (
-            <text key={`n${s.n}`} x={x} y={y} fill="#fff" fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="central" fontFamily="system-ui, sans-serif">
-              {s.n}
+            <text key={`n${s.i}`} x={x} y={y} fill={fill} fontSize="9.5" fontWeight="700" textAnchor="middle" dominantBaseline="central" fontFamily="system-ui, sans-serif">
+              {String(NUMBERS[s.i])}
             </text>
           );
         })}
