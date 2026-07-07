@@ -1,11 +1,12 @@
 import { doc, getDoc, setDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
+import { asset } from "./asset";
 
 const SETTINGS = "settings";
 const SITE = "site";
 
 // Bundled poster in /public — used until an admin sets a custom URL.
-export const DEFAULT_HERO_IMAGE = "/Amchi bazar.png";
+export const DEFAULT_HERO_IMAGE = asset("/Amchi bazar.png");
 
 // Google Drive links → lh3 CDN form that hotlinks in <img>; anything else
 // (other hosts, local /public paths) passes through unchanged.
