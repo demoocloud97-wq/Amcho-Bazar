@@ -7,7 +7,7 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 // GitHub Pages project site: served from /<repo>/. Base + router basepath must match.
-const BASE = "/amcho-bazar-sparkle/";
+const BASE = "/Amcho-Bazar/";
 
 export default defineConfig({
   tanstackStart: {
