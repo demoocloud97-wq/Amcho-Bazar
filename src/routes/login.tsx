@@ -6,6 +6,7 @@ import { Eye, EyeOff, Loader2, Lock, Mail, Sparkles } from "lucide-react";
 import { signInWithEmail, signInWithGoogle, resetPassword } from "@/lib/auth";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 import { useI18n } from "@/lib/i18n";
+import { useSeason } from "@/lib/season-context";
 import { EVENT } from "@/lib/dummy-data";
 
 export const Route = createFileRoute("/login")({
@@ -23,6 +24,10 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const navigate = useNavigate();
   const { t } = useI18n();
+  const { activeSeason } = useSeason();
+  // Show the operationally-active season's details (falls back to static event data).
+  const seasonLabel = activeSeason?.seasonName || EVENT.season;
+  const seasonStalls = activeSeason?.maximumStalls || EVENT.totalStalls;
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -101,9 +106,9 @@ function LoginPage() {
 
           <div className="mt-10 space-y-4">
             {[
-              { k: `${EVENT.totalStalls}`, v: t("login.statStalls") },
+              { k: `${seasonStalls}`, v: t("login.statStalls") },
               { k: `${EVENT.registeredSellers}+`, v: t("login.statWomen") },
-              { k: EVENT.season, v: t("login.statLive") },
+              { k: seasonLabel, v: t("login.statLive") },
             ].map((s) => (
               <div key={s.v} className="flex items-center justify-between rounded-2xl bg-white/10 px-4 py-3 backdrop-blur">
                 <span className="text-sm text-white/80">{s.v}</span>
