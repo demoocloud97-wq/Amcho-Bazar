@@ -700,7 +700,7 @@ function EventLocation({ season }: { season: import("@/lib/seasons-db").Season |
 function LocationRow({ icon, label, value }: { icon: React.ReactNode; label: string; value?: string }) {
   if (!value) return null;
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">{icon}</span>
       <div className="min-w-0">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
@@ -720,8 +720,10 @@ function LocationCard({ loc }: { loc: LocData }) {
   return (
     <div className="mt-12 grid gap-6 lg:grid-cols-2">
       {/* Left — info card */}
-      <div className="rounded-3xl border border-border bg-card p-6 shadow-card md:p-8">
-        <div className="flex items-start gap-3">
+      <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 shadow-card md:p-8">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-festive via-accent to-secondary" />
+        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-warm opacity-30 blur-2xl" />
+        <div className="relative flex items-start gap-3">
           <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-festive text-white shadow-soft"><MapPin className="h-6 w-6" /></span>
           <div className="min-w-0">
             <div className="text-[11px] font-semibold uppercase tracking-widest text-secondary">{t("loc.venue")}</div>
@@ -730,7 +732,7 @@ function LocationCard({ loc }: { loc: LocData }) {
           </div>
         </div>
 
-        <div className="mt-6 space-y-4">
+        <div className="relative mt-6 divide-y divide-border overflow-hidden rounded-2xl border border-border">
           <LocationRow icon={<MapPin className="h-4 w-4" />} label={t("loc.address")} value={loc.fullAddress} />
           <LocationRow icon={<CalendarDays className="h-4 w-4" />} label={t("loc.date")} value={loc.eventDate} />
           <LocationRow icon={<Clock className="h-4 w-4" />} label={t("loc.time")} value={loc.eventTime} />

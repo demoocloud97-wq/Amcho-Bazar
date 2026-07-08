@@ -74,11 +74,11 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
   },
   "footer.poweredBy":     { en: "Powered by", ur: "تعاون:", "ur-roman": "Powered by", hi: "द्वारा संचालित", ar: "بدعم من" },
   "footer.handcrafted": {
-    en: "Handcrafted with love for the women of Bhatkal.",
-    ur: "بھٹکل کی خواتین کے لیے محبت سے تیار کیا گیا۔",
-    "ur-roman": "Bhatkal ki khawateen ke liye mohabbat se tayar kiya gaya.",
-    hi: "भटकल की महिलाओं के लिए प्यार से बनाया गया।",
-    ar: "صُنع بحب لنساء بهتكل.",
+    en: "Handcrafted with love for the women of our community.",
+    ur: "ہماری کمیونٹی کی خواتین کے لیے محبت سے تیار کیا گیا۔",
+    "ur-roman": "Hamari community ki khawateen ke liye mohabbat se tayar kiya gaya.",
+    hi: "हमारे समुदाय की महिलाओं के लिए प्यार से बनाया गया।",
+    ar: "صُنع بحب لنساء مجتمعنا.",
   },
   "footer.org":           { en: "Nawait Community · Amcho Bazar", ur: "نوائط کمیونٹی · امچو بازار", "ur-roman": "Nawait Community · Amcho Bazar", hi: "नवाइत समुदाय · अम्चो बाज़ार", ar: "مجتمع نوائط · أمتشو بازار" },
 
@@ -122,7 +122,7 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
 
   "home.story.eyebrow":  { en: "Community story", ur: "کمیونٹی کی کہانی", "ur-roman": "Community ki kahani", hi: "समुदाय की कहानी", ar: "قصة المجتمع" },
   "home.story.title":    { en: "Rooted in Nawait, blooming for Bhatkal.", ur: "نوائط میں جڑی، بھٹکل کے لیے کھلتی ہوئی۔", "ur-roman": "Nawait mein judi, Bhatkal ke liye khilti hui.", hi: "नवाइत में जड़ें, भटकल के लिए खिलती हुई।", ar: "متجذّرة في نوائط، مزهرة لبهتكل." },
-  "home.story.subtitle": { en: "The Nawait Community has, for generations, held Bhatkal's women in a warm circle of mentorship, faith and enterprise. Amcho Bazar is our modern celebration of that circle — where recipes travel across streets, where a stitch becomes a livelihood, where a tea break becomes a partnership.", ur: "نوائط کمیونٹی نے نسلوں سے بھٹکل کی خواتین کو رہنمائی، ایمان اور کاروبار کے گرم حلقے میں تھاما ہے۔ امچو بازار اسی حلقے کا جدید جشن ہے — جہاں ترکیبیں گلیوں میں سفر کرتی ہیں، جہاں ایک ٹانکا روزی بن جاتا ہے، جہاں چائے کا وقفہ شراکت بن جاتا ہے۔", "ur-roman": "Nawait Community ne naslon se Bhatkal ki khawateen ko rehnumai, imaan aur karobar ke garm halqe mein thama hai. Amcho Bazar isi halqe ka jadeed jashn hai — jahan tarkeebein galiyon mein safar karti hain, jahan ek taanka rozi ban jata hai, jahan chai ka waqfa shirakat ban jata hai.", hi: "नवाइत समुदाय ने पीढ़ियों से भटकल की महिलाओं को मार्गदर्शन, आस्था और उद्यम के गर्म घेरे में थामा है। अम्चो बाज़ार उसी घेरे का आधुनिक जश्न है — जहाँ व्यंजन गलियों में सफर करते हैं, जहाँ एक टाँका आजीविका बन जाता है, जहाँ चाय का ब्रेक साझेदारी बन जाता है।", ar: "لطالما احتضن مجتمع نوائط، عبر الأجيال، نساء بهتكل في حلقة دافئة من الإرشاد والإيمان والعمل. أمتشو بازار احتفالنا الحديث بتلك الحلقة — حيث تسافر الوصفات بين الأزقة، وتصبح غرزة رزقًا، وتتحول استراحة شاي إلى شراكة." },
+  "home.story.subtitle": { en: "The Nawait Community has, for generations, held our women in a warm circle of mentorship, faith and enterprise. Amcho Bazar is our modern celebration of that circle — where recipes travel across streets, where a stitch becomes a livelihood, where a tea break becomes a partnership.", ur: "نوائط کمیونٹی نے نسلوں سے اپنی خواتین کو رہنمائی، ایمان اور کاروبار کے گرم حلقے میں تھاما ہے۔ امچو بازار اسی حلقے کا جدید جشن ہے — جہاں ترکیبیں گلیوں میں سفر کرتی ہیں، جہاں ایک ٹانکا روزی بن جاتا ہے، جہاں چائے کا وقفہ شراکت بن جاتا ہے۔", "ur-roman": "Nawait Community ne naslon se apni khawateen ko rehnumai, imaan aur karobar ke garm halqe mein thama hai. Amcho Bazar isi halqe ka jadeed jashn hai — jahan tarkeebein galiyon mein safar karti hain, jahan ek taanka rozi ban jata hai, jahan chai ka waqfa shirakat ban jata hai.", hi: "नवाइत समुदाय ने पीढ़ियों से अपनी महिलाओं को मार्गदर्शन, आस्था और उद्यम के गर्म घेरे में थामा है। अम्चो बाज़ार उसी घेरे का आधुनिक जश्न है — जहाँ व्यंजन गलियों में सफर करते हैं, जहाँ एक टाँका आजीविका बन जाता है, जहाँ चाय का ब्रेक साझेदारी बन जाता है।", ar: "لطالما احتضن مجتمع نوائط، عبر الأجيال، نساءنا في حلقة دافئة من الإرشاد والإيمان والعمل. أمتشو بازار احتفالنا الحديث بتلك الحلقة — حيث تسافر الوصفات بين الأزقة، وتصبح غرزة رزقًا، وتتحول استراحة شاي إلى شراكة." },
   "home.story.quote":    { en: "“She was my first customer.”", ur: "“وہ میری پہلی گاہک تھی۔”", "ur-roman": "“Woh meri pehli gaahak thi.”", hi: "“वह मेरी पहली ग्राहक थी।”", ar: "“كانت أول زبونة لي.”" },
   "home.story.quoteBy":  { en: "— Ayesha, Season 2 seller", ur: "— عائشہ، سیزن 2 کی بیچنے والی", "ur-roman": "— Ayesha, Season 2 ki bechne wali", hi: "— आयशा, सीज़न 2 विक्रेता", ar: "— عائشة، بائعة الموسم 2" },
   "home.story.chip1":    { en: "Est. 1968", ur: "قیام 1968", "ur-roman": "Qiyaam 1968", hi: "स्थापना 1968", ar: "تأسّس 1968" },
@@ -425,6 +425,10 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
   "ann.deleteTitle": { en: "Delete announcement?", ur: "اعلان حذف کریں؟", "ur-roman": "Elan delete karein?", hi: "घोषणा हटाएँ?", ar: "حذف الإعلان؟" },
   "ann.deleteDesc": { en: "This announcement will be permanently removed.", ur: "یہ اعلان مستقل طور پر ہٹا دیا جائے گا۔", "ur-roman": "Yeh elan hamesha ke liye hat jayega.", hi: "यह घोषणा स्थायी रूप से हटा दी जाएगी।", ar: "سيُحذف هذا الإعلان نهائيًا." },
   "ann.titleReq": { en: "Please add a title.", ur: "براہ کرم عنوان لکھیں۔", "ur-roman": "Baraye meharbani title likhein.", hi: "कृपया शीर्षक जोड़ें।", ar: "يرجى إضافة عنوان." },
+  "ann.edit":     { en: "Edit", ur: "ترمیم", "ur-roman": "Edit", hi: "संपादित करें", ar: "تعديل" },
+  "ann.editTitle": { en: "Edit announcement", ur: "اعلان میں ترمیم کریں", "ur-roman": "Elan edit karein", hi: "घोषणा संपादित करें", ar: "تعديل الإعلان" },
+  "ann.update":   { en: "Update", ur: "اپ ڈیٹ کریں", "ur-roman": "Update karein", hi: "अपडेट करें", ar: "تحديث" },
+  "ann.updated":  { en: "Announcement updated", ur: "اعلان اپ ڈیٹ ہو گیا", "ur-roman": "Elan update ho gaya", hi: "घोषणा अपडेट हो गई", ar: "تم تحديث الإعلان" },
 
   /* ---- Gallery ---- */
   "gallery.title":    { en: "Our seasons, one warm memory at a time.", ur: "ہمارے سیزن، ایک وقت میں ایک گرم یاد۔", "ur-roman": "Hamare season, ek waqt mein ek garm yaad.", hi: "हमारे सीज़न, एक बार में एक गर्म याद।", ar: "مواسمنا، ذكرى دافئة في كل مرة." },

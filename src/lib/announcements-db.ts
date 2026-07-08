@@ -1,5 +1,5 @@
 import {
-  collection, addDoc, getDocs, doc, deleteDoc, serverTimestamp, type DocumentData,
+  collection, addDoc, getDocs, doc, deleteDoc, updateDoc, serverTimestamp, type DocumentData,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { AMCHO_BAZAR_EVENT_ID } from "./events-db";
@@ -33,6 +33,14 @@ export async function createAnnouncement(data: { title: string; body: string; im
 export async function getAnnouncements(): Promise<Announcement[]> {
   const snap = await getDocs(collection(db, COL));
   return (snap.docs.map((d) => ({ id: d.id, ...(d.data() as DocumentData) })) as Announcement[]).sort(byNewest);
+}
+
+export async function updateAnnouncement(id: string, data: { title: string; body: string; imageUrl?: string }) {
+  await updateDoc(doc(db, COL, id), {
+    title: data.title,
+    body: data.body,
+    imageUrl: data.imageUrl ?? null, // null clears the image (Firestore rejects undefined)
+  });
 }
 
 export async function deleteAnnouncement(id: string) {

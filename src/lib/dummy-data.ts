@@ -4,7 +4,7 @@ export const EVENT = {
   seasonNumber: 3,
   tagline: "Amchi Market, Amchi Manshay",
   organizer: "Nawait Community",
-  city: "Bhatkal, Karnataka",
+  city: "Karachi, Pakistan",
   venue: "Nawait Community Hall, Nawayath Colony",
   dateISO: "2026-08-02T10:00:00",
   dateLabel: "August 2, 2026 · 10:00 AM – 9:00 PM",
@@ -38,7 +38,7 @@ export const CATEGORIES: {
   description: string;
   hue: string;
 }[] = [
-  { key: "Food", emoji: "🍲", sellers: 22, description: "Home kitchens, festive sweets, fresh bakes and Bhatkali specialties.", hue: "from-orange to-gold" },
+  { key: "Food", emoji: "🍲", sellers: 22, description: "Home kitchens, festive sweets, fresh bakes and regional specialties.", hue: "from-orange to-gold" },
   { key: "Clothing", emoji: "👗", sellers: 18, description: "Modest wear, hand-embroidered abayas, tunics and everyday elegance.", hue: "from-maroon to-orange" },
   { key: "Jewellery", emoji: "💍", sellers: 14, description: "Handcrafted silver, resin art, beadwork and heirloom-inspired pieces.", hue: "from-gold to-orange" },
   { key: "Household", emoji: "🏺", sellers: 9, description: "Home décor, kitchen essentials, candles and thoughtful gifting.", hue: "from-teal to-maroon" },
@@ -51,7 +51,7 @@ export const CATEGORIES: {
 
 const firstNames = ["Ayesha","Fatima","Zainab","Khadija","Ruqayya","Sumayya","Aisha","Hafsa","Mariam","Safiya","Rida","Sana","Farheen","Nusrat","Zoya","Amina","Iqra","Hiba","Nazneen","Shabana","Rabia","Noor","Yasmeen","Tahira","Umme","Shaista","Nabila","Sameera","Lubna","Salma","Zubaida","Anisa","Rehana","Bushra","Rabeea","Rihana","Aliya","Simra","Alifa","Naila","Zeba","Munira","Shafeeqa","Kausar","Nasreen"];
 const lastInitials = ["Khan","Sherif","Damudi","Muhtesim","Ronghi","Muniri","Bahri","Kola","Attar","Barmawer","Ali","Rukhna","Kashfi","Baba","Ahmed"];
-const businessAdj = ["Ayesha's","Noor","Amina's","Golden","Cream","Zoya's","Bhatkali","Nawait","Home of","Little","Silk &","Rose","Henna","Blossom","Petal","Amber","Saffron","Mehendi","Suraiya's","Rida's"];
+const businessAdj = ["Ayesha's","Noor","Amina's","Golden","Cream","Zoya's","Meher's","Nawait","Home of","Little","Silk &","Rose","Henna","Blossom","Petal","Amber","Saffron","Mehendi","Suraiya's","Rida's"];
 const businessNoun = ["Kitchen","Kraft","Closet","Cocoa","Bakes","Boutique","Threads","Petals","Palette","Bites","Bazaar","Beads","Studio","Home","Curations","Kids","Corner","Nook","Table","Atelier"];
 
 function seeded(i: number) {
@@ -73,7 +73,7 @@ function seeded(i: number) {
 
 function sampleProducts(cat: CategoryKey, i: number): string[] {
   const p: Record<CategoryKey, string[]> = {
-    Food: ["Bhatkali biryani", "Sannas", "Coconut ladoos", "Kheema samosa", "Karachi halwa", "Date rolls"],
+    Food: ["Chicken biryani", "Sannas", "Coconut ladoos", "Kheema samosa", "Karachi halwa", "Date rolls"],
     Clothing: ["Hand-embroidered abaya", "Cotton tunics", "Kids' kurtas", "Modest maxi", "Silk scarves"],
     Jewellery: ["Resin earrings", "Silver anklets", "Beaded chokers", "Pearl studs", "Boho rings"],
     Household: ["Soy candles", "Ceramic mugs", "Cushion covers", "Woven baskets", "Table runners"],
@@ -95,7 +95,7 @@ export const PRE_ASSIGNED = 0;
 export const FAQS = [
   { q: "Who can attend Amcho Bazar?", a: "Amcho Bazar is a women-only event. Women and children of all ages are warmly welcome. Boys under 10 may accompany their mothers." },
   { q: "Is there an entry fee for visitors?", a: "Entry for visitors is completely free. Come with your friends, family and neighbours." },
-  { q: "Where is the event held?", a: "Nawait Community Hall, Nawayath Colony, Bhatkal — with ample parking and prayer facilities on site." },
+  { q: "Where is the event held?", a: "Nawait Community Hall, Nawayath Colony — with ample parking and prayer facilities on site." },
   { q: "How do I register as a seller?", a: "Head to Become a Seller, complete the 5-step registration and wait for confirmation. A live draw assigns stalls fairly." },
   { q: "What is the registration fee?", a: "Rs 1,500 covers the stall, table, chair, décor kit and marketing for the day. Payment is only after your registration is approved." },
   { q: "What if my registration is on the waiting list?", a: "You'll be automatically upgraded if a stall opens up. Waiting-list sellers are also invited to the community pop-up in Season 3." },

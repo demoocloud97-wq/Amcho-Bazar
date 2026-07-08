@@ -66,7 +66,7 @@ function RegisterPage() {
     fullName: "",
     phone: "",
     email: "",
-    city: "Bhatkal",
+    city: "Karachi",
     business: "",
     tagline: "",
     yearsRunning: "",
@@ -292,7 +292,7 @@ function StepBusiness({ data, update }: any) {
           <input value={data.business} onChange={(e) => update("business", e.target.value)} className={inputCls} placeholder="Ayesha's Kitchen" />
         </Field>
         <Field label={t("reg.f.tagline")} hint={t("reg.f.taglineHint")}>
-          <input value={data.tagline} onChange={(e) => update("tagline", e.target.value)} className={inputCls} placeholder="Bhatkali biryani, made with love." />
+          <input value={data.tagline} onChange={(e) => update("tagline", e.target.value)} className={inputCls} placeholder="Homemade biryani, made with love." />
         </Field>
         <Field label={t("reg.f.years")}>
           <input value={data.yearsRunning} onChange={(e) => update("yearsRunning", e.target.value)} className={inputCls} placeholder="2 years" />
@@ -302,7 +302,7 @@ function StepBusiness({ data, update }: any) {
         </Field>
         <div className="md:col-span-2">
           <Field label={t("reg.f.sell")} hint={t("reg.f.sellHint")}>
-            <textarea value={data.products} onChange={(e) => update("products", e.target.value)} className={`${inputCls} min-h-[100px]`} placeholder="Bhatkali biryani, kheema samosa, date rolls…" />
+            <textarea value={data.products} onChange={(e) => update("products", e.target.value)} className={`${inputCls} min-h-[100px]`} placeholder="Chicken biryani, kheema samosa, date rolls…" />
           </Field>
         </div>
       </div>

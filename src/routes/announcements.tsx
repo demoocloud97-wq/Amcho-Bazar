@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { CalendarDays, ImagePlus, Loader2, Megaphone, Send, Trash2, X } from "lucide-react";
+import { CalendarDays, ImagePlus, Loader2, Megaphone, Pencil, Save, Send, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
-import { createAnnouncement, getAnnouncements, deleteAnnouncement, type Announcement } from "@/lib/announcements-db";
+import { createAnnouncement, updateAnnouncement, getAnnouncements, deleteAnnouncement, type Announcement } from "@/lib/announcements-db";
 import { normalizeImageUrl } from "@/lib/settings-db";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 
@@ -27,6 +27,7 @@ function AnnouncementsPage() {
   const [items, setItems] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [delTarget, setDelTarget] = useState<Announcement | null>(null);
+  const [editing, setEditing] = useState<Announcement | null>(null);
 
   async function load() {
     setLoading(true);
@@ -47,7 +48,14 @@ function AnnouncementsPage() {
       <PageHeader eyebrow={t("ann.eyebrow")} title={t("ann.title")} subtitle={t("ann.subtitle")} />
 
       <section className="mx-auto max-w-2xl px-4 pb-24 md:px-8">
-        {isAdmin && <ComposeForm onPosted={load} />}
+        {isAdmin && (
+          <ComposeForm
+            key={editing?.id ?? "new"}
+            editing={editing}
+            onDone={async () => { await load(); setEditing(null); }}
+            onCancel={() => setEditing(null)}
+          />
+        )}
 
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
@@ -66,13 +74,22 @@ function AnnouncementsPage() {
                   <div className="flex items-start justify-between gap-3">
                     <h3 className="font-display text-lg font-bold leading-tight">{a.title}</h3>
                     {isAdmin && (
-                      <button
-                        onClick={() => setDelTarget(a)}
-                        aria-label={t("ann.deleteTitle")}
-                        className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          onClick={() => { setEditing(a); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                          aria-label={t("ann.edit")}
+                          className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => setDelTarget(a)}
+                          aria-label={t("ann.deleteTitle")}
+                          className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     )}
                   </div>
                   {fmtDate(a.createdAt) && (
@@ -100,11 +117,12 @@ function AnnouncementsPage() {
   );
 }
 
-function ComposeForm({ onPosted }: { onPosted: () => Promise<void> }) {
+function ComposeForm({ editing, onDone, onCancel }: { editing: Announcement | null; onDone: () => Promise<void>; onCancel: () => void }) {
   const { t } = useI18n();
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const isEdit = !!editing;
+  const [title, setTitle] = useState(editing?.title ?? "");
+  const [body, setBody] = useState(editing?.body ?? "");
+  const [imageUrl, setImageUrl] = useState(editing?.imageUrl ?? "");
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -112,10 +130,12 @@ function ComposeForm({ onPosted }: { onPosted: () => Promise<void> }) {
     if (!title.trim()) { toast.error(t("ann.titleReq")); return; }
     setBusy(true);
     try {
-      await createAnnouncement({ title: title.trim(), body: body.trim(), imageUrl: imageUrl.trim() || undefined });
-      toast.success(t("ann.posted"));
-      setTitle(""); setBody(""); setImageUrl("");
-      await onPosted();
+      const payload = { title: title.trim(), body: body.trim(), imageUrl: imageUrl.trim() || undefined };
+      if (isEdit) await updateAnnouncement(editing!.id!, payload);
+      else await createAnnouncement(payload);
+      toast.success(isEdit ? t("ann.updated") : t("ann.posted"));
+      if (!isEdit) { setTitle(""); setBody(""); setImageUrl(""); }
+      await onDone();
     } catch (e2) {
       toast.error(friendlyAuthError(e2));
     } finally {
@@ -126,11 +146,11 @@ function ComposeForm({ onPosted }: { onPosted: () => Promise<void> }) {
   const inputCls = "w-full rounded-xl border border-border bg-white/70 px-3 py-2.5 text-sm outline-none ring-primary/20 focus:ring-4";
 
   return (
-    <form onSubmit={submit} className="rounded-3xl border border-border bg-card p-5 shadow-card md:p-6">
+    <form onSubmit={submit} className={`rounded-3xl border bg-card p-5 shadow-card md:p-6 ${isEdit ? "border-primary/40 ring-1 ring-primary/20" : "border-border"}`}>
       <div className="mb-4 flex items-center gap-3">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-festive text-white shadow-soft"><Megaphone className="h-5 w-5" /></span>
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-festive text-white shadow-soft">{isEdit ? <Pencil className="h-5 w-5" /> : <Megaphone className="h-5 w-5" />}</span>
         <div>
-          <h2 className="font-display text-lg font-bold leading-tight">{t("ann.postTitle")}</h2>
+          <h2 className="font-display text-lg font-bold leading-tight">{isEdit ? t("ann.editTitle") : t("ann.postTitle")}</h2>
           <p className="text-xs text-muted-foreground">{t("ann.postDesc")}</p>
         </div>
       </div>
@@ -162,13 +182,19 @@ function ComposeForm({ onPosted }: { onPosted: () => Promise<void> }) {
         )}
       </div>
 
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex justify-end gap-2">
+        {isEdit && (
+          <button type="button" onClick={onCancel} className="inline-flex min-h-11 items-center rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground/80 transition-colors hover:bg-muted">
+            {t("common.cancel")}
+          </button>
+        )}
         <button
           type="submit"
           disabled={busy}
           className="inline-flex min-h-11 items-center gap-2 rounded-full bg-festive px-6 py-2.5 text-sm font-bold text-white shadow-soft transition-transform hover:scale-[1.02] disabled:opacity-60"
         >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} {busy ? t("ann.posting") : t("ann.post")}
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : isEdit ? <Save className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+          {busy ? t("ann.posting") : isEdit ? t("ann.update") : t("ann.post")}
         </button>
       </div>
     </form>
