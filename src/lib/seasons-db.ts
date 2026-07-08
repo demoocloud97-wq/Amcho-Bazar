@@ -32,6 +32,15 @@ export type Season = {
   eventDate?: string;
   venue?: string;
   city?: string;
+  // Event location (all optional; drives the home "Event Location" section)
+  fullAddress?: string;
+  googleMapsLink?: string;
+  latitude?: number;
+  longitude?: number;
+  eventTime?: string;
+  parkingDetails?: string;
+  nearbyLandmark?: string;
+  contactNumber?: string;
   maximumStalls: number;
   maximumSelectedStalls: number;
   registrationFee: number;
@@ -60,6 +69,14 @@ function normalize(id: string, data: DocumentData): Season {
     eventDate: data.eventDate,
     venue: data.venue,
     city: data.city,
+    fullAddress: data.fullAddress,
+    googleMapsLink: data.googleMapsLink,
+    latitude: typeof data.latitude === "number" ? data.latitude : undefined,
+    longitude: typeof data.longitude === "number" ? data.longitude : undefined,
+    eventTime: data.eventTime,
+    parkingDetails: data.parkingDetails,
+    nearbyLandmark: data.nearbyLandmark,
+    contactNumber: data.contactNumber,
     maximumStalls: data.maximumStalls ?? 0,
     maximumSelectedStalls: data.maximumSelectedStalls ?? 0,
     registrationFee: data.registrationFee ?? 0,

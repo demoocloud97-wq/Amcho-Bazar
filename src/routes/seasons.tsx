@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { CheckCircle2, Archive, Pencil, Plus, Trash2, CalendarDays, DatabaseZap, Loader2, Store, Trophy, Wallet } from "lucide-react";
+import { CheckCircle2, Archive, Pencil, Plus, Trash2, CalendarDays, DatabaseZap, Loader2, Store, Trophy, Wallet, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
 import { RequireAdmin } from "@/components/site/require-admin";
@@ -258,6 +258,23 @@ function SeasonFormDialog({
             <Field label={t("sea.f.city")}><input value={form.city} onChange={(e) => set("city", e.target.value)} className={inputCls} /></Field>
           </div>
           <Field label={t("sea.f.eventDate")}><input value={form.eventDate} onChange={(e) => set("eventDate", e.target.value)} placeholder="August 2, 2026 · 10:00 AM – 9:00 PM" className={inputCls} /></Field>
+
+          {/* Event location — drives the home "Event Location" section */}
+          <div className="rounded-2xl border border-border bg-muted/30 p-3">
+            <div className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-primary"><MapPin className="h-3.5 w-3.5" /> Location</div>
+            <div className="space-y-3">
+              <Field label="Full address"><input value={form.fullAddress ?? ""} onChange={(e) => set("fullAddress", e.target.value)} placeholder="Nawait Community Hall, Street 5, …" className={inputCls} /></Field>
+              <Field label="Google Maps link"><input value={form.googleMapsLink ?? ""} onChange={(e) => set("googleMapsLink", e.target.value)} placeholder="https://maps.google.com/…" className={inputCls} /></Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Latitude"><input type="number" step="any" value={form.latitude ?? ""} onChange={(e) => set("latitude", e.target.value ? Number(e.target.value) : undefined)} placeholder="24.8607" className={inputCls} /></Field>
+                <Field label="Longitude"><input type="number" step="any" value={form.longitude ?? ""} onChange={(e) => set("longitude", e.target.value ? Number(e.target.value) : undefined)} placeholder="67.0011" className={inputCls} /></Field>
+              </div>
+              <Field label="Event time"><input value={form.eventTime ?? ""} onChange={(e) => set("eventTime", e.target.value)} placeholder="10:00 AM – 9:00 PM" className={inputCls} /></Field>
+              <Field label="Parking details"><input value={form.parkingDetails ?? ""} onChange={(e) => set("parkingDetails", e.target.value)} placeholder="Free parking on-site" className={inputCls} /></Field>
+              <Field label="Nearby landmark"><input value={form.nearbyLandmark ?? ""} onChange={(e) => set("nearbyLandmark", e.target.value)} placeholder="Opposite Central Park" className={inputCls} /></Field>
+              <Field label="Contact number (optional)"><input value={form.contactNumber ?? ""} onChange={(e) => set("contactNumber", e.target.value)} placeholder="+92 3xx xxxxxxx" className={inputCls} /></Field>
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label={t("sea.f.regOpens")}><input type="date" value={form.registrationStartDate} onChange={(e) => set("registrationStartDate", e.target.value)} className={inputCls} /></Field>
             <Field label={t("sea.f.regCloses")}><input type="date" value={form.registrationEndDate} onChange={(e) => set("registrationEndDate", e.target.value)} className={inputCls} /></Field>
