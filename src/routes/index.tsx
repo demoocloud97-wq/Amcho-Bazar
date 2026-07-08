@@ -214,6 +214,7 @@ function AnnouncementsHome() {
   const [items, setItems] = useState<Announcement[]>([]);
   useEffect(() => { getAnnouncements().then((a) => setItems(a.slice(0, 3))).catch(() => {}); }, []);
   if (items.length === 0) return null;
+  const [latest, ...rest] = items;
   return (
     <section className="mx-auto max-w-7xl px-4 py-20 md:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -228,27 +229,59 @@ function AnnouncementsHome() {
         </Link>
       </div>
 
-      <div className="mt-8 grid gap-5 md:grid-cols-3">
-        {items.map((a) => (
-          <Link
-            key={a.id}
-            to="/announcements"
-            className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow"
-          >
-            {a.imageUrl && (
-              <img src={normalizeImageUrl(a.imageUrl)} alt={a.title} loading="lazy" referrerPolicy="no-referrer" className="h-40 w-full object-cover" />
-            )}
-            <div className="flex flex-1 flex-col p-5">
-              {annDate(a.createdAt) && (
-                <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <CalendarDays className="h-3.5 w-3.5" /> {annDate(a.createdAt)}
-                </div>
+      <div className="mt-8 grid gap-5 lg:grid-cols-3">
+        {/* Featured — the latest announcement, over its image */}
+        <Link
+          to="/announcements"
+          className={`group relative flex min-h-[320px] flex-col justify-end overflow-hidden rounded-3xl shadow-card ring-1 ring-border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow ${rest.length ? "lg:col-span-2" : "lg:col-span-3"}`}
+        >
+          {latest.imageUrl ? (
+            <img src={normalizeImageUrl(latest.imageUrl)} alt={latest.title} loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          ) : (
+            <div className="absolute inset-0 bg-hero" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
+          <div className="relative p-6 text-white md:p-8">
+            <div className="mb-2.5 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary">
+                <Sparkles className="h-3 w-3" /> {t("draw.new")}
+              </span>
+              {annDate(latest.createdAt) && (
+                <span className="inline-flex items-center gap-1 text-xs text-white/80"><CalendarDays className="h-3.5 w-3.5" /> {annDate(latest.createdAt)}</span>
               )}
-              <h3 className="mt-1.5 font-display text-lg font-bold leading-tight">{a.title}</h3>
-              {a.body && <p className="mt-1.5 line-clamp-3 text-sm text-muted-foreground">{a.body}</p>}
             </div>
-          </Link>
-        ))}
+            <h3 className="font-display text-2xl font-bold leading-tight md:text-3xl">{latest.title}</h3>
+            {latest.body && <p className="mt-2 line-clamp-2 max-w-2xl text-sm text-white/85 md:text-base">{latest.body}</p>}
+          </div>
+        </Link>
+
+        {/* The next couple, compact */}
+        {rest.length > 0 && (
+          <div className="flex flex-col gap-5">
+            {rest.map((a) => (
+              <Link
+                key={a.id}
+                to="/announcements"
+                className="group flex flex-1 gap-4 rounded-3xl border border-border bg-card p-3 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow"
+              >
+                <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl ring-1 ring-border">
+                  {a.imageUrl ? (
+                    <img src={normalizeImageUrl(a.imageUrl)} alt={a.title} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-warm text-primary"><Megaphone className="h-6 w-6" /></div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 self-center">
+                  {annDate(a.createdAt) && (
+                    <div className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"><CalendarDays className="h-3 w-3" /> {annDate(a.createdAt)}</div>
+                  )}
+                  <h3 className="mt-0.5 line-clamp-2 font-display text-base font-bold leading-tight">{a.title}</h3>
+                  {a.body && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{a.body}</p>}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

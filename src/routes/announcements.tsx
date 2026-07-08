@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { CalendarDays, ImagePlus, Loader2, Megaphone, Send, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
-import { RequireAuth } from "@/components/site/require-auth";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
@@ -13,11 +12,7 @@ import { friendlyAuthError } from "@/lib/firebase-errors";
 
 export const Route = createFileRoute("/announcements")({
   head: () => ({ meta: [{ title: "Announcements · Amcho Bazar" }] }),
-  component: () => (
-    <RequireAuth>
-      <AnnouncementsPage />
-    </RequireAuth>
-  ),
+  component: AnnouncementsPage,
 });
 
 function fmtDate(ts: unknown): string {
