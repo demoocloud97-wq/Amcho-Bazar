@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, Heart, Sparkles, Sparkle, Users, Store, Gift, ShieldCheck, PartyPopper, ChevronDown, Flower2, Star, Sprout, HandHeart, GraduationCap, Megaphone, CalendarDays, MapPin, Navigation, CalendarPlus, Clock, Car, Landmark, Phone } from "lucide-react";
+import { ArrowRight, Heart, Sparkles, Sparkle, Users, Store, Gift, ShieldCheck, PartyPopper, ChevronDown, Flower2, Star, Sprout, HandHeart, GraduationCap, Megaphone, CalendarDays, MapPin, Navigation, CalendarPlus, Clock, Car, Landmark, Phone, Utensils, Shirt, Gem, Smile, NotebookPen, Home as HomeIcon, Palette, type LucideIcon } from "lucide-react";
 import { Countdown } from "@/components/site/countdown";
 import { AnimatedCounter } from "@/components/site/animated-counter";
 import { SectionHeading } from "@/components/site/section-heading";
@@ -214,11 +214,7 @@ function AnnouncementsHome() {
   const [items, setItems] = useState<Announcement[]>([]);
   useEffect(() => { getAnnouncements().then((a) => setItems(a.slice(0, 3))).catch(() => {}); }, []);
   if (items.length === 0) return null;
-  const multi = items.length > 1;
-  // Repeat so the ticker is always wider than the viewport, then duplicate for a seamless loop.
-  const reps = Math.max(1, Math.ceil(4 / items.length));
-  const loop = Array.from({ length: reps }, () => items).flat();
-  const track = [...loop, ...loop];
+  const single = items.length === 1;
   return (
     <section className="mx-auto max-w-7xl px-4 py-20 md:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -233,37 +229,8 @@ function AnnouncementsHome() {
         </Link>
       </div>
 
-      {multi ? (
-        /* Auto-scrolling ticker (only with multiple announcements) — pauses on hover, fades at edges. */
-        <div className="marquee-pause relative mt-8 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)]">
-          <div className="flex w-max animate-marquee gap-5">
-            {track.map((a, i) => (
-              <Link
-                key={i}
-                to="/announcements"
-                className="group flex w-[280px] shrink-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-card transition-shadow hover:shadow-glow sm:w-[360px]"
-              >
-                <div className="relative h-44 w-full overflow-hidden">
-                  {a.imageUrl ? (
-                    <img src={normalizeImageUrl(a.imageUrl)} alt={a.title} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-hero"><Megaphone className="h-8 w-8 text-white/80" /></div>
-                  )}
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
-                </div>
-                <div className="flex flex-1 flex-col p-5">
-                  {annDate(a.createdAt) && (
-                    <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> {annDate(a.createdAt)}</div>
-                  )}
-                  <h3 className="mt-1.5 line-clamp-1 font-display text-lg font-bold leading-tight">{a.title}</h3>
-                  {a.body && <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">{a.body}</p>}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      ) : (
-        /* Single announcement — a static wide card (no marquee). */
+      {single ? (
+        /* One announcement — a wide card. */
         <Link
           to="/announcements"
           className="group mt-8 grid overflow-hidden rounded-3xl border border-border bg-card shadow-card transition-shadow hover:shadow-glow md:grid-cols-2"
@@ -283,6 +250,33 @@ function AnnouncementsHome() {
             {items[0].body && <p className="mt-2 line-clamp-4 text-sm text-muted-foreground">{items[0].body}</p>}
           </div>
         </Link>
+      ) : (
+        /* A few announcements — a clean grid, each shown once. */
+        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((a) => (
+            <Link
+              key={a.id}
+              to="/announcements"
+              className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow"
+            >
+              <div className="relative h-44 w-full overflow-hidden">
+                {a.imageUrl ? (
+                  <img src={normalizeImageUrl(a.imageUrl)} alt={a.title} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-hero"><Megaphone className="h-8 w-8 text-white/80" /></div>
+                )}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
+              </div>
+              <div className="flex flex-1 flex-col p-5">
+                {annDate(a.createdAt) && (
+                  <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> {annDate(a.createdAt)}</div>
+                )}
+                <h3 className="mt-1.5 line-clamp-1 font-display text-lg font-bold leading-tight">{a.title}</h3>
+                {a.body && <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">{a.body}</p>}
+              </div>
+            </Link>
+          ))}
+        </div>
       )}
     </section>
   );
@@ -324,10 +318,10 @@ function About() {
         <div className="relative">
           <div className="absolute -inset-8 -z-10 rounded-[40px] bg-warm opacity-20 blur-2xl" />
           <div className="grid grid-cols-6 gap-3">
-            <img loading="lazy" className="col-span-4 aspect-[4/3] rounded-3xl object-cover shadow-card" src="https://images.unsplash.com/photo-1552071860-9b492bcd8c56?auto=format&fit=crop&w=800&q=80" alt="" />
-            <img loading="lazy" className="col-span-2 aspect-[3/4] rounded-3xl object-cover shadow-card" src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80" alt="" />
-            <img loading="lazy" className="col-span-2 aspect-[3/4] rounded-3xl object-cover shadow-card" src="https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&w=600&q=80" alt="" />
-            <img loading="lazy" className="col-span-4 aspect-[4/3] rounded-3xl object-cover shadow-card" src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=800&q=80" alt="" />
+            <img loading="lazy" referrerPolicy="no-referrer" className="col-span-4 aspect-[4/3] rounded-3xl object-cover shadow-card" src={normalizeImageUrl("https://drive.google.com/file/d/1WVsMfO5_rQ2F_D1jsnbfkA_FBQIsEOz5/view?usp=drive_link")} alt="Amcho Bazar" />
+            <img loading="lazy" referrerPolicy="no-referrer" className="col-span-2 aspect-[3/4] rounded-3xl object-cover shadow-card" src={normalizeImageUrl("https://drive.google.com/file/d/1POtdIPj5FzrCTLjXkuYw9KFohR_RZzfu/view?usp=drive_link")} alt="Amcho Bazar" />
+            <img loading="lazy" referrerPolicy="no-referrer" className="col-span-2 aspect-[3/4] rounded-3xl object-cover shadow-card" src={normalizeImageUrl("https://drive.google.com/file/d/10fIzT0b7omcnqrpkbMFPHHAd_xlxaWL4/view?usp=drive_link")} alt="Amcho Bazar" />
+            <img loading="lazy" referrerPolicy="no-referrer" className="col-span-4 aspect-[4/3] rounded-3xl object-cover shadow-card" src={normalizeImageUrl("https://drive.google.com/file/d/1uar8c2TTHouCWZvHcQWVx9dcdidD6GKf/view?usp=drive_link")} alt="Amcho Bazar" />
           </div>
           <div className="glass absolute -bottom-6 left-1/2 -translate-x-1/2 rounded-full px-5 py-2 text-sm font-medium text-primary shadow-soft">
             {EVENT.city} · {EVENT.dateLabel.split("·")[0]}
@@ -395,13 +389,15 @@ function CommunityStory() {
           <div className="absolute -inset-6 -z-10 rounded-[36px] bg-accent/30 blur-2xl" />
           <img
             loading="lazy"
-            className="rounded-[32px] object-cover shadow-card"
-            src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=800&q=80"
-            alt="Nawait Community women together"
+            referrerPolicy="no-referrer"
+            className="w-full rounded-[32px] object-cover shadow-card"
+            src={normalizeImageUrl("https://drive.google.com/file/d/1hXOPpdaFwJ3-V_Uh1HZGHmJsigOO-zHB/view?usp=drive_link")}
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=800&q=80"; }}
+            alt="Amcho Bazar — stalls and sellers"
           />
-          <div className="glass absolute -bottom-6 -right-6 max-w-[220px] rounded-2xl p-4 text-sm shadow-soft">
-            <div className="font-display text-lg font-semibold text-primary">{t("home.story.quote")}</div>
-            <div className="mt-1 text-muted-foreground">{t("home.story.quoteBy")}</div>
+          <div className="absolute -bottom-8 -right-12 z-10 max-w-[210px] rounded-2xl border border-border bg-card p-3.5 shadow-glow md:-right-32">
+            <div className="font-display text-xs font-semibold leading-snug text-primary">{t("home.story.quote")}</div>
+            {t("home.story.quoteBy") && <div className="mt-1 text-[11px] text-muted-foreground">{t("home.story.quoteBy")}</div>}
           </div>
         </div>
         <div>
@@ -459,6 +455,42 @@ function StatsBand({ d }: { d: HomeData }) {
 /* ============================================================
    FEATURED CATEGORIES
 ============================================================ */
+// Colour themes cycled across category cards (Tailwind default palette).
+const CAT_THEMES = [
+  { bg: "bg-orange-100", text: "text-orange-500", badgeBg: "bg-orange-100", badgeText: "text-orange-600", zig: "text-orange-400" },
+  { bg: "bg-purple-100", text: "text-purple-500", badgeBg: "bg-purple-100", badgeText: "text-purple-600", zig: "text-purple-400" },
+  { bg: "bg-amber-100", text: "text-amber-600", badgeBg: "bg-amber-100", badgeText: "text-amber-700", zig: "text-amber-500" },
+  { bg: "bg-pink-100", text: "text-pink-500", badgeBg: "bg-pink-100", badgeText: "text-pink-600", zig: "text-pink-400" },
+  { bg: "bg-blue-100", text: "text-blue-500", badgeBg: "bg-blue-100", badgeText: "text-blue-600", zig: "text-blue-400" },
+  { bg: "bg-teal-100", text: "text-teal-600", badgeBg: "bg-teal-100", badgeText: "text-teal-700", zig: "text-teal-500" },
+  { bg: "bg-green-100", text: "text-green-600", badgeBg: "bg-green-100", badgeText: "text-green-700", zig: "text-green-500" },
+  { bg: "bg-rose-100", text: "text-rose-500", badgeBg: "bg-rose-100", badgeText: "text-rose-600", zig: "text-rose-400" },
+];
+
+function ZigzagStrip({ colorClass }: { colorClass: string }) {
+  return (
+    <div className="mb-[-1px] flex gap-6">
+      <span className={`zigzag-bunting h-2.5 w-[45%] ${colorClass}`} />
+      <span className={`zigzag-bunting h-2.5 w-[45%] ${colorClass}`} />
+    </div>
+  );
+}
+
+// Map a category name to a themed line icon; unknown names fall back to the emoji/logo.
+function catIcon(name: string): LucideIcon | null {
+  const n = name.toLowerCase();
+  if (/food|snack|eat|kitchen|bak|sweet|biryani|drink|juice|chai/.test(n)) return Utensils;
+  if (/cloth|dress|fashion|frock|wear|boutique|lawn|garment/.test(n)) return Shirt;
+  if (/jewel|gold|ornament/.test(n)) return Gem;
+  if (/beauty|cosmet|skincare|henna|makeup|salon/.test(n)) return Sparkles;
+  if (/kid|child|toy|baby/.test(n)) return Smile;
+  if (/station|book|paper|art suppl/.test(n)) return NotebookPen;
+  if (/house|home|decor|crockery|gadget|kitchenware|plastic/.test(n)) return HomeIcon;
+  if (/handmade|artisan|craft|show ?piece/.test(n)) return Palette;
+  if (/gift/.test(n)) return Gift;
+  return null;
+}
+
 function FeaturedCategories({ d }: { d: HomeData }) {
   const { isAdmin } = useAuth();
   const { t } = useI18n();
@@ -466,55 +498,58 @@ function FeaturedCategories({ d }: { d: HomeData }) {
   if (!d.loading && cats.length === 0) return null;
   return (
     <section className="mx-auto max-w-7xl px-4 py-24 md:px-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <SectionHeading
-          align="left"
-          eyebrow={t("home.featCat.eyebrow")}
-          title={t("home.featCat.title")}
-        />
-        {isAdmin && (
-          <Link to="/categories" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:text-secondary">
-            {t("home.featCat.exploreAll")} <ArrowRight className="h-4 w-4" />
-          </Link>
-        )}
+      {/* Heading */}
+      <div className="mx-auto max-w-3xl text-center">
+        <span className="inline-flex items-center gap-2 rounded-full border border-secondary/25 bg-secondary/5 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-secondary">
+          <span className="h-1.5 w-1.5 rounded-full bg-secondary" /> {t("home.featCat.eyebrow")}
+        </span>
+        <h2 className="mt-6 font-display text-4xl font-bold leading-tight text-foreground md:text-5xl">
+          {t("home.featCat.title")}{" "}
+          <span className="bg-gradient-to-r from-orange-500 to-purple-600 bg-clip-text text-transparent">Amcho Bazar</span>
+        </h2>
+        <p className="mt-5 text-lg text-muted-foreground">{t("home.featCat.subtitle")}</p>
       </div>
-      <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+
+      {/* Grid */}
+      <div className="mt-14 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
         {cats.map((c, i) => {
           const count = d.categoryCounts[c.id!] ?? 0;
-          const cardClass =
-            "group relative block h-full overflow-hidden rounded-3xl border border-border bg-card shadow-card transition-all hover:-translate-y-1 hover:shadow-glow";
-          const inner = (
-            <>
-              {c.imageUrl ? (
-                <img src={normalizeImageUrl(c.imageUrl)} alt={c.name} loading="lazy" referrerPolicy="no-referrer" className="aspect-[16/10] w-full object-cover" />
-              ) : (
-                <div className="flex aspect-[16/10] w-full items-center justify-center bg-warm text-5xl">{c.emoji}</div>
-              )}
-              <div className="p-6">
-                <div className="font-display text-xl font-semibold">{c.name}</div>
-                {count > 0 && <div className="mt-1 text-sm text-muted-foreground">{count} {t("home.sellersWord")}</div>}
-                {c.description && <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{c.description}</p>}
-                {isAdmin && (
-                  <div className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-primary">
-                    {t("home.featCat.explore")} <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-                  </div>
-                )}
-              </div>
-            </>
-          );
+          const th = CAT_THEMES[i % CAT_THEMES.length];
+          const Icon = catIcon(c.name);
           return (
             <motion.div
               key={c.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.4, delay: i * 0.05 }}
+              transition={{ duration: 0.4, delay: (i % 4) * 0.05 }}
             >
-              {isAdmin ? (
-                <Link to="/categories" className={cardClass}>{inner}</Link>
-              ) : (
-                <div className={cardClass}>{inner}</div>
-              )}
+              <ZigzagStrip colorClass={th.zig} />
+              <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-6 shadow-card transition-shadow hover:shadow-glow">
+                <div className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-full ${th.bg}`}>
+                  {Icon ? (
+                    <Icon className={`h-7 w-7 ${th.text}`} />
+                  ) : c.imageUrl ? (
+                    <img src={normalizeImageUrl(c.imageUrl)} alt={c.name} loading="lazy" referrerPolicy="no-referrer" className="h-9 w-9 object-contain" />
+                  ) : (
+                    <span className="text-3xl leading-none">{c.emoji}</span>
+                  )}
+                </div>
+                <h3 className="mt-5 font-display text-2xl font-bold text-foreground">{c.name}</h3>
+                {c.description && <p className="mt-2 line-clamp-3 text-muted-foreground">{c.description}</p>}
+                <div className="mt-auto flex items-center justify-between gap-2 pt-6">
+                  {count > 0 ? (
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${th.badgeBg} ${th.badgeText}`}>
+                      🏠 {count} {t("home.sellersWord")}
+                    </span>
+                  ) : <span />}
+                  {isAdmin && (
+                    <Link to="/categories" className={`inline-flex items-center gap-1 text-sm font-semibold ${th.text} hover:underline`}>
+                      {t("home.featCat.explore")} <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  )}
+                </div>
+              </div>
             </motion.div>
           );
         })}

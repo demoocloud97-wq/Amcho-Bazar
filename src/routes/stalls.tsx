@@ -1,15 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Search, Store, Loader2, X } from "lucide-react";
+import { Search, Store, Loader2, Upload, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
-import { getStallsBySeasonId, getStallsBySeason, type Stall } from "@/lib/stalls-db";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { getStallsBySeasonId, getStallsBySeason, createStall, type Stall } from "@/lib/stalls-db";
 import { getCategories, type Category } from "@/lib/categories-db";
 import { useSeason } from "@/lib/season-context";
+import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
 import { EVENT } from "@/lib/dummy-data";
-import { SEASON1_STALLS } from "@/lib/season1-gallery";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 
 // A season tab: a real Season entity if seeded, else a numeric-season fallback
@@ -30,12 +31,14 @@ export const Route = createFileRoute("/stalls")({
 
 function StallsPage() {
   const { seasons } = useSeason();
+  const { isAdmin } = useAuth();
   const { t } = useI18n();
   const [stalls, setStalls] = useState<Stall[]>([]);
   const [cats, setCats] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("All");
+  const [refresh, setRefresh] = useState(0);
 
   // Always show Season 1..N; a real Season entity (if seeded) supplies its name
   // + id, otherwise a numeric-season fallback keeps that tab browsable.
@@ -66,28 +69,13 @@ function StallsPage() {
       .then(([lists, c]) => {
         const byId = new Map<string, Stall>();
         lists.flat().forEach((s) => byId.set(s.id!, s));
-        let merged = [...byId.values()];
-        let cats = c;
-        // Season 1 has no Firestore stalls — fall back to the real archive list.
-        if (tab.season === 1 && merged.length === 0) {
-          const idByName = new Map(c.map((cc) => [cc.name.toLowerCase(), cc.id!]));
-          const extraCats: Category[] = [];
-          merged = SEASON1_STALLS.map((s, i) => {
-            let cid = idByName.get(s.category.toLowerCase());
-            if (!cid) {
-              cid = s.category;
-              if (!extraCats.some((e) => e.id === cid)) extraCats.push({ id: cid, name: s.category, emoji: "", description: "", status: "active" });
-            }
-            return { id: `s1-${i}`, name: s.name, owner: "", status: "assigned", season: 1, categoryId: cid, subcategoryId: null, imageUrl: s.imageUrl };
-          });
-          cats = [...c, ...extraCats];
-        }
-        setStalls(merged);
-        setCats(cats);
+        // Only real (Firestore) stalls — no built-in Season 1 sample archive.
+        setStalls([...byId.values()]);
+        setCats(c);
       })
       .catch((e) => { console.error(e); toast.error(friendlyAuthError(e)); })
       .finally(() => setLoading(false));
-  }, [tab?.key]);
+  }, [tab?.key, refresh]);
 
   const catName = useMemo(() => new Map(cats.map((c) => [c.id!, c.name])), [cats]);
   const catOptions = useMemo(
@@ -157,12 +145,14 @@ function StallsPage() {
           </div>
         </div>
 
-        <div className="mb-6 flex items-center justify-between text-sm text-muted-foreground">
+        <div className="mb-6 flex items-center justify-between gap-3 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-2">
             {loading ? t("common.loading") : <><span className="tabular-nums font-semibold text-foreground">{filtered.length}</span> {t("stalls.count")}</>}
             {tab && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{tab.label}</span>}
           </span>
-          <span className="inline-flex items-center gap-2"><Store className="h-4 w-4 text-primary" /> {t("stalls.hall")}</span>
+          {isAdmin && tab
+            ? <BulkImportStalls tab={tab} onDone={() => setRefresh((x) => x + 1)} />
+            : <span className="inline-flex items-center gap-2"><Store className="h-4 w-4 text-primary" /> {t("stalls.hall")}</span>}
         </div>
 
         {loading ? (
@@ -247,5 +237,81 @@ function StallImage({ src, alt }: { src?: string | null; alt: string }) {
         className={`aspect-[4/3] w-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
       />
     </div>
+  );
+}
+
+// Admin: paste a JSON array of { season, src, caption } to create many stalls at once.
+function BulkImportStalls({ tab, onDone }: { tab: Tab; onDone: () => void }) {
+  const { seasons } = useSeason();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const idByNumber = useMemo(() => new Map(seasons.map((s) => [s.seasonNumber, s.id])), [seasons]);
+
+  async function run() {
+    let rows: { season?: number; src?: string; url?: string; caption?: string; title?: string; name?: string; category?: string }[];
+    try {
+      rows = JSON.parse(text);
+      if (!Array.isArray(rows)) throw new Error("not an array");
+    } catch {
+      toast.error("Invalid JSON — paste an array of { season, src, caption }.");
+      return;
+    }
+    const items = rows
+      .map((r) => ({
+        season: Number(r.season) || tab.season,
+        src: (r.src || r.url || "").trim(),
+        name: (r.caption ?? r.title ?? r.name ?? "").trim(),
+        category: (r.category ?? "").trim(),
+      }))
+      .filter((r) => r.src);
+    if (items.length === 0) { toast.error("No valid rows (each needs a src)."); return; }
+
+    setBusy(true);
+    try {
+      let done = 0;
+      for (const it of items) {
+        const seasonId = idByNumber.get(it.season) ?? (it.season === tab.season ? tab.seasonId : undefined);
+        await createStall({ name: it.name || "Stall", owner: "", status: "assigned", categoryId: it.category, season: it.season, seasonId, imageUrl: it.src });
+        done++;
+      }
+      toast.success(`${done} stalls imported`);
+      setText("");
+      setOpen(false);
+      onDone();
+    } catch (err) {
+      toast.error(friendlyAuthError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-primary shadow-soft transition-colors hover:bg-muted"
+      >
+        <Upload className="h-4 w-4" /> Bulk import
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Bulk import stalls</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Paste an array of {"{ season, src, caption }"} rows. Google Drive links work.</p>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={'[ { "season": 1, "src": "https://…", "caption": "Stall name" } ]'}
+            className="mt-2 min-h-[220px] w-full rounded-xl border border-border bg-white/70 p-3 font-mono text-xs outline-none ring-primary/20 focus:ring-4"
+          />
+          <div className="mt-3 flex justify-end gap-2">
+            <button type="button" onClick={() => setOpen(false)} className="rounded-full border border-border px-4 py-2 text-sm font-medium">Cancel</button>
+            <button type="button" onClick={run} disabled={busy} className="inline-flex items-center gap-2 rounded-full bg-festive px-5 py-2 text-sm font-semibold text-white shadow-soft disabled:opacity-50">
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />} Import
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

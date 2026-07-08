@@ -286,6 +286,14 @@
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+/* Festive zig-zag bunting strip above category cards (colour via currentColor). */
+.zigzag-bunting {
+  background:
+    linear-gradient(-45deg, transparent 6px, currentColor 0) 0 3px,
+    linear-gradient(45deg, transparent 6px, currentColor 0) 0 3px;
+  background-repeat: repeat-x;
+  background-size: 10px 10px;
+}
 .animate-float { animation: float-slow 6s ease-in-out infinite; }
 .animate-pulse-glow { animation: pulse-glow 2.4s ease-in-out infinite; }
 .animate-spin-slow { animation: spin-slow 18s linear infinite; }
