@@ -538,16 +538,12 @@ function FeaturedCategories({ d }: { d: HomeData }) {
                 <h3 className="mt-5 font-display text-2xl font-bold text-foreground">{c.name}</h3>
                 {c.description && <p className="mt-2 line-clamp-3 text-muted-foreground">{c.description}</p>}
                 <div className="mt-auto flex items-center justify-between gap-2 pt-6">
-                  {count > 0 ? (
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${th.badgeBg} ${th.badgeText}`}>
-                      🏠 {count} {t("home.sellersWord")}
-                    </span>
-                  ) : <span />}
-                  {isAdmin && (
-                    <Link to="/categories" className={`inline-flex items-center gap-1 text-sm font-semibold ${th.text} hover:underline`}>
-                      {t("home.featCat.explore")} <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  )}
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${th.badgeBg} ${th.badgeText}`}>
+                    🏠 {count} {t("home.sellersWord")}
+                  </span>
+                  <Link to={isAdmin ? "/categories" : "/stalls"} className={`inline-flex items-center gap-1 text-sm font-semibold ${th.text} hover:underline`}>
+                    {t("home.featCat.explore")} <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
                 </div>
               </div>
             </motion.div>
