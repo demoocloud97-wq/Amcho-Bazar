@@ -238,7 +238,7 @@ function GalleryImg({ src, alt }: { src: string; alt: string }) {
 function toImageUrl(url: string): string {
   if (!url.includes("google")) return url;
   const id = url.match(/[?&]id=([^&]+)/)?.[1] ?? url.match(/\/d\/([^/=?]+)/)?.[1];
-  return id ? `https://lh3.googleusercontent.com/d/${id}=w1000` : url;
+  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w1600` : url;
 }
 
 const SAMPLE_JSON = `[

@@ -103,12 +103,19 @@ export function SiteHeader() {
                 <MainMenu />
               </>
             ) : (
-              <Link
-                to="/login"
-                className="inline-flex h-11 items-center gap-1.5 rounded-full bg-festive px-4 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <LogIn className="h-4 w-4" /> {t("menu.signIn")}
-              </Link>
+              <>
+                {/* Desktop: just Sign In (inline nav covers navigation). */}
+                <Link
+                  to="/login"
+                  className="hidden h-11 items-center gap-1.5 rounded-full bg-festive px-4 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:inline-flex"
+                >
+                  <LogIn className="h-4 w-4" /> {t("menu.signIn")}
+                </Link>
+                {/* Mobile: full menu so Home/Gallery/Stalls stay reachable. */}
+                <div className="md:hidden">
+                  <MainMenu />
+                </div>
+              </>
             )}
           </div>
         </div>

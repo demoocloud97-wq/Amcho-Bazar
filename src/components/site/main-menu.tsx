@@ -158,6 +158,8 @@ export function MainMenu() {
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <NavItem to="/announcements" icon={<Megaphone className="h-4 w-4" />} label={t("menu.announcements")} />
+              <NavItem to="/stalls" icon={<Store className="h-4 w-4" />} label={t("nav.stalls")} />
+              <NavItem to="/gallery" icon={<ImageIcon className="h-4 w-4" />} label={t("nav.gallery")} />
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <NavItem to="/settings" icon={<Settings className="h-4 w-4" />} label={t("menu.settings")} />

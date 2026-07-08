@@ -392,7 +392,6 @@ function CommunityStory() {
             referrerPolicy="no-referrer"
             className="w-full rounded-[32px] object-cover shadow-card"
             src={normalizeImageUrl("https://drive.google.com/file/d/1hXOPpdaFwJ3-V_Uh1HZGHmJsigOO-zHB/view?usp=drive_link")}
-            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=800&q=80"; }}
             alt="Amcho Bazar — stalls and sellers"
           />
           <div className="absolute -bottom-8 -right-12 z-10 max-w-[210px] rounded-2xl border border-border bg-card p-3.5 shadow-glow md:-right-32">

@@ -200,7 +200,7 @@ function StallsPage() {
 function normalizeDrive(url: string): string {
   if (!url.includes("google")) return url;
   const id = url.match(/[?&]id=([^&]+)/)?.[1] ?? url.match(/\/d\/([^/=?]+)/)?.[1];
-  return id ? `https://lh3.googleusercontent.com/d/${id}=w1000` : url;
+  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w1600` : url;
 }
 
 // Drive/CDN images can fail to load; fall back to a branded poster tile
