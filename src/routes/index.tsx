@@ -455,23 +455,42 @@ function StatsBand({ d }: { d: HomeData }) {
 /* ============================================================
    FEATURED CATEGORIES
 ============================================================ */
-// Colour themes cycled across category cards (Tailwind default palette).
-const CAT_THEMES = [
-  { bg: "bg-orange-100", text: "text-orange-500", badgeBg: "bg-orange-100", badgeText: "text-orange-600", zig: "text-orange-400" },
-  { bg: "bg-purple-100", text: "text-purple-500", badgeBg: "bg-purple-100", badgeText: "text-purple-600", zig: "text-purple-400" },
-  { bg: "bg-amber-100", text: "text-amber-600", badgeBg: "bg-amber-100", badgeText: "text-amber-700", zig: "text-amber-500" },
-  { bg: "bg-pink-100", text: "text-pink-500", badgeBg: "bg-pink-100", badgeText: "text-pink-600", zig: "text-pink-400" },
-  { bg: "bg-blue-100", text: "text-blue-500", badgeBg: "bg-blue-100", badgeText: "text-blue-600", zig: "text-blue-400" },
-  { bg: "bg-teal-100", text: "text-teal-600", badgeBg: "bg-teal-100", badgeText: "text-teal-700", zig: "text-teal-500" },
-  { bg: "bg-green-100", text: "text-green-600", badgeBg: "bg-green-100", badgeText: "text-green-700", zig: "text-green-500" },
-  { bg: "bg-rose-100", text: "text-rose-500", badgeBg: "bg-rose-100", badgeText: "text-rose-600", zig: "text-rose-400" },
-];
+// Colour themes keyed by colour name (Tailwind default palette).
+const CAT_THEMES: Record<string, { grad: string; text: string; badgeBg: string; badgeText: string; strip: string }> = {
+  orange: { grad: "from-orange-100 to-orange-200", text: "text-orange-600", badgeBg: "bg-orange-100", badgeText: "text-orange-600", strip: "bg-orange-500" },
+  purple: { grad: "from-purple-100 to-purple-200", text: "text-purple-600", badgeBg: "bg-purple-100", badgeText: "text-purple-600", strip: "bg-purple-500" },
+  amber: { grad: "from-amber-100 to-amber-200", text: "text-amber-700", badgeBg: "bg-amber-100", badgeText: "text-amber-700", strip: "bg-amber-500" },
+  pink: { grad: "from-pink-100 to-pink-200", text: "text-pink-600", badgeBg: "bg-pink-100", badgeText: "text-pink-600", strip: "bg-pink-500" },
+  blue: { grad: "from-blue-100 to-blue-200", text: "text-blue-600", badgeBg: "bg-blue-100", badgeText: "text-blue-600", strip: "bg-blue-500" },
+  teal: { grad: "from-teal-100 to-teal-200", text: "text-teal-700", badgeBg: "bg-teal-100", badgeText: "text-teal-700", strip: "bg-teal-500" },
+  green: { grad: "from-green-100 to-green-200", text: "text-green-700", badgeBg: "bg-green-100", badgeText: "text-green-700", strip: "bg-green-500" },
+  stone: { grad: "from-stone-200 to-stone-300", text: "text-stone-700", badgeBg: "bg-stone-200", badgeText: "text-stone-700", strip: "bg-stone-500" },
+  rose: { grad: "from-rose-100 to-rose-200", text: "text-rose-600", badgeBg: "bg-rose-100", badgeText: "text-rose-600", strip: "bg-rose-500" },
+  indigo: { grad: "from-indigo-100 to-indigo-200", text: "text-indigo-600", badgeBg: "bg-indigo-100", badgeText: "text-indigo-600", strip: "bg-indigo-500" },
+};
+const THEME_ORDER = ["orange", "purple", "amber", "pink", "blue", "teal", "green", "stone", "rose", "indigo"];
+
+// Match each category to a fixed colour by name; unknown names cycle by position.
+function catColor(name: string, i: number): string {
+  const n = name.toLowerCase();
+  if (/food|snack|eat|biryani|sweet|bak|drink|juice/.test(n)) return "orange";
+  if (/cloth|dress|fashion|frock|wear|boutique|lawn|garment/.test(n)) return "purple";
+  if (/jewel|gold|ornament/.test(n)) return "amber";
+  if (/beauty|cosmet|skincare|henna|makeup|salon/.test(n)) return "pink";
+  if (/kid|child|toy|baby/.test(n)) return "blue";
+  if (/station|book|paper|art suppl/.test(n)) return "teal";
+  if (/house|home|decor|crockery|kitchenware|plastic|gadget/.test(n)) return "green";
+  if (/handmade|artisan|craft/.test(n)) return "stone";
+  if (/gift/.test(n)) return "rose";
+  if (/shop|store|misc/.test(n)) return "indigo";
+  return THEME_ORDER[i % THEME_ORDER.length];
+}
 
 function ZigzagStrip({ colorClass }: { colorClass: string }) {
   return (
-    <div className="mb-[-1px] flex gap-6">
-      <span className={`zigzag-bunting h-2.5 w-[45%] ${colorClass}`} />
-      <span className={`zigzag-bunting h-2.5 w-[45%] ${colorClass}`} />
+    <div className="relative z-10 -mb-2 flex gap-6 px-3">
+      <span className={`zigzag-bunting block h-3 w-[45%] rounded-t-md ${colorClass}`} />
+      <span className={`zigzag-bunting block h-3 w-[45%] rounded-t-md ${colorClass}`} />
     </div>
   );
 }
@@ -491,6 +510,23 @@ function catIcon(name: string): LucideIcon | null {
   return null;
 }
 
+// Use the category's own description; otherwise fall back to a sensible one by name.
+function catDesc(name: string, existing?: string): string {
+  if (existing && existing.trim()) return existing.trim();
+  const n = name.toLowerCase();
+  if (/food|snack|eat|biryani|sweet|bak|drink|juice/.test(n)) return "Traditional dishes, homemade snacks, desserts and beverages.";
+  if (/cloth|dress|fashion|frock|wear|boutique|lawn|garment/.test(n)) return "Ethnic wear, contemporary styles and festive fashion from local designers.";
+  if (/jewel|gold|ornament/.test(n)) return "Handcrafted ornaments, traditional gold designs and modern statement pieces.";
+  if (/beauty|cosmet|skincare|henna|makeup|salon/.test(n)) return "Natural skincare, cosmetics and wellness essentials curated with care.";
+  if (/kid|child|toy|baby/.test(n)) return "Playful clothing, toys and treats made for the little ones.";
+  if (/station|book|paper|art suppl/.test(n)) return "Notebooks, art supplies and paper goods from independent makers.";
+  if (/house|home|decor|crockery|kitchenware|plastic|gadget/.test(n)) return "Home decor, kitchenware and everyday essentials with a local touch.";
+  if (/handmade|artisan|craft/.test(n)) return "One-of-a-kind creations from artisans across the community.";
+  if (/gift/.test(n)) return "Thoughtful gifts, hampers and keepsakes for every occasion.";
+  if (/shop|store|misc/.test(n)) return "A little bit of everything from your favourite local sellers.";
+  return "Discover unique products from talented local entrepreneurs.";
+}
+
 function FeaturedCategories({ d }: { d: HomeData }) {
   const { isAdmin } = useAuth();
   const { t } = useI18n();
@@ -505,7 +541,7 @@ function FeaturedCategories({ d }: { d: HomeData }) {
         </span>
         <h2 className="mt-6 font-display text-4xl font-bold leading-tight text-foreground md:text-5xl">
           {t("home.featCat.title")}{" "}
-          <span className="bg-gradient-to-r from-orange-500 to-purple-600 bg-clip-text text-transparent">Amcho Bazar</span>
+          <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Amcho Bazar</span>
         </h2>
         <p className="mt-5 text-lg text-muted-foreground">{t("home.featCat.subtitle")}</p>
       </div>
@@ -514,7 +550,7 @@ function FeaturedCategories({ d }: { d: HomeData }) {
       <div className="mt-14 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
         {cats.map((c, i) => {
           const count = d.categoryCounts[c.id!] ?? 0;
-          const th = CAT_THEMES[i % CAT_THEMES.length];
+          const th = CAT_THEMES[catColor(c.name, i)];
           const Icon = catIcon(c.name);
           return (
             <motion.div
@@ -524,26 +560,28 @@ function FeaturedCategories({ d }: { d: HomeData }) {
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.4, delay: (i % 4) * 0.05 }}
             >
-              <ZigzagStrip colorClass={th.zig} />
-              <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-6 shadow-card transition-shadow hover:shadow-glow">
-                <div className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-full ${th.bg}`}>
+              <div className="group h-full transition-transform duration-200 hover:-translate-y-1 hover:scale-[1.02]">
+                <ZigzagStrip colorClass={th.strip} />
+                <div className="flex h-full min-h-[320px] flex-col rounded-2xl border border-slate-100 bg-white p-8 pt-10 shadow-sm transition-shadow duration-200 group-hover:shadow-xl">
+                <div className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br ${th.grad}`}>
                   {Icon ? (
-                    <Icon className={`h-7 w-7 ${th.text}`} />
+                    <Icon className={`h-7 w-7 ${th.text}`} strokeWidth={2} />
                   ) : c.imageUrl ? (
                     <img src={normalizeImageUrl(c.imageUrl)} alt={c.name} loading="lazy" referrerPolicy="no-referrer" className="h-9 w-9 object-contain" />
                   ) : (
                     <span className="text-3xl leading-none">{c.emoji}</span>
                   )}
                 </div>
-                <h3 className="mt-5 font-display text-2xl font-bold text-foreground">{c.name}</h3>
-                {c.description && <p className="mt-2 line-clamp-3 text-muted-foreground">{c.description}</p>}
+                <h3 className="mt-5 font-display text-2xl font-bold text-slate-900">{c.name}</h3>
+                <p className="mt-2 line-clamp-3 text-[15px] leading-relaxed text-slate-500">{catDesc(c.name, c.description)}</p>
                 <div className="mt-auto flex items-center justify-between gap-2 pt-6">
                   <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${th.badgeBg} ${th.badgeText}`}>
                     🏠 {count} {t("home.sellersWord")}
                   </span>
                   <Link to={isAdmin ? "/categories" : "/stalls"} className={`inline-flex items-center gap-1 text-sm font-semibold ${th.text} hover:underline`}>
-                    {t("home.featCat.explore")} <ArrowRight className="h-3.5 w-3.5" />
+                    {t("home.featCat.explore")} <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
                   </Link>
+                </div>
                 </div>
               </div>
             </motion.div>

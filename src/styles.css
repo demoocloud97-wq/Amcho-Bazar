@@ -286,13 +286,20 @@
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
-/* Festive zig-zag bunting strip above category cards (colour via currentColor). */
+/* Festive bunting strip: a solid colour bar masked into a scalloped/zig-zag bottom. */
 .zigzag-bunting {
-  background:
-    linear-gradient(-45deg, transparent 6px, currentColor 0) 0 3px,
-    linear-gradient(45deg, transparent 6px, currentColor 0) 0 3px;
-  background-repeat: repeat-x;
-  background-size: 10px 10px;
+  -webkit-mask-image:
+    linear-gradient(-45deg, transparent 6px, #000 0),
+    linear-gradient(45deg, transparent 6px, #000 0);
+  -webkit-mask-repeat: repeat-x;
+  -webkit-mask-size: 10px 10px;
+  -webkit-mask-position: 0 3px;
+  mask-image:
+    linear-gradient(-45deg, transparent 6px, #000 0),
+    linear-gradient(45deg, transparent 6px, #000 0);
+  mask-repeat: repeat-x;
+  mask-size: 10px 10px;
+  mask-position: 0 3px;
 }
 .animate-float { animation: float-slow 6s ease-in-out infinite; }
 .animate-pulse-glow { animation: pulse-glow 2.4s ease-in-out infinite; }
