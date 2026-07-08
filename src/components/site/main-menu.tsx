@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
-  ArrowLeftRight, BarChart3, ClipboardList, CreditCard, Dices, Image as ImageIcon,
-  LayoutDashboard, ListTree, LogIn, LogOut, Megaphone, MoreVertical, Plus, Tags,
+  ArrowLeftRight, BarChart3, CreditCard, Image as ImageIcon,
+  LayoutDashboard, ListTree, LogIn, LogOut, Megaphone, MoreVertical, Plus, Settings,
   Store, Ticket, UserCircle,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -101,13 +101,30 @@ export function MainMenu() {
             {seasons.length > 1 && (
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger className={ROW}>
-                  <Chip><ArrowLeftRight className="h-4 w-4" /></Chip> {t("menu.switchSeason")}
+                  <Chip><ArrowLeftRight className="h-4 w-4" /></Chip>
+                  <span className="flex-1">{t("menu.switchSeason")}</span>
+                  {season && <span className="max-w-[72px] truncate text-xs font-medium text-muted-foreground">{season.seasonName}</span>}
                 </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="rounded-xl">
+                <DropdownMenuSubContent className="w-64 rounded-2xl p-1.5 shadow-glow">
+                  <DropdownMenuLabel className="px-2 pb-1 pt-0.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t("menu.switchSeason")}</DropdownMenuLabel>
                   <DropdownMenuRadioGroup value={seasonId ?? ""} onValueChange={setSeasonId}>
                     {seasons.map((s) => (
-                      <DropdownMenuRadioItem key={s.id} value={s.id!}>
-                        {s.seasonName}{s.isActive ? " · Active" : ""}
+                      <DropdownMenuRadioItem key={s.id} value={s.id!} className="cursor-pointer rounded-lg py-2 data-[state=checked]:bg-primary/5">
+                        <div className="flex w-full items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold leading-tight">{s.seasonName}</div>
+                            {s.year != null && <div className="text-[11px] text-muted-foreground">{s.year}</div>}
+                          </div>
+                          {s.isActive && (
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/12 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                              <span className="relative flex h-1.5 w-1.5">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-70" />
+                                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                              </span>
+                              {t("menu.active")}
+                            </span>
+                          )}
+                        </div>
                       </DropdownMenuRadioItem>
                     ))}
                   </DropdownMenuRadioGroup>
@@ -136,19 +153,14 @@ export function MainMenu() {
                   <Chip><Store className="h-4 w-4" /></Chip> {t("menu.amchoBazar")}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="rounded-xl">
-                  <NavItem to="/admin" icon={<ClipboardList className="h-4 w-4" />} label={t("menu.registrations")} />
-                  <NavItem to="/categories" icon={<Tags className="h-4 w-4" />} label={t("nav.categories")} />
-                  <NavItem to="/stalls" icon={<Store className="h-4 w-4" />} label={t("nav.stalls")} />
-                  <NavItem to="/draw" icon={<Dices className="h-4 w-4" />} label={t("nav.liveDraw")} />
                   <NavItem to="/payments" icon={<CreditCard className="h-4 w-4" />} label={t("menu.payments")} />
                   <NavItem to="/reports" icon={<BarChart3 className="h-4 w-4" />} label={t("menu.reports")} />
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
               <NavItem to="/announcements" icon={<Megaphone className="h-4 w-4" />} label={t("menu.announcements")} />
-              <NavItem to="/gallery" icon={<ImageIcon className="h-4 w-4" />} label={t("nav.gallery")} />
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <NavItem to="/profile" icon={<UserCircle className="h-4 w-4" />} label={t("menu.profile")} />
+            <NavItem to="/settings" icon={<Settings className="h-4 w-4" />} label={t("menu.settings")} />
             <DropdownMenuItem onSelect={handleLogout} className={`${ROW} text-destructive focus:bg-destructive/10 focus:text-destructive`}>
               <Chip tone="danger"><LogOut className="h-4 w-4" /></Chip> {t("menu.signOut")}
             </DropdownMenuItem>
@@ -162,7 +174,7 @@ export function MainMenu() {
               <NavItem to="/announcements" icon={<Megaphone className="h-4 w-4" />} label={t("menu.announcements")} />
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <NavItem to="/profile" icon={<UserCircle className="h-4 w-4" />} label={t("menu.profile")} />
+            <NavItem to="/settings" icon={<Settings className="h-4 w-4" />} label={t("menu.settings")} />
             <DropdownMenuItem onSelect={handleLogout} className={`${ROW} text-destructive focus:bg-destructive/10 focus:text-destructive`}>
               <Chip tone="danger"><LogOut className="h-4 w-4" /></Chip> {t("menu.signOut")}
             </DropdownMenuItem>

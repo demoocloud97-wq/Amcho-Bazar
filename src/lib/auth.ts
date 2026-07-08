@@ -8,6 +8,9 @@ import {
   onAuthStateChanged,
   updateProfile,
   sendPasswordResetEmail,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   type User,
 } from "firebase/auth";
 import { auth } from "./firebase";
@@ -43,6 +46,19 @@ export async function logout() {
 
 export async function resetPassword(email: string) {
   await sendPasswordResetEmail(auth, email);
+}
+
+// True if the account has an email/password login (Google-only users cannot set one here).
+export function hasPasswordProvider(user: User) {
+  return user.providerData.some((p) => p.providerId === "password");
+}
+
+// Re-authenticate with the current password, then set a new one.
+export async function changePassword(currentPassword: string, newPassword: string) {
+  const user = auth.currentUser;
+  if (!user?.email) throw new Error("Not signed in");
+  await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, currentPassword));
+  await updatePassword(user, newPassword);
 }
 
 // Subscribe to auth state; returns an unsubscribe function.

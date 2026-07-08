@@ -29,7 +29,7 @@ export const Route = createFileRoute("/stalls")({
 });
 
 function StallsPage() {
-  const { seasons, activeSeason } = useSeason();
+  const { seasons } = useSeason();
   const { t } = useI18n();
   const [stalls, setStalls] = useState<Stall[]>([]);
   const [cats, setCats] = useState<Category[]>([]);
@@ -49,11 +49,11 @@ function StallsPage() {
 
   const [tab, setTab] = useState<Tab | null>(null);
 
-  // Default to the active season, else the newest tab.
+  // Always land on Season 1 first when opening this screen.
   useEffect(() => {
     if (tab || !tabs.length) return;
-    setTab(tabs.find((t) => t.seasonId === activeSeason?.id) ?? tabs[tabs.length - 1]);
-  }, [tabs, activeSeason, tab]);
+    setTab(tabs[0]);
+  }, [tabs, tab]);
 
   // Reload whenever the chosen season tab changes. Merge stalls matched by the
   // real seasonId AND the numeric season, so legacy (un-migrated) stalls show.
@@ -217,6 +217,7 @@ function normalizeDrive(url: string): string {
 // (stall initial on a warm gradient) so cards still look designed, not broken.
 function StallImage({ src, alt }: { src?: string | null; alt: string }) {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   if (!src || failed) {
     const initial = alt.trim().charAt(0).toUpperCase() || "?";
     return (
@@ -230,13 +231,21 @@ function StallImage({ src, alt }: { src?: string | null; alt: string }) {
     );
   }
   return (
-    <img
-      src={normalizeDrive(src)}
-      alt={alt}
-      loading="lazy"
-      referrerPolicy="no-referrer"
-      onError={() => setFailed(true)}
-      className="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-105"
-    />
+    <div className="relative aspect-[4/3] w-full overflow-hidden">
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted animate-pulse">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/60" />
+        </div>
+      )}
+      <img
+        src={normalizeDrive(src)}
+        alt={alt}
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onLoad={() => setLoaded(true)}
+        onError={() => setFailed(true)}
+        className={`aspect-[4/3] w-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? "opacity-100" : "opacity-0"}`}
+      />
+    </div>
   );
 }

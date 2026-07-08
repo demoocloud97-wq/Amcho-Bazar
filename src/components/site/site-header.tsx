@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { LogIn } from "lucide-react";
 import { Logo } from "./logo";
 import { MainMenu } from "./main-menu";
 import { NotificationBell } from "./notification-bell";
@@ -96,8 +97,19 @@ export function SiteHeader() {
 
           <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0">
             <LanguageSwitcher />
-            <NotificationBell />
-            <MainMenu />
+            {user ? (
+              <>
+                <NotificationBell />
+                <MainMenu />
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="inline-flex h-11 items-center gap-1.5 rounded-full bg-festive px-4 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <LogIn className="h-4 w-4" /> {t("menu.signIn")}
+              </Link>
+            )}
           </div>
         </div>
       </div>

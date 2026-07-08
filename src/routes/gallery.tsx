@@ -33,7 +33,7 @@ type Tab = { key: string; label: string; seasonId?: string; season: number };
 
 function GalleryPage() {
   const { isAdmin } = useAuth();
-  const { seasons, activeSeason, loading: seasonsLoading } = useSeason();
+  const { seasons, loading: seasonsLoading } = useSeason();
   const { t } = useI18n();
 
   // Always show Season 1..N; a real Season entity (if seeded) supplies its name
@@ -52,11 +52,17 @@ function GalleryPage() {
   const [active, setActive] = useState<number | null>(null);
   const [delTarget, setDelTarget] = useState<GalleryItem | null>(null);
 
-  // Default to the active season, else the newest tab.
+  // Restore the last-viewed season (persists across refresh); else Season 1.
   useEffect(() => {
     if (tab || !tabs.length) return;
-    setTab(tabs.find((t) => t.seasonId === activeSeason?.id) ?? tabs[tabs.length - 1]);
-  }, [tabs, activeSeason, tab]);
+    const saved = Number(localStorage.getItem("gallery.season"));
+    setTab(tabs.find((t) => t.season === saved) ?? tabs[0]);
+  }, [tabs, tab]);
+
+  // Remember the chosen season so a refresh reopens it.
+  useEffect(() => {
+    if (tab) localStorage.setItem("gallery.season", String(tab.season));
+  }, [tab]);
 
   async function load(t: Tab) {
     setLoading(true);
@@ -147,7 +153,7 @@ function GalleryPage() {
                 className="group relative mb-4 block w-full break-inside-avoid overflow-hidden rounded-3xl shadow-card"
               >
                 <button onClick={() => setActive(i)} className="block w-full">
-                  <img src={p.src} alt={p.caption} loading="lazy" referrerPolicy="no-referrer" className="max-h-80 w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                  <GalleryImg src={p.src} alt={p.caption} />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-left text-xs font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
                     {p.caption}
                   </div>
@@ -200,6 +206,29 @@ function GalleryPage() {
         description={delTarget ? `“${delTarget.caption}” will be removed from the gallery.` : ""}
         confirmLabel={t("gallery.delete")}
         onConfirm={handleDelete}
+      />
+    </div>
+  );
+}
+
+// Masonry photo with its own loading state — shows a shimmer + spinner until the image lands.
+function GalleryImg({ src, alt }: { src: string; alt: string }) {
+  const [done, setDone] = useState(false); // loaded OR errored — either way stop the spinner
+  return (
+    <div className={`relative w-full ${done ? "" : "min-h-44"}`}>
+      {!done && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted animate-pulse">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/60" />
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        onLoad={() => setDone(true)}
+        onError={() => setDone(true)}
+        className={`max-h-80 w-full object-cover transition-opacity duration-500 group-hover:scale-105 ${done ? "opacity-100" : "opacity-0"}`}
       />
     </div>
   );

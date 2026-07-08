@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StallsRouteImport } from './routes/stalls'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as RegisterRouteImport } from './routes/register'
@@ -37,6 +38,11 @@ const StallsRoute = StallsRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SeasonsRoute = SeasonsRouteImport.update({
@@ -141,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/seasons': typeof SeasonsRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/stalls': typeof StallsRoute
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/seasons': typeof SeasonsRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/stalls': typeof StallsRoute
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/reports': typeof ReportsRoute
   '/seasons': typeof SeasonsRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/stalls': typeof StallsRoute
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
@@ -206,6 +215,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reports'
     | '/seasons'
+    | '/settings'
     | '/signup'
     | '/stalls'
     | '/categories/$categoryId'
@@ -226,6 +236,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reports'
     | '/seasons'
+    | '/settings'
     | '/signup'
     | '/stalls'
     | '/categories/$categoryId'
@@ -247,6 +258,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/reports'
     | '/seasons'
+    | '/settings'
     | '/signup'
     | '/stalls'
     | '/categories/$categoryId'
@@ -269,6 +281,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ReportsRoute: typeof ReportsRoute
   SeasonsRoute: typeof SeasonsRoute
+  SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   StallsRoute: typeof StallsRoute
 }
@@ -287,6 +300,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/seasons': {
@@ -441,6 +461,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ReportsRoute: ReportsRoute,
   SeasonsRoute: SeasonsRoute,
+  SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   StallsRoute: StallsRoute,
 }

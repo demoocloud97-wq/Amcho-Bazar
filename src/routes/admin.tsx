@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { Activity, BarChart3, CheckCircle2, ClipboardList, HelpCircle, Hourglass, Image as ImageIcon, LayoutGrid, ListChecks, Loader2, MonitorPlay, MoreVertical, Plus, Receipt, SlidersHorizontal, Sparkles, Store, Trash2, TrendingUp, Users, Zap } from "lucide-react";
+import { Activity, BarChart3, CheckCircle2, ClipboardList, Hourglass, LayoutGrid, Loader2, MonitorPlay, MoreVertical, Plus, Receipt, Sparkles, Store, Trash2, TrendingUp, Users } from "lucide-react";
 import { toast } from "sonner";
 import { EVENT } from "@/lib/dummy-data";
 import { AnimatedCounter } from "@/components/site/animated-counter";
@@ -11,7 +11,7 @@ import { getRegistrationsForAdmin, getRegistrationsBySeasonId, createRegistratio
 import { getCategories, getSubCategories, fillDefaultSubcategories, type Category } from "@/lib/categories-db";
 import { setStallForRegistration, deleteStallForRegistration } from "@/lib/stalls-db";
 import { seedApprovedRegistrations } from "@/lib/seed-registrations";
-import { getHeroImage, setHeroImage, normalizeImageUrl, DEFAULT_HERO_IMAGE, getDrawNonStop, setDrawNonStop, getFillSubcatsEnabled, setFillSubcatsEnabled, getFaqs, saveFaqs, type Faq } from "@/lib/settings-db";
+import { getFillSubcatsEnabled } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 import { RequireAdmin } from "@/components/site/require-admin";
@@ -66,7 +66,7 @@ function AdminPage() {
   // Approve / waitlist a request — always assign it to the season the admin is
   // viewing, so an approved seller shows up in that season everywhere (admin
   // list, draw pool, reports).
-  async function setStatus(r: Registration, status: Registration["status"]) {
+  async function setStatus(r: Registration, status: Registration["status"], opts?: { silent?: boolean }) {
     if (!seasonId) { toast.error(t("adm.selectFirst")); return; }
     try {
       await updateRegistration(r.id!, { status, seasonId, season: season?.seasonNumber });
@@ -102,9 +102,11 @@ function AdminPage() {
       } else {
         await deleteStallForRegistration(r.id!).catch(() => {});
       }
+      if (opts?.silent) return;
       toast.success(`${t("adm.marked")} ${t(`myreg.status.${status}`)} ${t("adm.in")} ${season?.seasonName ?? ""}`);
       await reload();
     } catch (e) {
+      if (opts?.silent) throw e;
       toast.error(friendlyAuthError(e));
     }
   }
@@ -143,6 +145,22 @@ function AdminPage() {
       toast.success(`${ids.length} ${t("adm.bulkDeleted")}`);
       setSel(new Set());
       setConfirmBulk(false);
+      await reload();
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+  // Apply a status (approve / waitlist …) to every selected seller at once.
+  async function bulkStatus(status: Registration["status"]) {
+    const regs = registrations.filter((r) => sel.has(r.id!));
+    if (regs.length === 0) return;
+    setBulkBusy(true);
+    try {
+      for (const r of regs) await setStatus(r, status, { silent: true });
+      toast.success(`${regs.length} ${t("adm.marked")} ${t(`myreg.status.${status}`)}`);
+      setSel(new Set());
       await reload();
     } catch (e) {
       toast.error(friendlyAuthError(e));
@@ -241,8 +259,9 @@ function AdminPage() {
   }, [registrations]);
 
   const shown = registrations.slice(0, 12);
-  const allSel = shown.length > 0 && shown.every((r) => sel.has(r.id!));
-  function toggleAll() { setSel(allSel ? new Set() : new Set(shown.map((r) => r.id!))); }
+  // "Select all" grabs every seller in the season, not just the visible rows.
+  const allSel = registrations.length > 0 && registrations.every((r) => sel.has(r.id!));
+  function toggleAll() { setSel(allSel ? new Set() : new Set(registrations.map((r) => r.id!))); }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 md:px-8">
@@ -390,11 +409,17 @@ function AdminPage() {
         </div>
         {/* Bulk action bar */}
         {sel.size > 0 && (
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-2.5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-primary/25 bg-primary/5 px-4 py-2.5">
             <span className="text-sm font-semibold text-foreground">{sel.size} {t("adm.bulkSelected")}</span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button onClick={() => setSel(new Set())} className="rounded-full px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted">{t("adm.bulkClear")}</button>
-              <button onClick={() => setConfirmBulk(true)} className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-4 py-1.5 text-xs font-bold text-white shadow-soft transition-transform hover:scale-[1.03]">
+              <button disabled={bulkBusy} onClick={() => bulkStatus("approved")} className="inline-flex items-center gap-1.5 rounded-full bg-teal px-4 py-1.5 text-xs font-bold text-white shadow-soft transition-transform hover:scale-[1.03] disabled:opacity-50">
+                <CheckCircle2 className="h-3.5 w-3.5" /> {t("adm.approve")} ({sel.size})
+              </button>
+              <button disabled={bulkBusy} onClick={() => bulkStatus("waitlist")} className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-4 py-1.5 text-xs font-bold text-white shadow-soft transition-transform hover:scale-[1.03] disabled:opacity-50">
+                <Hourglass className="h-3.5 w-3.5" /> {t("adm.waitlist")}
+              </button>
+              <button disabled={bulkBusy} onClick={() => setConfirmBulk(true)} className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-4 py-1.5 text-xs font-bold text-white shadow-soft transition-transform hover:scale-[1.03] disabled:opacity-50">
                 <Trash2 className="h-3.5 w-3.5" /> {t("adm.bulkDelete")} ({sel.size})
               </button>
             </div>
@@ -493,21 +518,6 @@ function AdminPage() {
         </div>
       </div>
 
-      {/* Settings — secondary controls, below the dashboard */}
-      <div className="mt-12">
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4 text-primary" />
-          <h2 className="font-display text-xl font-semibold">{t("adm.settings")}</h2>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">{t("adm.settingsDesc")}</p>
-        <div className="mt-4 space-y-4">
-          <HeroImageEditor />
-          <DrawNonStopToggle />
-          <FillSubcatsToggle enabled={fillEnabled} onChange={setFillEnabled} />
-          <FaqEditor />
-        </div>
-      </div>
-
       <ConfirmDialog
         open={!!delTarget}
         onOpenChange={(o) => !o && setDelTarget(null)}
@@ -525,242 +535,6 @@ function AdminPage() {
         confirmLabel={t("adm.bulkDelete")}
         onConfirm={bulkDelete}
       />
-    </div>
-  );
-}
-
-function FillSubcatsToggle({ enabled, onChange }: { enabled: boolean; onChange: (v: boolean) => void }) {
-  const { t } = useI18n();
-  const [busy, setBusy] = useState(false);
-  async function toggle() {
-    const next = !enabled;
-    setBusy(true);
-    try {
-      await setFillSubcatsEnabled(next);
-      onChange(next);
-      toast.success(next ? t("adm.fillOn") : t("adm.fillOff"));
-    } catch (e) {
-      toast.error(friendlyAuthError(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <ListChecks className="h-5 w-5" />
-        </div>
-        <div>
-          <div className="font-display text-lg font-semibold">{t("adm.fillTitle")}</div>
-          <div className="text-sm text-muted-foreground">{t("adm.fillDesc")}</div>
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-3">
-        <span className={`text-sm font-semibold ${enabled ? "text-primary" : "text-muted-foreground"}`}>{enabled ? t("adm.enabled") : t("adm.disabled")}</span>
-        <button
-          onClick={toggle}
-          disabled={busy}
-          role="switch"
-          aria-checked={enabled}
-          aria-label="Toggle the Fill sub-categories button"
-          className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${enabled ? "bg-festive" : "bg-muted"}`}
-        >
-          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function HeroImageEditor() {
-  const { t } = useI18n();
-  const [url, setUrl] = useState("");
-  const [current, setCurrent] = useState<string>(DEFAULT_HERO_IMAGE);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    getHeroImage()
-      .then((u) => { setCurrent(u); setUrl(u === DEFAULT_HERO_IMAGE ? "" : u); })
-      .catch(() => {});
-  }, []);
-
-  async function save() {
-    const next = url.trim() || DEFAULT_HERO_IMAGE;
-    setBusy(true);
-    try {
-      await setHeroImage(next);
-      setCurrent(next);
-      toast.success(t("adm.heroUpdated"));
-    } catch (e) {
-      toast.error(friendlyAuthError(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="rounded-3xl border border-border bg-card p-5 shadow-card">
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <ImageIcon className="h-5 w-5" />
-        </div>
-        <div>
-          <div className="font-display text-lg font-semibold">{t("adm.heroTitle")}</div>
-          <div className="text-sm text-muted-foreground">{t("adm.heroDesc")}</div>
-        </div>
-      </div>
-      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-start">
-        <img
-          src={normalizeImageUrl(current)}
-          alt="Current hero"
-          referrerPolicy="no-referrer"
-          className="h-28 w-28 shrink-0 rounded-2xl object-cover ring-1 ring-border"
-        />
-        <div className="flex-1 space-y-2">
-          <label htmlFor="hero-url" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("adm.imageUrl")}</label>
-          <input
-            id="hero-url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://…  (blank = default poster)"
-            className="w-full rounded-xl border border-border bg-white/70 px-3 py-2.5 text-sm outline-none ring-primary/20 focus:ring-4"
-          />
-          <button
-            onClick={save}
-            disabled={busy}
-            className="inline-flex items-center gap-2 rounded-full bg-festive px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-[1.03] disabled:opacity-50"
-          >
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />} {t("adm.saveImage")}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DrawNonStopToggle() {
-  const { t } = useI18n();
-  const [on, setOn] = useState(false);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => { getDrawNonStop().then(setOn).catch(() => {}); }, []);
-
-  async function toggle() {
-    const next = !on;
-    setBusy(true);
-    try {
-      await setDrawNonStop(next);
-      setOn(next);
-      toast.success(next ? t("adm.nonstopOn") : t("adm.nonstopOff"));
-    } catch (e) {
-      toast.error(friendlyAuthError(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <Zap className="h-5 w-5" />
-        </div>
-        <div>
-          <div className="font-display text-lg font-semibold">{t("adm.nonstopTitle")}</div>
-          <div className="text-sm text-muted-foreground">{t("adm.nonstopDesc")}</div>
-        </div>
-      </div>
-      <div className="flex shrink-0 items-center gap-3">
-        <span className={`text-sm font-semibold ${on ? "text-primary" : "text-muted-foreground"}`}>{on ? t("adm.enabled") : t("adm.disabled")}</span>
-        <button
-          onClick={toggle}
-          disabled={busy}
-          role="switch"
-          aria-checked={on}
-          aria-label="Toggle Non-Stop button on the Live Draw screen"
-          className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${on ? "bg-festive" : "bg-muted"}`}
-        >
-          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${on ? "translate-x-6" : "translate-x-1"}`} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function FaqEditor() {
-  const { t } = useI18n();
-  const [faqs, setFaqs] = useState<Faq[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  useEffect(() => { getFaqs().then((f) => { setFaqs(f); setLoaded(true); }).catch(() => setLoaded(true)); }, []);
-
-  function update(i: number, patch: Partial<Faq>) { setFaqs((list) => list.map((f, j) => (j === i ? { ...f, ...patch } : f))); }
-  function add() { setFaqs((list) => [...list, { q: "", a: "" }]); }
-  function remove(i: number) { setFaqs((list) => list.filter((_, j) => j !== i)); }
-
-  async function save() {
-    setBusy(true);
-    try {
-      const clean = faqs.filter((f) => f.q.trim());
-      await saveFaqs(clean);
-      setFaqs(clean);
-      toast.success(t("adm.faqSaved"));
-    } catch (e) {
-      toast.error(friendlyAuthError(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="rounded-3xl border border-border bg-card p-5 shadow-card">
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <HelpCircle className="h-5 w-5" />
-        </div>
-        <div className="flex-1">
-          <div className="font-display text-lg font-semibold">{t("adm.faqTitle")}</div>
-          <div className="text-sm text-muted-foreground">{t("adm.faqDesc")}</div>
-        </div>
-      </div>
-
-      {loaded && (
-        <div className="mt-4 space-y-3">
-          {faqs.length === 0 && <p className="rounded-2xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">{t("adm.faqEmpty")}</p>}
-          {faqs.map((f, i) => (
-            <div key={i} className="rounded-2xl border border-border bg-muted/30 p-3">
-              <div className="flex items-center gap-2">
-                <input
-                  value={f.q}
-                  onChange={(e) => update(i, { q: e.target.value })}
-                  placeholder={t("adm.faqQ")}
-                  className="flex-1 rounded-xl border border-border bg-white/70 px-3 py-2 text-sm font-semibold outline-none ring-primary/20 focus:ring-4"
-                />
-                <button type="button" onClick={() => remove(i)} aria-label={t("adm.delete")} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-              <textarea
-                value={f.a}
-                onChange={(e) => update(i, { a: e.target.value })}
-                placeholder={t("adm.faqA")}
-                className="mt-2 min-h-[70px] w-full rounded-xl border border-border bg-white/70 px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4"
-              />
-            </div>
-          ))}
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={add} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-muted">
-              <Plus className="h-4 w-4" /> {t("adm.faqAdd")}
-            </button>
-            <button type="button" onClick={save} disabled={busy} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-festive px-5 py-2 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-[1.02] disabled:opacity-50">
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />} {t("adm.faqSave")}
-            </button>
-          </div>
-          <p className="text-xs text-muted-foreground">{t("adm.faqNote")}</p>
-        </div>
-      )}
     </div>
   );
 }

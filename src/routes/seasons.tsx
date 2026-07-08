@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { CheckCircle2, Archive, Pencil, Plus, Trash2, CalendarDays, DatabaseZap, Loader2 } from "lucide-react";
+import { CheckCircle2, Archive, Pencil, Plus, Trash2, CalendarDays, DatabaseZap, Loader2, Store, Trophy, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
 import { RequireAdmin } from "@/components/site/require-admin";
@@ -25,10 +25,28 @@ export const Route = createFileRoute("/seasons")({
 });
 
 function statusTone(s: Season): string {
-  if (s.isActive) return "bg-emerald-500/15 text-emerald-600";
-  if (s.status === "Completed") return "bg-amber-500/15 text-amber-600";
+  if (s.isActive) return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400";
+  if (s.status === "Completed") return "bg-amber-500/15 text-amber-600 dark:text-amber-400";
   if (s.status === "Archived") return "bg-muted text-muted-foreground";
   return "bg-primary/10 text-primary";
+}
+
+// Colour of the thin accent bar at the top of each season card.
+function accentBar(s: Season): string {
+  if (s.isActive) return "bg-emerald-500";
+  if (s.status === "Completed") return "bg-amber-500";
+  if (s.status === "Archived") return "bg-muted-foreground/40";
+  return "bg-primary";
+}
+
+function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl bg-muted/50 px-2 py-2.5 text-center">
+      <div className="mx-auto mb-1 flex h-5 w-5 items-center justify-center text-primary">{icon}</div>
+      <div className="font-display text-sm font-bold tabular-nums leading-none">{value}</div>
+      <div className="mt-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+    </div>
+  );
 }
 
 function SeasonsPage() {
@@ -102,38 +120,63 @@ function SeasonsPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {seasons.map((s) => (
-              <div key={s.id} className="rounded-3xl border border-border bg-card p-5 shadow-card">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-display text-lg font-semibold">{s.seasonName}</div>
-                    <div className="text-sm text-muted-foreground">{t("sea.seasonWord")} {s.seasonNumber} · {s.year}</div>
+              <div
+                key={s.id}
+                className={`group relative overflow-hidden rounded-3xl border bg-card shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow ${s.isActive ? "border-emerald-500/40 ring-1 ring-emerald-500/25" : "border-border"}`}
+              >
+                <div className={`absolute inset-x-0 top-0 h-1 ${accentBar(s)}`} />
+                {s.isActive && <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-emerald-500/15 blur-2xl" />}
+
+                <div className="relative p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-festive font-display text-lg font-black text-white shadow-soft">{s.seasonNumber}</span>
+                      <div className="min-w-0">
+                        <div className="truncate font-display text-lg font-bold leading-tight">{s.seasonName}</div>
+                        <div className="text-xs text-muted-foreground">{t("sea.seasonWord")} {s.seasonNumber} · {s.year}</div>
+                      </div>
+                    </div>
+                    <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${statusTone(s)}`}>
+                      {s.isActive && (
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-70" />
+                          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        </span>
+                      )}
+                      {s.isActive ? t("sea.active") : t(`sea.st.${s.status}`)}
+                    </span>
                   </div>
-                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusTone(s)}`}>
-                    {s.isActive ? t("sea.active") : t(`sea.st.${s.status}`)}
-                  </span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                  {s.eventDate && <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" /> {s.eventDate}</span>}
-                  <span>{s.maximumStalls} {t("sea.stalls")} · {s.maximumSelectedStalls} {t("sea.winners")}</span>
-                  <span>Rs {s.registrationFee} {t("sea.fee")}</span>
-                </div>
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  {!s.isActive && s.status !== "Archived" && (
-                    <button onClick={() => activate(s)} className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-500/25">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> {t("sea.activate")}
-                    </button>
+
+                  {s.eventDate && (
+                    <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1 text-xs font-medium text-foreground/80">
+                      <CalendarDays className="h-3.5 w-3.5 text-primary" /> {s.eventDate}
+                    </div>
                   )}
-                  <button onClick={() => { setEditing(s); setFormOpen(true); }} className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/70">
-                    <Pencil className="h-3.5 w-3.5" /> {t("sea.edit")}
-                  </button>
-                  {s.status !== "Archived" && (
-                    <button onClick={() => archive(s)} className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/70">
-                      <Archive className="h-3.5 w-3.5" /> {t("sea.archive")}
+
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    <Stat icon={<Store className="h-full w-full" />} label={t("sea.stalls")} value={s.maximumStalls} />
+                    <Stat icon={<Trophy className="h-full w-full" />} label={t("sea.winners")} value={s.maximumSelectedStalls} />
+                    <Stat icon={<Wallet className="h-full w-full" />} label={t("sea.fee")} value={`Rs ${s.registrationFee}`} />
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {!s.isActive && s.status !== "Archived" && (
+                      <button onClick={() => activate(s)} className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-emerald-500/15 px-3.5 py-1.5 text-xs font-semibold text-emerald-600 transition-colors hover:bg-emerald-500/25 dark:text-emerald-400">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> {t("sea.activate")}
+                      </button>
+                    )}
+                    <button onClick={() => { setEditing(s); setFormOpen(true); }} className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-muted px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/70">
+                      <Pencil className="h-3.5 w-3.5" /> {t("sea.edit")}
                     </button>
-                  )}
-                  <button onClick={() => setDelTarget(s)} className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10">
-                    <Trash2 className="h-3.5 w-3.5" /> {t("sea.delete")}
-                  </button>
+                    {s.status !== "Archived" && (
+                      <button onClick={() => archive(s)} className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-muted px-3.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/70">
+                        <Archive className="h-3.5 w-3.5" /> {t("sea.archive")}
+                      </button>
+                    )}
+                    <button onClick={() => setDelTarget(s)} className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10">
+                      <Trash2 className="h-3.5 w-3.5" /> {t("sea.delete")}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

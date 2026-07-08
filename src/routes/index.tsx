@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, Heart, Sparkles, Sparkle, Users, Store, Gift, ShieldCheck, PartyPopper, ChevronDown, Flower2, Star, Sprout, HandHeart, GraduationCap } from "lucide-react";
+import { ArrowRight, Heart, Sparkles, Sparkle, Users, Store, Gift, ShieldCheck, PartyPopper, ChevronDown, Flower2, Star, Sprout, HandHeart, GraduationCap, Megaphone, CalendarDays } from "lucide-react";
 import { Countdown } from "@/components/site/countdown";
 import { AnimatedCounter } from "@/components/site/animated-counter";
 import { SectionHeading } from "@/components/site/section-heading";
@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
 import { useHomeData, type HomeData } from "@/lib/home-data";
 import { getFaqs, type Faq as FaqItem, getHeroImage, normalizeImageUrl, DEFAULT_HERO_IMAGE } from "@/lib/settings-db";
+import { getAnnouncements, type Announcement } from "@/lib/announcements-db";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -22,6 +23,7 @@ function Index() {
   return (
     <div className="overflow-hidden">
       <Hero season={d.activeSeason} />
+      <AnnouncementsHome />
       <MissionBand />
       <About />
       <WomenEmpowerment />
@@ -45,7 +47,16 @@ function Hero({ season }: { season: import("@/lib/seasons-db").Season | null }) 
   const { t } = useI18n();
   const [heroImg, setHeroImg] = useState(DEFAULT_HERO_IMAGE);
   const [heroFailed, setHeroFailed] = useState(false);
-  useEffect(() => { getHeroImage().then((u) => { setHeroImg(u); setHeroFailed(false); }).catch(() => {}); }, []);
+  useEffect(() => {
+    getHeroImage().then((u) => {
+      if (!u || u === DEFAULT_HERO_IMAGE) return; // already showing it — no swap, no flash
+      // Preload the stored poster; swap the src in only once it's ready (avoids a white gap mid-swap).
+      const pre = new Image();
+      pre.referrerPolicy = "no-referrer";
+      pre.onload = () => { setHeroImg(u); setHeroFailed(false); };
+      pre.src = normalizeImageUrl(u);
+    }).catch(() => {});
+  }, []);
   const seasonName = season?.seasonName ?? EVENT.season;
   const eventDate = season?.eventDate ?? EVENT.dateLabel;
   return (
@@ -186,6 +197,60 @@ function MissionBand() {
         ))}
       </div>
     </div>
+  );
+}
+
+/* ============================================================
+   ANNOUNCEMENTS (latest, from Firestore) — hidden when there are none
+============================================================ */
+function annDate(ts: unknown): string {
+  const a = ts as { toDate?: () => Date; seconds?: number };
+  const dt = typeof a?.toDate === "function" ? a.toDate() : typeof a?.seconds === "number" ? new Date(a.seconds * 1000) : null;
+  return dt ? dt.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "";
+}
+
+function AnnouncementsHome() {
+  const { t } = useI18n();
+  const [items, setItems] = useState<Announcement[]>([]);
+  useEffect(() => { getAnnouncements().then((a) => setItems(a.slice(0, 3))).catch(() => {}); }, []);
+  if (items.length === 0) return null;
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-20 md:px-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-secondary">
+            <Megaphone className="h-4 w-4" /> {t("ann.eyebrow")}
+          </div>
+          <h2 className="mt-2 font-display text-3xl font-bold md:text-4xl">{t("ann.title")}</h2>
+        </div>
+        <Link to="/announcements" className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-primary shadow-soft transition-colors hover:bg-muted">
+          {t("home.viewAll")} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+
+      <div className="mt-8 grid gap-5 md:grid-cols-3">
+        {items.map((a) => (
+          <Link
+            key={a.id}
+            to="/announcements"
+            className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow"
+          >
+            {a.imageUrl && (
+              <img src={normalizeImageUrl(a.imageUrl)} alt={a.title} loading="lazy" referrerPolicy="no-referrer" className="h-40 w-full object-cover" />
+            )}
+            <div className="flex flex-1 flex-col p-5">
+              {annDate(a.createdAt) && (
+                <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <CalendarDays className="h-3.5 w-3.5" /> {annDate(a.createdAt)}
+                </div>
+              )}
+              <h3 className="mt-1.5 font-display text-lg font-bold leading-tight">{a.title}</h3>
+              {a.body && <p className="mt-1.5 line-clamp-3 text-sm text-muted-foreground">{a.body}</p>}
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
 
