@@ -161,7 +161,7 @@ function GalleryPage() {
                 {isAdmin && p.id && (
                   <button
                     onClick={() => setDelTarget(items.find((it) => it.id === p.id) ?? null)}
-                    className="absolute end-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white opacity-0 backdrop-blur transition-opacity hover:bg-destructive group-hover:opacity-100"
+                    className="absolute end-2 top-2 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white shadow-soft ring-1 ring-white/20 backdrop-blur transition-colors hover:bg-destructive"
                     aria-label="Delete photo"
                   >
                     <Trash2 className="h-4 w-4" />
