@@ -5,6 +5,8 @@ import { ArrowRight, Heart, Sparkles, Sparkle, Users, Store, Gift, ShieldCheck, 
 import { Countdown } from "@/components/site/countdown";
 import { AnimatedCounter } from "@/components/site/animated-counter";
 import { SectionHeading } from "@/components/site/section-heading";
+import { OrganizedWithPurpose } from "@/components/site/organized-with-purpose";
+import { Reveal } from "@/components/site/reveal";
 import { FestiveDivider } from "@/components/site/festive-divider";
 import { EVENT } from "@/lib/dummy-data";
 import { useEffect, useState } from "react";
@@ -23,18 +25,19 @@ function Index() {
   return (
     <div className="overflow-hidden">
       <Hero season={d.activeSeason} />
-      <AnnouncementsHome />
-      <MissionBand />
-      <About />
-      <WomenEmpowerment />
-      <CommunityStory />
-      <StatsBand d={d} />
-      <FeaturedCategories d={d} />
-      <PreviousHighlights d={d} />
-      <GalleryPreview d={d} />
-      <EventLocation season={d.activeSeason} />
-      <Faq />
-      <BecomeASellerCta />
+      <Reveal><AnnouncementsHome /></Reveal>
+      <Reveal><MissionBand /></Reveal>
+      <Reveal><About /></Reveal>
+      <Reveal><WomenEmpowerment /></Reveal>
+      <Reveal><CommunityStory /></Reveal>
+      <OrganizedWithPurpose />
+      <Reveal><StatsBand d={d} /></Reveal>
+      <Reveal><FeaturedCategories d={d} /></Reveal>
+      <Reveal><PreviousHighlights d={d} /></Reveal>
+      <Reveal><GalleryPreview d={d} /></Reveal>
+      <Reveal><EventLocation season={d.activeSeason} /></Reveal>
+      <Reveal><Faq /></Reveal>
+      <Reveal><BecomeASellerCta /></Reveal>
     </div>
   );
 }
@@ -60,7 +63,7 @@ function Hero({ season }: { season: import("@/lib/seasons-db").Season | null }) 
   const seasonName = season?.seasonName ?? EVENT.season;
   const eventDate = season?.eventDate ?? EVENT.dateLabel;
   return (
-    <section className="relative isolate overflow-hidden bg-hero pb-20 pt-10 text-white md:pb-32">
+    <section className="relative isolate overflow-hidden bg-hero pb-2 pt-10 text-white md:pb-2">
       {/* Festive top stripe */}
       <div className="absolute inset-x-0 top-0 h-2 pattern-stripes" />
 
@@ -122,6 +125,7 @@ function Hero({ season }: { season: import("@/lib/seasons-db").Season | null }) 
             <Countdown target={EVENT.dateISO} />
             <div className="mt-3 text-sm text-white/70">{eventDate}</div>
           </div>
+
         </motion.div>
 
         <motion.div
@@ -161,8 +165,18 @@ function Hero({ season }: { season: import("@/lib/seasons-db").Season | null }) 
         </motion.div>
       </div>
 
-      <div className="relative mt-16 flex justify-center">
+      <div className="relative mt-6 flex justify-center">
         <ChevronDown className="h-6 w-6 animate-bounce text-white/50" />
+      </div>
+
+      <div className="relative mx-auto mt-6 flex max-w-7xl items-center justify-center gap-4 border-t border-white/10 px-4 pt-6 md:translate-x-16 md:px-8">
+        <span className="text-xs font-semibold uppercase tracking-[0.25em] text-white/50">{t("footer.poweredBy")}</span>
+        <span className="font-display text-xl font-semibold text-warm md:text-2xl">Al Fajar Youth Wing</span>
+        <img
+          src={normalizeImageUrl("https://drive.google.com/file/d/14iSFQkcpTI6OfYe7dmklB6r67Pspd_AB/view?usp=sharing")}
+          alt="Al Fajar Youth Wing"
+          className="h-28 w-auto object-contain md:h-32"
+        />
       </div>
     </section>
   );
@@ -382,36 +396,128 @@ function WomenEmpowerment() {
 ============================================================ */
 function CommunityStory() {
   const { t } = useI18n();
+  const particles = Array.from({ length: 14 });
+  const CONIC = "conic-gradient(from 0deg, var(--color-gold), var(--color-orange), var(--color-fajar-gold), var(--color-maroon), var(--color-gold))";
   return (
-    <section className="relative mx-auto max-w-7xl px-4 py-24 md:px-8">
-      <div className="grid gap-12 md:grid-cols-[1fr_1.2fr] md:items-center">
-        <div className="relative">
-          <div className="absolute -inset-6 -z-10 rounded-[36px] bg-accent/30 blur-2xl" />
-          <img
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            className="w-full rounded-[32px] object-cover shadow-card"
-            src={normalizeImageUrl("https://drive.google.com/file/d/1hXOPpdaFwJ3-V_Uh1HZGHmJsigOO-zHB/view?usp=drive_link")}
-            alt="Amcho Bazar — stalls and sellers"
-          />
-          <div className="absolute -bottom-8 -right-12 z-10 max-w-[210px] rounded-2xl border border-border bg-card p-3.5 shadow-glow md:-right-32">
-            <div className="font-display text-xs font-semibold leading-snug text-primary">{t("home.story.quote")}</div>
-            {t("home.story.quoteBy") && <div className="mt-1 text-[11px] text-muted-foreground">{t("home.story.quoteBy")}</div>}
-          </div>
-        </div>
-        <div>
-          <SectionHeading
-            align="left"
-            eyebrow={t("home.story.eyebrow")}
-            title={t("home.story.title")}
-            subtitle={t("home.story.subtitle")}
-          />
-          <div className="mt-8 grid grid-cols-3 gap-3">
-            {["home.story.chip1", "home.story.chip2", "home.story.chip3"].map((key) => (
-              <div key={key} className="rounded-2xl border border-border bg-card p-4 text-center text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                {t(key)}
+    <section
+      className="relative overflow-hidden py-24 md:py-32"
+      style={{
+        background:
+          "radial-gradient(1200px 600px at 85% 20%, color-mix(in oklch, var(--color-maroon) 10%, transparent), transparent 60%), radial-gradient(1000px 500px at 15% 80%, color-mix(in oklch, var(--color-orange) 12%, transparent), transparent 60%), var(--color-cream)",
+      }}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 left-1/2 h-[500px] w-[500px] -translate-x-1/2 rounded-full blur-3xl animate-glow-drift"
+        style={{ background: "radial-gradient(circle, color-mix(in oklch, var(--color-gold) 40%, transparent), transparent 70%)" }}
+      />
+
+      <div className="relative mx-auto max-w-7xl px-6">
+        <div className="grid items-center gap-16 lg:grid-cols-2 lg:gap-20">
+          {/* LEFT — image showcase */}
+          <div className="relative mx-auto aspect-square w-full max-w-[520px]">
+            {/* Rotating gradient border */}
+            <div aria-hidden className="absolute inset-0 rounded-[2rem] animate-spin-slow" style={{ background: CONIC, filter: "blur(1px)", opacity: 0.55 }} />
+            {/* Glass frame holding the photo */}
+            <div
+              className="absolute inset-[6px] overflow-hidden rounded-[calc(2rem-6px)]"
+              style={{
+                boxShadow: "0 40px 80px -30px color-mix(in oklch, var(--color-maroon) 45%, transparent), inset 0 1px 0 rgba(255,255,255,0.6)",
+                border: "1px solid color-mix(in oklch, white 60%, transparent)",
+              }}
+            >
+              <img
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className="h-full w-full object-cover"
+                src={normalizeImageUrl("https://drive.google.com/file/d/1hXOPpdaFwJ3-V_Uh1HZGHmJsigOO-zHB/view?usp=drive_link")}
+                alt="Amcho Bazar — stalls and sellers"
+              />
+              <div aria-hidden className="pointer-events-none absolute inset-0 animate-glow-drift" style={{ background: "radial-gradient(circle at 50% 20%, color-mix(in oklch, var(--color-gold) 35%, transparent), transparent 55%)" }} />
+              {/* Floating particles */}
+              {particles.map((_, i) => {
+                const top = (i * 37) % 90 + 5;
+                const left = (i * 53) % 90 + 5;
+                const size = 3 + (i % 4);
+                const delay = (i * 0.4) % 5;
+                const tx = (i % 2 === 0 ? 1 : -1) * (8 + (i % 5) * 2);
+                const ty = (i % 3 === 0 ? -1 : 1) * (10 + (i % 4) * 2);
+                return (
+                  <span
+                    key={i}
+                    aria-hidden
+                    className="absolute rounded-full animate-particle"
+                    style={{
+                      top: `${top}%`,
+                      left: `${left}%`,
+                      width: size,
+                      height: size,
+                      background: "radial-gradient(circle, var(--color-gold), transparent 70%)",
+                      boxShadow: "0 0 8px var(--color-gold)",
+                      animationDelay: `${delay}s`,
+                      // @ts-expect-error CSS vars
+                      "--tx": `${tx}px`,
+                      "--ty": `${ty}px`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+            {/* Quote chip */}
+            {t("home.story.quote") && (
+              <div className="absolute -bottom-6 -right-4 z-10 max-w-[230px] rounded-2xl bg-white/90 p-4 backdrop-blur-xl md:-right-10" style={{ border: "1px solid color-mix(in oklch, var(--color-gold) 40%, transparent)", boxShadow: "0 20px 50px -24px color-mix(in oklch, var(--color-maroon) 55%, transparent)" }}>
+                <div className="font-display text-sm font-semibold italic leading-snug" style={{ color: "var(--color-maroon)" }}>&ldquo;{t("home.story.quote")}&rdquo;</div>
+                {t("home.story.quoteBy") && <div className="mt-1 text-[11px]" style={{ color: "color-mix(in oklch, var(--color-maroon) 65%, black)" }}>{t("home.story.quoteBy")}</div>}
               </div>
-            ))}
+            )}
+          </div>
+
+          {/* RIGHT — story */}
+          <div>
+            <span
+              className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold tracking-[0.2em] uppercase"
+              style={{
+                background: "linear-gradient(135deg, color-mix(in oklch, var(--color-gold) 30%, white), color-mix(in oklch, var(--color-orange) 20%, white))",
+                color: "var(--color-maroon)",
+                border: "1px solid color-mix(in oklch, var(--color-gold) 55%, transparent)",
+              }}
+            >
+              ✨ {t("home.story.eyebrow")}
+            </span>
+
+            <h2
+              className="mt-6 font-display text-4xl leading-[1.05] font-black tracking-tight md:text-5xl lg:text-6xl"
+              style={{
+                background: "linear-gradient(120deg, var(--color-maroon), var(--color-orange) 55%, var(--color-gold))",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+              }}
+            >
+              {t("home.story.title")}
+            </h2>
+
+            <p className="mt-6 max-w-xl text-lg leading-relaxed" style={{ color: "color-mix(in oklch, var(--color-maroon) 75%, black)" }}>
+              {t("home.story.subtitle")}
+            </p>
+
+            {/* Heritage pills */}
+            <div className="mt-10 flex flex-wrap gap-2.5">
+              {["home.story.chip1", "home.story.chip2", "home.story.chip3"].map((key) => (
+                <span
+                  key={key}
+                  className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-widest transition-all duration-300 hover:-translate-y-0.5 hover:scale-105"
+                  style={{
+                    background: "linear-gradient(135deg, color-mix(in oklch, white 85%, transparent), color-mix(in oklch, var(--color-cream) 70%, transparent))",
+                    border: "1px solid color-mix(in oklch, var(--color-gold) 40%, transparent)",
+                    color: "var(--color-maroon)",
+                    boxShadow: "0 6px 18px -12px color-mix(in oklch, var(--color-maroon) 40%, transparent)",
+                  }}
+                >
+                  {t(key)}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </div>

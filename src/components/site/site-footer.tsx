@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Instagram, Mail, MapPin, Phone } from "lucide-react";
 import { Logo } from "./logo";
+import { normalizeImageUrl } from "@/lib/settings-db";
 import { EVENT } from "@/lib/dummy-data";
 import { useAuth } from "@/lib/auth-context";
 import { useSeason } from "@/lib/season-context";
@@ -66,9 +67,11 @@ export function SiteFooter() {
 
       <div className="relative border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 py-6 text-xs text-white/75 md:flex-row md:justify-between md:px-8">
-          <p className="inline-flex items-center gap-1.5 font-medium">
-            {t("footer.poweredBy")} <span className="text-accent">Al Fajar Youth Wing</span>
-          </p>
+          <div className="inline-flex items-center gap-2.5">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">{t("footer.poweredBy")}</span>
+            <span className="font-semibold text-accent">Al Fajar Youth Wing</span>
+            <img src={normalizeImageUrl("https://drive.google.com/file/d/14iSFQkcpTI6OfYe7dmklB6r67Pspd_AB/view?usp=sharing")} alt="Al Fajar Youth Wing" className="h-12 w-auto object-contain" />
+          </div>
           <p>{t("footer.handcrafted")}</p>
           <p>© {new Date().getFullYear()} {t("footer.org")}</p>
         </div>

@@ -72,7 +72,7 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
     hi: "नवाइत समुदाय द्वारा केवल महिलाओं के लिए एक सामुदायिक उत्सव — घरेलू व्यवसाय, सार्थक मनोरंजन और बहनापे की खुशी का जश्न।",
     ar: "مهرجان مجتمعي للنساء فقط من مجتمع نوائط — احتفاء بالأعمال المنزلية والترفيه الهادف وفرحة الأخوة.",
   },
-  "footer.poweredBy":     { en: "Powered by", ur: "تعاون:", "ur-roman": "Powered by", hi: "द्वारा संचालित", ar: "بدعم من" },
+  "footer.poweredBy":     { en: "Presented by", ur: "پیشکش:", "ur-roman": "Presented by", hi: "प्रस्तुत", ar: "تقديم" },
   "footer.handcrafted": {
     en: "Handcrafted with love for the women of our community.",
     ur: "ہماری کمیونٹی کی خواتین کے لیے محبت سے تیار کیا گیا۔",
@@ -84,6 +84,13 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
 
   /* ---- Home page ---- */
   "home.presents":        { en: "presents", ur: "پیش کرتی ہے", "ur-roman": "pesh karti hai", hi: "प्रस्तुत करता है", ar: "تقدّم" },
+  "home.org.eyebrow":     { en: "Organized with Purpose", ur: "بامقصد اہتمام", "ur-roman": "Bamaqsad ehtemam", hi: "उद्देश्य के साथ आयोजित", ar: "منظّم بهدف" },
+  "home.org.title":       { en: "Empowering Communities, Inspiring Women.", ur: "کمیونٹیز کو بااختیار، خواتین کو حوصلہ", "ur-roman": "Communities ko ba-ikhtiyar, khawateen ko hausla", hi: "समुदायों को सशक्त, महिलाओं को प्रेरित", ar: "تمكين المجتمعات، وإلهام النساء." },
+  "home.org.body":        { en: "Amcho Bazar is proudly organized by Al Fajar Youth Wing, a community-driven organization committed to empowering women entrepreneurs, supporting local businesses, and creating meaningful experiences that strengthen our community.", ur: "امچو بازار فخر سے الفجر یوتھ ونگ کے زیرِ اہتمام ہے، ایک کمیونٹی پر مبنی تنظیم جو خواتین کاروباریوں کو بااختیار بنانے، مقامی کاروبار کی مدد اور ایسے بامعنی تجربات پیدا کرنے کے لیے پُرعزم ہے جو ہماری کمیونٹی کو مضبوط کرتے ہیں۔", "ur-roman": "Amcho Bazar fakhr se Al Fajar Youth Wing ke zer-e-ehtemam hai, ek community-driven tanzeem jo khawateen karobariyon ko ba-ikhtiyar banane, maqami karobar ki madad aur aise bamaani tajribat paida karne ke liye pur-azm hai jo hamari community ko mazboot karte hain.", hi: "अम्चो बाज़ार गर्व से अल फजर यूथ विंग द्वारा आयोजित है, एक समुदाय-संचालित संगठन जो महिला उद्यमियों को सशक्त बनाने, स्थानीय व्यवसायों का समर्थन करने और हमारे समुदाय को मजबूत करने वाले सार्थक अनुभव बनाने के लिए प्रतिबद्ध है।", ar: "يُنظَّم أمتشو بازار بكل فخر من قِبَل الفجر يوث وينج، وهي منظمة مجتمعية ملتزمة بتمكين رائدات الأعمال، ودعم الأعمال المحلية، وخلق تجارب هادفة تعزز مجتمعنا." },
+  "home.org.learnMore":   { en: "Learn More", ur: "مزید جانیں", "ur-roman": "Mazeed janein", hi: "और जानें", ar: "اعرف المزيد" },
+  "home.org.point1":      { en: "Empowering women entrepreneurs", ur: "خواتین کاروباریوں کو بااختیار بنانا", "ur-roman": "Khawateen karobariyon ko ba-ikhtiyar banana", hi: "महिला उद्यमियों को सशक्त बनाना", ar: "تمكين رائدات الأعمال" },
+  "home.org.point2":      { en: "Supporting local businesses", ur: "مقامی کاروبار کی مدد", "ur-roman": "Maqami karobar ki madad", hi: "स्थानीय व्यवसायों का समर्थन", ar: "دعم الأعمال المحلية" },
+  "home.org.point3":      { en: "Meaningful community experiences", ur: "بامعنی کمیونٹی تجربات", "ur-roman": "Bamaani community tajribat", hi: "सार्थक सामुदायिक अनुभव", ar: "تجارب مجتمعية هادفة" },
   "home.viewAll":         { en: "View all", ur: "سب دیکھیں", "ur-roman": "Sab dekhein", hi: "सभी देखें", ar: "عرض الكل" },
   "home.hero.blurb":      { en: "A women-only community festival where 120 women entrepreneurs open their home businesses to the neighbourhood — a day of shopping, feasting and sisterhood at Nawait Community Hall.", ur: "صرف خواتین کے لیے ایک کمیونٹی میلہ جہاں 120 خواتین کاروباری اپنے گھریلو کاروبار محلے کے لیے کھولتی ہیں — نوائط کمیونٹی ہال میں خریداری، دعوت اور بہنوں کی خوشی کا دن۔", "ur-roman": "Sirf khawateen ke liye ek community mela jahan 120 khawateen apne gharelu karobar mohallay ke liye kholti hain — Nawait Community Hall mein shopping, dawat aur behnon ki khushi ka din.", hi: "केवल महिलाओं के लिए एक सामुदायिक उत्सव जहाँ 120 महिला उद्यमी अपने घरेलू व्यवसाय मोहल्ले के लिए खोलती हैं — नवाइत कम्युनिटी हॉल में खरीदारी, दावत और बहनापे का दिन।", ar: "مهرجان مجتمعي للنساء فقط حيث تفتح 120 سيدة أعمال مشاريعهن المنزلية للحي — يوم من التسوق والولائم والأخوة في قاعة مجتمع نوائط." },
   "home.hero.watchDraw":  { en: "Watch the Live Draw", ur: "لائیو ڈرا دیکھیں", "ur-roman": "Live Draw dekhein", hi: "लाइव ड्रॉ देखें", ar: "شاهد السحب المباشر" },
