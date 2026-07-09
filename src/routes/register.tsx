@@ -148,6 +148,29 @@ function RegisterPage() {
     (step === 2 && data.categories.length > 0) ||
     step === 3;
 
+  // Registration follows the active season's status: open only when RegistrationOpen.
+  // No active season ⇒ don't gate (legacy/dummy fallback).
+  const gate = activeSeason && activeSeason.status !== "RegistrationOpen"
+    ? (activeSeason.status === "Upcoming" ? "soon" : "closed")
+    : null;
+  if (gate) {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+        <div className="pointer-events-none absolute -top-32 left-1/2 h-96 w-[720px] -translate-x-1/2 rounded-full bg-warm opacity-30 blur-3xl" />
+        <div className="relative w-full max-w-md rounded-3xl border border-primary/15 bg-card p-8 text-center shadow-soft">
+          <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <h1 className="font-display text-2xl font-bold text-primary">{t(gate === "soon" ? "reg.gate.soonTitle" : "reg.gate.closedTitle")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t(gate === "soon" ? "reg.gate.soon" : "reg.gate.closed")}</p>
+          <Link to="/" className="mt-6 inline-flex items-center gap-2 rounded-full bg-festive px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-transform hover:scale-[1.03]">
+            <ArrowLeft className="h-4 w-4" /> {t("reg.gate.home")}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* soft festive backdrop */}

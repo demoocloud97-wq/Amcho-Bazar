@@ -234,8 +234,12 @@ function DrawPage() {
     }, 4700);
   }
 
+  // Draw runs only while the season is in a draw phase (no season ⇒ legacy fallback, allow).
+  const canDraw = !season || season.status === "DrawPending" || season.status === "DrawRunning";
+
   function startCeremony() {
     if (phase !== "idle") return;
+    if (!canDraw) { toast.error(t("draw.notPhase")); return; }
     if (available.length === 0) {
       toast.error(candidates.length === 0 ? t("draw.noRegs") : t("draw.allAssigned"));
       return;
@@ -284,6 +288,7 @@ function DrawPage() {
   }
   function startNonStop() {
     if (phase !== "idle") return;
+    if (!canDraw) { toast.error(t("draw.notPhase")); return; }
     if (available.length === 0) {
       toast.error(candidates.length === 0 ? t("draw.noRegs") : t("draw.allAssigned"));
       return;

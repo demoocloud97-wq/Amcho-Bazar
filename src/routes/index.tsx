@@ -62,6 +62,10 @@ function Hero({ season }: { season: import("@/lib/seasons-db").Season | null }) 
   }, []);
   const seasonName = season?.seasonName ?? EVENT.season;
   const eventDate = season?.eventDate ?? EVENT.dateLabel;
+  // Season eventDate is a free-text label; use it for the countdown only if it parses, else dummy.
+  const rawDate = season?.eventDate?.split("·")[0].trim();
+  const parsed = rawDate ? Date.parse(rawDate) : NaN;
+  const countdownTarget = Number.isNaN(parsed) ? EVENT.dateISO : new Date(parsed).toISOString();
   return (
     <section className="relative isolate overflow-hidden bg-hero pb-2 pt-10 text-white md:pb-2">
       {/* Festive top stripe */}
@@ -122,7 +126,7 @@ function Hero({ season }: { season: import("@/lib/seasons-db").Season | null }) 
 
           <div className="mt-10 max-w-lg">
             <div className="mb-3 text-xs uppercase tracking-[0.3em] text-white/60">{t("home.hero.doorsOpen")}</div>
-            <Countdown target={EVENT.dateISO} />
+            <Countdown target={countdownTarget} />
             <div className="mt-3 text-sm text-white/70">{eventDate}</div>
           </div>
 
