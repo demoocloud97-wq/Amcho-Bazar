@@ -465,9 +465,9 @@ function CommunityStory() {
             </div>
             {/* Quote chip */}
             {t("home.story.quote") && (
-              <div className="absolute -bottom-6 -right-4 z-10 max-w-[230px] rounded-2xl bg-white/90 p-4 backdrop-blur-xl md:-right-10" style={{ border: "1px solid color-mix(in oklch, var(--color-gold) 40%, transparent)", boxShadow: "0 20px 50px -24px color-mix(in oklch, var(--color-maroon) 55%, transparent)" }}>
-                <div className="font-display text-sm font-semibold italic leading-snug" style={{ color: "var(--color-maroon)" }}>&ldquo;{t("home.story.quote")}&rdquo;</div>
-                {t("home.story.quoteBy") && <div className="mt-1 text-[11px]" style={{ color: "color-mix(in oklch, var(--color-maroon) 65%, black)" }}>{t("home.story.quoteBy")}</div>}
+              <div className="absolute -bottom-8 -right-6 z-10 max-w-[280px] rounded-2xl p-4 md:-bottom-12 md:-right-44" style={{ border: "1.5px solid color-mix(in oklch, var(--color-gold) 55%, transparent)" }}>
+                <div className="font-display text-base font-semibold italic leading-snug" style={{ color: "var(--color-maroon)" }}>&ldquo;{t("home.story.quote")}&rdquo;</div>
+                {t("home.story.quoteBy") && <div className="mt-1.5 text-xs" style={{ color: "color-mix(in oklch, var(--color-maroon) 65%, black)" }}>{t("home.story.quoteBy")}</div>}
               </div>
             )}
           </div>
