@@ -286,7 +286,7 @@ export function OrganizedWithPurpose() {
 
             {/* CTA */}
             <div
-              className="mt-8 flex flex-col items-center gap-4 rounded-2xl px-5 py-5 text-center sm:flex-row sm:justify-between sm:text-left"
+              className="mt-8 flex flex-col items-center gap-2 rounded-2xl px-6 py-2 text-center sm:flex-row sm:justify-between sm:text-left md:-mx-6 lg:-mx-12"
               style={{
                 background:
                   "linear-gradient(120deg, color-mix(in oklch, var(--color-maroon) 8%, white), color-mix(in oklch, var(--color-gold) 12%, white))",
@@ -317,7 +317,7 @@ export function OrganizedWithPurpose() {
                 height={96}
                 loading="lazy"
                 referrerPolicy="no-referrer"
-                className="h-28 w-auto shrink-0 object-contain md:h-32"
+                className="h-20 w-auto shrink-0 object-contain md:h-24"
               />
             </div>
           </div>

@@ -400,7 +400,7 @@ function CommunityStory() {
   const CONIC = "conic-gradient(from 0deg, var(--color-gold), var(--color-orange), var(--color-fajar-gold), var(--color-maroon), var(--color-gold))";
   return (
     <section
-      className="relative overflow-hidden py-24 md:py-32"
+      className="relative overflow-hidden py-14 md:py-20"
       style={{
         background:
           "radial-gradient(1200px 600px at 85% 20%, color-mix(in oklch, var(--color-maroon) 10%, transparent), transparent 60%), radial-gradient(1000px 500px at 15% 80%, color-mix(in oklch, var(--color-orange) 12%, transparent), transparent 60%), var(--color-cream)",
@@ -413,9 +413,9 @@ function CommunityStory() {
       />
 
       <div className="relative mx-auto max-w-7xl px-6">
-        <div className="grid items-center gap-16 lg:grid-cols-2 lg:gap-20">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           {/* LEFT — image showcase */}
-          <div className="relative mx-auto aspect-square w-full max-w-[520px]">
+          <div className="relative mx-auto aspect-square w-full max-w-[340px]">
             {/* Rotating gradient border */}
             <div aria-hidden className="absolute inset-0 rounded-[2rem] animate-spin-slow" style={{ background: CONIC, filter: "blur(1px)", opacity: 0.55 }} />
             {/* Glass frame holding the photo */}
@@ -486,7 +486,7 @@ function CommunityStory() {
             </span>
 
             <h2
-              className="mt-6 font-display text-4xl leading-[1.05] font-black tracking-tight md:text-5xl lg:text-6xl"
+              className="mt-5 font-display text-3xl leading-[1.05] font-black tracking-tight md:text-4xl lg:text-5xl"
               style={{
                 background: "linear-gradient(120deg, var(--color-maroon), var(--color-orange) 55%, var(--color-gold))",
                 WebkitBackgroundClip: "text",
@@ -497,12 +497,12 @@ function CommunityStory() {
               {t("home.story.title")}
             </h2>
 
-            <p className="mt-6 max-w-xl text-lg leading-relaxed" style={{ color: "color-mix(in oklch, var(--color-maroon) 75%, black)" }}>
+            <p className="mt-4 max-w-xl text-sm leading-relaxed md:text-base" style={{ color: "color-mix(in oklch, var(--color-maroon) 75%, black)" }}>
               {t("home.story.subtitle")}
             </p>
 
             {/* Heritage pills */}
-            <div className="mt-10 flex flex-wrap gap-2.5">
+            <div className="mt-7 flex flex-wrap gap-2">
               {["home.story.chip1", "home.story.chip2", "home.story.chip3"].map((key) => (
                 <span
                   key={key}
