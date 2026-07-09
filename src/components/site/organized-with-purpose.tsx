@@ -53,7 +53,7 @@ export function OrganizedWithPurpose() {
   return (
     <section
       ref={ref}
-      className="relative overflow-hidden py-24 md:py-32"
+      className="relative overflow-hidden py-14 md:py-20"
       style={{
         background:
           "radial-gradient(1200px 600px at 15% 20%, color-mix(in oklch, var(--color-maroon) 10%, transparent), transparent 60%), radial-gradient(1000px 500px at 85% 80%, color-mix(in oklch, var(--color-orange) 12%, transparent), transparent 60%), var(--color-cream)",
@@ -70,10 +70,10 @@ export function OrganizedWithPurpose() {
       />
 
       <div className="relative mx-auto max-w-7xl px-6">
-        <div className="grid items-center gap-16 lg:grid-cols-2 lg:gap-20">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           {/* LEFT — Logo showcase */}
           <div className={inView ? "animate-rise-in" : "opacity-0"}>
-            <div className="relative mx-auto aspect-square w-full max-w-[520px]">
+            <div className="relative mx-auto aspect-square w-full max-w-[340px]">
               {/* Rotating gradient border */}
               <div
                 aria-hidden
@@ -181,7 +181,7 @@ export function OrganizedWithPurpose() {
             </span>
 
             <h2
-              className="mt-6 font-display text-4xl leading-[1.05] font-black tracking-tight md:text-5xl lg:text-6xl"
+              className="mt-5 font-display text-3xl leading-[1.05] font-black tracking-tight md:text-4xl lg:text-5xl"
               style={{
                 background:
                   "linear-gradient(120deg, var(--color-maroon), var(--color-orange) 55%, var(--color-gold))",
@@ -198,7 +198,7 @@ export function OrganizedWithPurpose() {
             </h2>
 
             <p
-              className="mt-6 max-w-xl text-lg leading-relaxed"
+              className="mt-4 max-w-xl text-sm leading-relaxed md:text-base"
               style={{ color: "color-mix(in oklch, var(--color-maroon) 75%, black)" }}
             >
               Behind every successful season of Amcho Bazar is the dedication of Al Fajar
@@ -210,11 +210,11 @@ export function OrganizedWithPurpose() {
             </p>
 
             {/* Mission cards */}
-            <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            <div className="mt-7 grid gap-3 sm:grid-cols-3">
               {missions.map((m, i) => (
                 <article
                   key={m.title}
-                  className={`group relative overflow-hidden rounded-2xl p-6 transition-all duration-500 hover:-translate-y-2 ${
+                  className={`group relative overflow-hidden rounded-2xl p-4 transition-all duration-500 hover:-translate-y-2 ${
                     inView ? "animate-rise-in" : "opacity-0"
                   }`}
                   style={{
@@ -235,7 +235,7 @@ export function OrganizedWithPurpose() {
                     }}
                   />
                   <div
-                    className="relative flex h-12 w-12 items-center justify-center rounded-xl text-2xl"
+                    className="relative flex h-10 w-10 items-center justify-center rounded-xl text-xl"
                     style={{
                       background:
                         "linear-gradient(135deg, color-mix(in oklch, var(--color-orange) 35%, white), color-mix(in oklch, var(--color-gold) 40%, white))",
@@ -246,7 +246,7 @@ export function OrganizedWithPurpose() {
                     {m.icon}
                   </div>
                   <h4
-                    className="relative mt-4 font-display text-lg font-semibold"
+                    className="relative mt-3 font-display text-base font-semibold"
                     style={{ color: "var(--color-maroon)" }}
                   >
                     {m.title}
@@ -262,7 +262,7 @@ export function OrganizedWithPurpose() {
             </div>
 
             {/* Value badges */}
-            <div className="mt-8 flex flex-wrap gap-2.5">
+            <div className="mt-6 flex flex-wrap gap-2">
               {values.map((v, i) => (
                 <span
                   key={v.label}
@@ -286,7 +286,7 @@ export function OrganizedWithPurpose() {
 
             {/* CTA */}
             <div
-              className="mt-12 flex flex-col items-center gap-4 rounded-2xl px-6 py-8 text-center sm:flex-row sm:justify-between sm:text-left"
+              className="mt-8 flex flex-col items-center gap-4 rounded-2xl px-5 py-5 text-center sm:flex-row sm:justify-between sm:text-left"
               style={{
                 background:
                   "linear-gradient(120deg, color-mix(in oklch, var(--color-maroon) 8%, white), color-mix(in oklch, var(--color-gold) 12%, white))",
