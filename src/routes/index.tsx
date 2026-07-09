@@ -687,9 +687,15 @@ function FeaturedCategories({ d }: { d: HomeData }) {
                   <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${th.badgeBg} ${th.badgeText}`}>
                     🏠 {count} {t("home.sellersWord")}
                   </span>
-                  <Link to={isAdmin ? "/categories" : "/stalls"} className={`inline-flex items-center gap-1 text-sm font-semibold ${th.text} hover:underline`}>
-                    {t("home.featCat.explore")} <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
-                  </Link>
+                  {isAdmin ? (
+                    <Link to="/categories" className={`inline-flex items-center gap-1 text-sm font-semibold ${th.text} hover:underline`}>
+                      {t("home.featCat.explore")} <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+                    </Link>
+                  ) : (
+                    <span className={`inline-flex cursor-default items-center gap-1 text-sm font-semibold ${th.text}`}>
+                      {t("home.featCat.explore")} <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-1" />
+                    </span>
+                  )}
                 </div>
                 </div>
               </div>

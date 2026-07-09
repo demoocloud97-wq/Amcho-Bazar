@@ -69,7 +69,13 @@ export function useHomeData(): HomeData {
           const [regs, stalls, gallery] = activeReads;
           entrepreneurs = regs.length || stalls.length;
           availableStalls = Math.max(0, (activeSeason?.maximumStalls ?? 0) - stalls.length);
-          for (const s of stalls) categoryCounts[s.categoryId] = (categoryCounts[s.categoryId] ?? 0) + 1;
+          // Sellers-per-category: count registrations (real applicants, incl. multi-category);
+          // fall back to assigned stalls for public visitors who can't read registrations.
+          const source = regs.length ? regs : stalls;
+          for (const item of source) {
+            const ids = "categoryIds" in item && item.categoryIds?.length ? item.categoryIds : (item.categoryId ? [item.categoryId] : []);
+            for (const id of ids) categoryCounts[id] = (categoryCounts[id] ?? 0) + 1;
+          }
           galleryPreview = gallery.slice(0, 6).map((g) => ({ src: g.src, caption: g.caption }));
         }
 

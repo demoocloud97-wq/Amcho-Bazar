@@ -167,6 +167,13 @@
     scroll-padding-top: 5rem;
   }
 
+  /* Kill horizontal scroll app-wide: any decorative glow / off-canvas element
+     that slips past the viewport gets clipped, not scrolled. `clip` (not
+     `hidden`) so the sticky header keeps working. */
+  html, body {
+    overflow-x: clip;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -333,6 +340,16 @@
   .animate-rise-in { animation: none; opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) { .animate-marquee { animation: none; } }
+
+/* ============================================================
+   Google Website Translate — the visible UI is our own custom
+   dropdown (google-translate.tsx); Google's own chrome is hidden.
+   ============================================================ */
+.goog-te-banner-frame,
+.skiptranslate > iframe { display: none !important; visibility: hidden !important; }
+body { top: 0 !important; position: static !important; }
+.goog-tooltip, .goog-tooltip:hover, #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
+.goog-text-highlight { background: none !important; box-shadow: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -4,7 +4,7 @@ import { LogIn } from "lucide-react";
 import { Logo } from "./logo";
 import { MainMenu } from "./main-menu";
 import { NotificationBell } from "./notification-bell";
-import { LanguageSwitcher } from "./language-switcher";
+import { GoogleTranslate } from "./google-translate";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
 import { watchDrawLive } from "@/lib/settings-db";
@@ -96,7 +96,7 @@ export function SiteHeader() {
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0">
-            <LanguageSwitcher />
+            <GoogleTranslate />
             {user ? (
               <>
                 <NotificationBell />
