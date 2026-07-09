@@ -1,0 +1,1 @@
+import"./i18n-CKx3dDHE.js";var e=`amcho-bazar`;export{e as t};
