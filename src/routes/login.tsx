@@ -4,6 +4,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2, Lock, Mail, Sparkles } from "lucide-react";
 import { signInWithEmail, signInWithGoogle, resetPassword } from "@/lib/auth";
+import { PresentedBy } from "@/components/site/presented-by";
+import { LoginFlow, FlowModal } from "@/components/site/auth-flow";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 import { useI18n } from "@/lib/i18n";
 import { useSeason } from "@/lib/season-context";
@@ -209,8 +211,17 @@ function LoginPage() {
               {t("login.create")}
             </Link>
           </p>
+
+          <FlowModal
+            label="View sign-in flow"
+            buttonClassName="mt-5 flex w-full items-center justify-center gap-2 rounded-full border border-border bg-white/60 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/5"
+          >
+            <LoginFlow />
+          </FlowModal>
         </motion.div>
       </div>
+
+      <PresentedBy className="-mt-8 pb-10" />
     </div>
   );
 }

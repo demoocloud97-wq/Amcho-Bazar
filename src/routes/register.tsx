@@ -12,6 +12,8 @@ import { useI18n } from "@/lib/i18n";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 import { useAuth } from "@/lib/auth-context";
 import { RequireAuth } from "@/components/site/require-auth";
+import { PresentedBy } from "@/components/site/presented-by";
+import { RegistrationFlow, FlowModal } from "@/components/site/auth-flow";
 
 export const Route = createFileRoute("/register")({
   head: () => ({
@@ -235,7 +237,16 @@ function RegisterPage() {
               </button>
             </div>
           )}
+
+          <FlowModal
+            label="View registration flow"
+            buttonClassName="mt-6 flex w-full items-center justify-center gap-2 rounded-full border border-border bg-white/60 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/5"
+          >
+            <RegistrationFlow currentStep={step} />
+          </FlowModal>
         </div>
+
+        <PresentedBy className="mt-2" />
       </section>
     </div>
   );
