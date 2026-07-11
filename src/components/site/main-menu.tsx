@@ -1,9 +1,11 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   ArrowLeftRight, BarChart3, CreditCard, Image as ImageIcon,
-  LayoutDashboard, ListTree, LogIn, LogOut, Megaphone, MoreVertical, Plus, Settings,
+  LayoutDashboard, ListTree, LogIn, LogOut, Megaphone, MoreVertical, Plus, Radio, Settings,
   Store, Ticket, UserCircle,
 } from "lucide-react";
+import { watchDrawLive } from "@/lib/settings-db";
 import { toast } from "sonner";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
@@ -40,6 +42,8 @@ export function MainMenu() {
   const { seasons, seasonId, season, setSeasonId } = useSeason();
   const { t } = useI18n();
   const navigate = useNavigate();
+  const [drawLive, setDrawLive] = useState(false);
+  useEffect(() => watchDrawLive(setDrawLive), []);
 
   async function handleLogout() {
     await logout();
@@ -134,6 +138,23 @@ export function MainMenu() {
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
             )}
+            <DropdownMenuSeparator />
+          </>
+        )}
+
+        {/* Live draw — reachable from the mobile menu (the header nav is desktop-only).
+            Admins always see it (they run it); everyone else only while it's broadcasting. */}
+        {(isAdmin || drawLive) && (
+          <>
+            <DropdownMenuItem asChild className={`${ROW} font-semibold text-secondary focus:bg-secondary/10 focus:text-secondary`}>
+              <Link to={isAdmin ? "/draw" : "/present"}>
+                <span className="relative grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-festive text-white">
+                  <Radio className="h-4 w-4" />
+                  {drawLive && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-popover" />}
+                </span>
+                {isAdmin ? t("nav.liveDraw") : t("nav.watchLive")}
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>
         )}
