@@ -7,11 +7,12 @@ import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { EVENT } from "@/lib/dummy-data";
-import { getDrawNonStop, getDrawLive, setDrawLive } from "@/lib/settings-db";
+import { getDrawNonStop, getDrawLive, setDrawLive, watchDrawCountdown } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
-import { getRegistrationsBySeasonId, getRegistrations, updateRegistration, type Registration } from "@/lib/db";
-import { materializeRegistrationStalls } from "@/lib/stalls-db";
+import { watchRegistrationsForAdmin, updateRegistration, type Registration } from "@/lib/db";
+import { materializeRegistrationStalls, deleteStallForRegistration } from "@/lib/stalls-db";
 import { getDrawResultsBySeasonId, saveDrawResult, clearDrawResultsBySeasonId } from "@/lib/draw-results-db";
+import { publishDrawPool, setPoolSpinning } from "@/lib/draw-pool-db";
 import { RequireAdmin } from "@/components/site/require-admin";
 import { RedDart } from "@/components/site/dartboard";
 import { useI18n } from "@/lib/i18n";
@@ -47,9 +48,8 @@ type Selected = {
   at: string;
 };
 
-// Fallbacks if no season is loaded yet.
+// Fallback if no season is loaded yet.
 const DEFAULT_TARGET = EVENT.totalWinners; // 45
-const DEFAULT_TOTAL_STALLS = EVENT.totalStalls; // 75
 
 type Candidate = { id: string; seller: string; business: string; category: string; avatar: string };
 
@@ -57,16 +57,17 @@ function DrawPage() {
   const { season, seasonId } = useSeason();
   const { t } = useI18n();
   const TARGET = season?.maximumSelectedStalls || DEFAULT_TARGET;
-  const TOTAL_STALLS = season?.maximumStalls || DEFAULT_TOTAL_STALLS;
 
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [allRegs, setAllRegs] = useState<Candidate[]>([]); // every applicant — the venue map cells (by name)
+  const [registeredCount, setRegisteredCount] = useState(0); // total registered this season (live)
   const [selected, setSelected] = useState<Selected[]>([]);
   const [phase, setPhase] = useState<"idle" | "countdown" | "spinning" | "reveal" | "done">("idle");
   const [count, setCount] = useState(3);
   const [reel, setReel] = useState<{ seller: string; business: string } | null>(null);
   const [current, setCurrent] = useState<Selected | null>(null);
   const [showWinner, setShowWinner] = useState(false); // delay the name until the dart has visibly landed
-  const [spinStall, setSpinStall] = useState<number | null>(null); // stall cell lit up while the picker runs
+  const [spinRegId, setSpinRegId] = useState<string | null>(null); // applicant cell lit up while the picker runs
   const [confirmReset, setConfirmReset] = useState(false);
   const [running, setRunning] = useState(false);
   const [nonStop, setNonStop] = useState(false); // admin toggle: show one-click Non-Stop button
@@ -76,11 +77,17 @@ function DrawPage() {
   const timers = useRef<number[]>([]);
   const selectedRef = useRef<Selected[]>([]); // latest picks for the fast loop (avoids stale closures)
   const candidatesRef = useRef<Candidate[]>([]); // latest candidates for the fast loop
-  const spinStallRef = useRef<number | null>(null); // cell the picker is currently on → where the dart lands
+  const spinRegIdRef = useRef<string | null>(null); // applicant cell the picker is currently on
   const regByIdRef = useRef<Map<string, Registration>>(new Map()); // full registrations, to approve a winner
 
   useEffect(() => { getDrawNonStop().then(setNonStop).catch(() => {}); }, []);
   useEffect(() => { getDrawLive().then(setLive).catch(() => {}); }, []);
+  // Admin-set countdown (Settings → Live Draw) — the spin lasts this long so the
+  // public countdown (which uses the same value) reaches 1 exactly as the winner reveals.
+  const [countdownSecs, setCountdownSecs] = useState(3);
+  useEffect(() => watchDrawCountdown(setCountdownSecs), []);
+  const countdownRef = useRef(3);
+  useEffect(() => { countdownRef.current = countdownSecs; }, [countdownSecs]);
 
   async function toggleLive() {
     const next = !live;
@@ -98,8 +105,7 @@ function DrawPage() {
   useEffect(() => { selectedRef.current = selected; }, [selected]);
   useEffect(() => { candidatesRef.current = candidates; }, [candidates]);
 
-  // Load this season's approved sellers + any already-drawn results. Season-scoped:
-  // switching seasons swaps the whole draw independently.
+  // One-time per season: load already-saved draw picks and reset the machine.
   useEffect(() => {
     timers.current.forEach((t) => clearTimeout(t));
     timers.current = [];
@@ -107,26 +113,9 @@ function DrawPage() {
     setPhase("idle");
     setCurrent(null);
     setReel(null);
-    if (!seasonId) { setCandidates([]); setSelected([]); selectedRef.current = []; return; }
-    const num = season?.seasonNumber;
-    Promise.all([
-      getRegistrationsBySeasonId(seasonId),
-      num != null ? getRegistrations(num).catch(() => []) : Promise.resolve([] as Registration[]),
-      getDrawResultsBySeasonId(seasonId),
-    ])
-      .then(([byId, byNum, results]) => {
-        // Merge this season's registrations matched by seasonId AND by numeric
-        // season (legacy), so every current-season applicant is included — and
-        // nothing from other seasons.
-        const map = new Map<string, Registration>();
-        [...byId, ...byNum].forEach((r) => { if (r.id) map.set(r.id, r); });
-        regByIdRef.current = map; // full lookup so a winner can be approved + listed
-        // Waitlisted (and any legacy pending) applicants enter the draw; winning
-        // is what approves them. Already-approved/paid are past winners — excluded.
-        const cands = [...map.values()]
-          .filter((r) => r.status === "waitlist" || r.status === "pending")
-          .map((r) => ({ id: r.id!, seller: r.seller, business: r.business, category: r.category as string, avatar: avatarFor(r.id!) }));
-        setCandidates(cands);
+    if (!seasonId) { setSelected([]); selectedRef.current = []; return; }
+    getDrawResultsBySeasonId(seasonId)
+      .then((results) => {
         const picks: Selected[] = results.map((r) => ({
           order: r.order, stallNo: r.stallNo, seller: r.seller, business: r.business,
           category: r.category, avatar: avatarFor(r.candidateId), id: r.candidateId, at: r.at,
@@ -139,12 +128,39 @@ function DrawPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seasonId, season?.seasonNumber]);
 
+  // Live: registered applicants + the draw pool update in real time — new sign-ups
+  // appear mid-ceremony, and winners leave the pool as they get approved.
+  useEffect(() => {
+    if (!seasonId) { setCandidates([]); setAllRegs([]); setRegisteredCount(0); regByIdRef.current = new Map(); return; }
+    const unsub = watchRegistrationsForAdmin(seasonId, season?.seasonNumber, (regs) => {
+      const map = new Map<string, Registration>();
+      regs.forEach((r) => { if (r.id) map.set(r.id, r); });
+      regByIdRef.current = map; // full lookup so a winner can be approved + listed
+      setRegisteredCount(map.size);
+      const toCand = (r: Registration): Candidate => ({ id: r.id!, seller: r.seller, business: r.business, category: r.category as string, avatar: avatarFor(r.id!) });
+      // Every applicant is a cell on the venue map (stable order by id so cells don't jump).
+      setAllRegs([...map.values()].map(toCand).sort((a, b) => a.id.localeCompare(b.id)));
+      // Waitlisted (and any legacy pending) applicants enter the draw; winning is what
+      // approves them. Already-approved/paid are past winners — excluded from the pool.
+      setCandidates([...map.values()].filter((r) => r.status === "waitlist" || r.status === "pending").map(toCand));
+    });
+    return unsub;
+  }, [seasonId, season?.seasonNumber]);
+
+  // Publish the name-only applicant pool so the public /present live map can show
+  // every applicant as a named cell (registrations themselves are auth-gated).
+  useEffect(() => {
+    if (!seasonId || allRegs.length === 0) return;
+    publishDrawPool(seasonId, allRegs.map(({ id, seller, business, category }) => ({ id, seller, business, category }))).catch(() => {});
+  }, [seasonId, allRegs]);
+
   const available = useMemo(() => {
     const usedIds = new Set(selected.map((s) => s.id));
     return candidates.filter((s) => !usedIds.has(s.id));
   }, [selected, candidates]);
 
   const usedStalls = useMemo(() => new Set(selected.map((s) => s.stallNo)), [selected]);
+  const selectedIds = useMemo(() => new Set(selected.map((s) => s.id)), [selected]); // winning applicant cells
 
   useEffect(() => () => timers.current.forEach((t) => clearTimeout(t)), []);
 
@@ -184,39 +200,34 @@ function DrawPage() {
       setRunning(false);
       return;
     }
-    // No countdown — go straight into the spin so every registered applicant cycles.
+    // Spin for exactly the admin-set countdown (Settings → Live Draw) so the public
+    // countdown reaches 1 as the winner reveals.
+    const spinMs = Math.max(1, countdownRef.current) * 1000;
     setPhase("spinning");
+    if (seasonId) setPoolSpinning(seasonId, true).catch(() => {}); // public map starts hopping now
     let ticks = 0;
+    const maxTicks = Math.round(spinMs / 300);
     const spinId = window.setInterval(() => {
+      // Hop across random not-yet-won applicant cells so the picker visibly "runs".
       const pick = available[Math.floor(Math.random() * available.length)];
-      if (pick) setReel({ seller: pick.seller, business: pick.business });
-      // Light up a random free stall on the venue map so the picker visibly "runs".
-      const rem: number[] = [];
-      for (let i = 1; i <= TOTAL_STALLS; i++) if (!usedStalls.has(i)) rem.push(i);
-      if (rem.length) {
-        const hop = rem[Math.floor(Math.random() * rem.length)];
-        spinStallRef.current = hop;
-        setSpinStall(hop);
+      if (pick) {
+        setReel({ seller: pick.seller, business: pick.business });
+        spinRegIdRef.current = pick.id;
+        setSpinRegId(pick.id);
       }
       ticks++;
-      if (ticks > 14) window.clearInterval(spinId);
+      if (ticks >= maxTicks) window.clearInterval(spinId);
     }, 300);
     timers.current.push(spinId as unknown as number);
 
     addTimer(() => {
-      // final pick
-      const winner = available[Math.floor(Math.random() * available.length)];
-      // The dart lands on the exact stall the spin came to rest on.
-      const remaining: number[] = [];
-      for (let i = 1; i <= TOTAL_STALLS; i++) if (!usedStalls.has(i)) remaining.push(i);
-      const landed = spinStallRef.current;
-      const stallNo = landed != null && !usedStalls.has(landed)
-        ? landed
-        : remaining[Math.floor(Math.random() * remaining.length)];
+      // The dart lands on the applicant whose cell the spin came to rest on.
+      const landed = spinRegIdRef.current;
+      const winner = available.find((c) => c.id === landed) ?? available[Math.floor(Math.random() * available.length)];
       const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const s: Selected = {
         order: selected.length + 1,
-        stallNo,
+        stallNo: selected.length + 1, // sequential stall number, kept for the directory
         seller: winner.seller,
         business: winner.business,
         category: winner.category,
@@ -224,8 +235,9 @@ function DrawPage() {
         id: winner.id,
         at: nowStr,
       };
-      setSpinStall(null);
-      setCurrent(s);        // dart now strikes this stall on the venue map
+      setSpinRegId(null);
+      if (seasonId) setPoolSpinning(seasonId, false).catch(() => {}); // stop the public hop; winner reveals
+      setCurrent(s);        // dart now strikes this applicant's cell on the venue map
       setReel(null);
       setPhase("reveal");
       persist(s);
@@ -240,7 +252,7 @@ function DrawPage() {
         setPhase("idle");
         if (running) addTimer(runOne, 800);
       }, HOLD + 3400);
-    }, 4700);
+    }, spinMs); // spin lasts the admin-set countdown so the public count reaches 1 at reveal
   }
 
   // Draw runs only while the season is in a draw phase (no season ⇒ legacy fallback, allow).
@@ -268,18 +280,14 @@ function DrawPage() {
       setCurrent(null);
       setPhase(cur.length >= TARGET ? "done" : "idle");
       setRunning(false);
+      if (seasonId) setPoolSpinning(seasonId, false).catch(() => {});
       if (cur.length >= TARGET) fireConfetti();
       return;
     }
-    const usedStallSet = new Set(cur.map((s) => s.stallNo));
-    const remaining: number[] = [];
-    for (let i = 1; i <= TOTAL_STALLS; i++) if (!usedStallSet.has(i)) remaining.push(i);
-
     const winner = avail[Math.floor(Math.random() * avail.length)];
-    const stallNo = remaining[Math.floor(Math.random() * remaining.length)];
     const s: Selected = {
       order: cur.length + 1,
-      stallNo,
+      stallNo: cur.length + 1, // sequential stall number, kept for the directory
       seller: winner.seller,
       business: winner.business,
       category: winner.category,
@@ -304,13 +312,16 @@ function DrawPage() {
     }
     setRunning(true);
     setPhase("spinning");
+    if (seasonId) setPoolSpinning(seasonId, true).catch(() => {}); // public map hops through the non-stop run
     addTimer(fastStep, 250);
   }
 
   function pauseCeremony() {
     setRunning(false);
+    if (seasonId) setPoolSpinning(seasonId, false).catch(() => {});
   }
   function reset() {
+    const wonIds = selectedRef.current.map((s) => s.id); // registration ids of the current winners
     timers.current.forEach((t) => clearTimeout(t));
     timers.current = [];
     selectedRef.current = [];
@@ -318,11 +329,16 @@ function DrawPage() {
     setCurrent(null);
     setShowWinner(false);
     setReel(null);
-    setSpinStall(null);
-    spinStallRef.current = null;
+    setSpinRegId(null);
+    spinRegIdRef.current = null;
     setPhase("idle");
     setRunning(false);
-    if (seasonId) clearDrawResultsBySeasonId(seasonId).catch(() => {}); // wipe this season's saved draw
+    if (seasonId) { setPoolSpinning(seasonId, false).catch(() => {}); clearDrawResultsBySeasonId(seasonId).catch(() => {}); } // wipe this season's saved draw
+    // Undo the win: put every winner back in the waitlist pool and drop their stall.
+    wonIds.forEach((id) => {
+      updateRegistration(id, { status: "waitlist", season: season?.seasonNumber }).catch(() => {});
+      deleteStallForRegistration(id).catch(() => {});
+    });
   }
 
   const progress = selected.length / TARGET;
@@ -343,14 +359,13 @@ function DrawPage() {
             {t("draw.title")}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-white/80">
-            {t("draw.subtitle").replace("{n}", String(candidates.length)).replace("{total}", String(TOTAL_STALLS))}
+            {t("draw.subtitle").replace("{n}", String(candidates.length)).replace("{total}", String(TARGET))}
           </p>
         </div>
 
         {/* STATS + CONTROLS */}
-        <div className="mx-auto mt-10 grid max-w-5xl grid-cols-2 gap-3 md:grid-cols-4">
-          <StatChip label={t("draw.registered")} value={candidates.length} />
-          <StatChip label={t("draw.availStalls")} value={TOTAL_STALLS} />
+        <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3">
+          <StatChip label={t("draw.registered")} value={registeredCount} />
           <StatChip label={t("draw.totalWinners")} value={TARGET} />
           <StatChip label={t("draw.progress")} value={`${selected.length}/${TARGET}`} accent />
         </div>
@@ -423,8 +438,10 @@ function DrawPage() {
         {/* LEFT — draw machine & venue */}
         <div className="space-y-6">
           <StallArena
-            total={TOTAL_STALLS}
+            total={TARGET}
             target={TARGET}
+            regs={allRegs}
+            selectedIds={selectedIds}
             usedStalls={usedStalls}
             selected={selected}
             current={current}
@@ -432,7 +449,7 @@ function DrawPage() {
             reveal={phase === "reveal"}
             phase={phase}
             reel={reel}
-            spinStall={spinStall}
+            spinRegId={spinRegId}
           />
         </div>
 
@@ -468,9 +485,11 @@ function DrawPage() {
 /* ==== small chip ==== */
 function StatChip({ label, value, accent = false }: { label: string; value: number | string; accent?: boolean }) {
   return (
-    <div className={`rounded-2xl border p-4 backdrop-blur-xl ${accent ? "border-accent/40 bg-festive/30 shadow-soft" : "border-white/15 bg-white/10"}`}>
-      <div className="text-[10px] font-semibold uppercase tracking-widest text-white/70">{label}</div>
-      <div className="mt-1 font-display text-2xl font-bold tabular-nums text-white md:text-3xl">{value}</div>
+    <div className={`relative overflow-hidden rounded-2xl border p-4 backdrop-blur-xl transition-transform hover:-translate-y-0.5 ${accent ? "border-accent/40 bg-gradient-to-br from-festive/45 to-festive/10 shadow-glow" : "border-white/15 bg-white/[0.07]"}`}>
+      <span className={`pointer-events-none absolute inset-x-0 top-0 h-0.5 ${accent ? "bg-accent" : "bg-white/25"}`} />
+      <span className={`pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full blur-2xl ${accent ? "bg-accent/40" : "bg-white/10"}`} />
+      <div className="relative text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60">{label}</div>
+      <div className="relative mt-1.5 font-display text-3xl font-black tabular-nums text-white md:text-4xl">{value}</div>
     </div>
   );
 }
@@ -525,6 +544,8 @@ function RevealOverlay({ s, target }: { s: Selected; target: number }) {
 function StallArena({
   total,
   target,
+  regs,
+  selectedIds,
   usedStalls,
   selected,
   current,
@@ -532,10 +553,12 @@ function StallArena({
   reveal = false,
   phase = "idle",
   reel = null,
-  spinStall = null,
+  spinRegId = null,
 }: {
   total: number;
   target: number;
+  regs: Candidate[];
+  selectedIds: Set<string>;
   usedStalls: Set<number>;
   selected: Selected[];
   current: Selected | null;
@@ -543,10 +566,11 @@ function StallArena({
   reveal?: boolean;
   phase?: string;
   reel?: { seller: string; business: string } | null;
-  spinStall?: number | null;
+  spinRegId?: string | null;
 }) {
   const { t } = useI18n();
   const byStall = new Map(selected.map((s) => [s.stallNo, s]));
+  const winnersById = new Map(selected.map((s) => [s.id, s])); // winning applicant cells (live map)
   // The arena shows the SELECTED stall numbers (sorted) laid out in the pattern:
   // left wing (first 22) · right wing (next 22) · last one centred below.
   const picks = selected.map((s) => s.stallNo).sort((a, b) => a - b);
@@ -571,7 +595,7 @@ function StallArena({
           </span>
           <span className="inline-flex items-center gap-1.5 font-script text-sm text-accent">
             {done && <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
-            {done ? `${total} ${t("draw.stall")} · ${target} ${t("draw.randomlySelected")}` : `${total} ${t("sea.stalls")} · ${t("draw.lightingUp")}`}
+            {done ? `${total} ${t("draw.stall")} · ${target} ${t("draw.randomlySelected")}` : `${regs.length} ${t("draw.registered")} · ${t("draw.lightingUp")}`}
           </span>
           <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold tabular-nums text-white/80 ring-1 ring-white/15">
             {selected.length} / {target} {t("draw.assignedWord")}
@@ -615,7 +639,7 @@ function StallArena({
       </div>
 
       {!done && (
-        <SimpleStallGrid total={total} byStall={byStall} usedStalls={usedStalls} current={current} throwing={reveal} spinStall={spinStall} />
+        <SimpleStallGrid regs={regs} winnersById={winnersById} selectedIds={selectedIds} current={current} throwing={reveal} spinRegId={spinRegId} />
       )}
 
       {/* Arena — appears after all 45 stalls are assigned */}
@@ -706,37 +730,46 @@ function StallArena({
 }
 
 function SimpleStallGrid({
-  total,
-  byStall,
-  usedStalls,
+  regs,
+  winnersById,
+  selectedIds,
   current,
   throwing = false,
-  spinStall = null,
+  spinRegId = null,
 }: {
-  total: number;
-  byStall: Map<number, Selected>;
-  usedStalls: Set<number>;
+  regs: Candidate[];
+  winnersById: Map<string, Selected>;
+  selectedIds: Set<string>;
   current: Selected | null;
   throwing?: boolean;
-  spinStall?: number | null;
+  spinRegId?: string | null;
 }) {
-  const stalls = Array.from({ length: total }, (_, i) => i + 1);
+  const { t } = useI18n();
+  if (regs.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-8 text-center text-sm text-white/60">
+        {t("draw.noRegs")}
+      </div>
+    );
+  }
+  // One cell per applicant, labelled by name. Winners light up in their category
+  // colour; the picker glows across cells and the dart strikes the winning cell.
   return (
-    <div className="relative grid grid-cols-10 gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-      {stalls.map((n) => {
-        const info = byStall.get(n);
-        const assigned = usedStalls.has(n);
-        const isCurrent = current?.stallNo === n;
-        const isSpin = !isCurrent && spinStall === n; // stall lit up as the picker runs
+    <div className="relative grid grid-cols-3 gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:grid-cols-4 md:grid-cols-5">
+      {regs.map((r) => {
+        const info = winnersById.get(r.id);
+        const won = selectedIds.has(r.id);
+        const isCurrent = current?.id === r.id;
+        const isSpin = !isCurrent && spinRegId === r.id; // cell lit up as the picker runs
         const palette = info ? CATEGORY_COLORS[info.category] ?? CATEGORY_COLORS.Others : null;
         return (
-          <div key={n} className="group relative">
+          <div key={r.id} className="group relative">
             <motion.div
               layout
               initial={false}
-              animate={isCurrent ? { scale: 1.18 } : isSpin ? { scale: 1.1 } : { scale: 1 }}
+              animate={isCurrent ? { scale: 1.12 } : isSpin ? { scale: 1.06 } : { scale: 1 }}
               transition={{ type: "spring", stiffness: 280, damping: 18 }}
-              className={`flex aspect-square items-center justify-center rounded-lg text-[10px] font-black transition-all ${
+              className={`flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 text-center transition-all ${
                 isCurrent ? "animate-pulse-glow" : ""
               }`}
               style={{
@@ -745,19 +778,20 @@ function SimpleStallGrid({
                   : isSpin
                     ? "rgba(255,201,74,0.22)"
                     : "rgba(255,255,255,0.05)",
-                color: assigned ? "#fff" : isSpin ? "#fff" : "rgba(255,255,255,0.5)",
+                color: won ? "#fff" : isSpin ? "#fff" : "rgba(255,255,255,0.55)",
                 boxShadow: isCurrent
                   ? `0 0 0 2px #FFC94A, 0 0 18px 3px ${palette?.ring ?? "rgba(255,201,74,0.7)"}`
                   : isSpin
                     ? "0 0 0 2px rgba(255,201,74,0.8), 0 0 14px 2px rgba(255,201,74,0.5)"
-                    : assigned
+                    : won
                       ? `0 4px 10px -4px ${palette?.ring ?? "rgba(0,0,0,0.4)"}, inset 0 -2px 0 rgba(0,0,0,0.18)`
                       : "inset 0 0 0 1px rgba(255,255,255,0.07)",
               }}
             >
-              <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">{n.toString().padStart(2, "0")}</span>
+              <span className="line-clamp-2 text-[10px] font-bold leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">{r.business}</span>
+              {won && <span className="text-[8px] font-semibold tabular-nums opacity-80">#{info!.stallNo.toString().padStart(2, "0")}</span>}
             </motion.div>
-            {/* Thrown dart — strikes the randomly-selected stall number */}
+            {/* Thrown dart — strikes the winning applicant's cell */}
             <AnimatePresence>
               {isCurrent && throwing && (
                 <motion.div
@@ -772,12 +806,10 @@ function SimpleStallGrid({
                 </motion.div>
               )}
             </AnimatePresence>
-            {info && (
-              <div className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-black/90 px-3 py-2 text-[11px] shadow-glow group-hover:block">
-                <div className="font-semibold text-white">{info.business}</div>
-                <div className="text-white/70">{info.seller} · {info.category}</div>
-              </div>
-            )}
+            <div className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-black/90 px-3 py-2 text-[11px] shadow-glow group-hover:block">
+              <div className="font-semibold text-white">{r.business}</div>
+              <div className="text-white/70">{r.seller}{won ? ` · ${t("draw.chipWinner")}` : ""}</div>
+            </div>
           </div>
         );
       })}

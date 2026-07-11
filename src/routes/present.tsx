@@ -6,6 +6,8 @@ import { Maximize, PartyPopper, Sparkles, Trophy } from "lucide-react";
 import { EVENT } from "@/lib/dummy-data";
 import { useSeason } from "@/lib/season-context";
 import { watchDrawResultsBySeasonId, type DrawResult } from "@/lib/draw-results-db";
+import { watchDrawPool, type PoolApplicant } from "@/lib/draw-pool-db";
+import { watchDrawSpeed, watchDrawCountdown } from "@/lib/settings-db";
 import { colorFor } from "@/lib/category-colors";
 import { Dartboard, RedDart } from "@/components/site/dartboard";
 import { useI18n } from "@/lib/i18n";
@@ -35,10 +37,16 @@ function PresentationPage() {
   const { seasons, activeSeason, season } = useSeason();
   const { t } = useI18n();
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
+  // Admin-selected pace from Settings (live); a ?speed= URL param still overrides it.
+  const [settingSpeed, setSettingSpeed] = useState<Speed>("medium");
+  useEffect(() => watchDrawSpeed(setSettingSpeed), []);
+  // Admin-selected pre-pick countdown length (seconds), live from Settings.
+  const [countdownSecs, setCountdownSecs] = useState(3);
+  useEffect(() => watchDrawCountdown(setCountdownSecs), []);
   const speed = useMemo<Speed>(() => {
     const s = params.get("speed");
-    return s === "slow" || s === "fast" ? s : "medium";
-  }, [params]);
+    return s === "slow" || s === "medium" || s === "fast" ? s : settingSpeed;
+  }, [params, settingSpeed]);
 
   // Follow the season the admin passed (so a non-active draw still mirrors), else the active one.
   const seasonParam = params.get("season");
@@ -50,6 +58,10 @@ function PresentationPage() {
   const totalStalls = show?.maximumStalls ?? EVENT.totalStalls;
 
   const [results, setResults] = useState<DrawResult[]>([]);
+  const [pool, setPool] = useState<PoolApplicant[]>([]); // all applicants — the live-map cells (by name)
+  const [spinning, setSpinning] = useState(false); // admin's picker is running → hop the map
+  const [hopId, setHopId] = useState<string | null>(null); // cell glowing during the local hop
+  const [preCount, setPreCount] = useState(3); // countdown shown on the stage while the admin picks
   const [shownCount, setShownCount] = useState(0);
   const [phase, setPhase] = useState<Phase>("idle");
   const [count, setCount] = useState(3);
@@ -72,6 +84,34 @@ function PresentationPage() {
     return () => unsub();
   }, [show?.id]);
 
+  // Live applicant pool (name-only) + spinning flag → named cells + hop on the map.
+  useEffect(() => {
+    if (!show?.id) { setPool([]); setSpinning(false); return; }
+    const unsub = watchDrawPool(show.id, ({ applicants, spinning }) => {
+      setPool([...applicants].sort((a, b) => a.id.localeCompare(b.id)));
+      setSpinning(spinning);
+    });
+    return () => unsub();
+  }, [show?.id]);
+
+  // While the admin's picker spins, hop a random applicant cell so the public map
+  // "runs" the instant Begin is clicked. Landing/reveal comes from drawResults.
+  useEffect(() => {
+    if (!spinning || pool.length === 0) { setHopId(null); return; }
+    const id = window.setInterval(() => {
+      setHopId(pool[Math.floor(Math.random() * pool.length)].id);
+    }, 120);
+    return () => { window.clearInterval(id); setHopId(null); };
+  }, [spinning, pool]);
+
+  // Admin-set countdown on the stage while the picker runs (N → 1, then holds).
+  useEffect(() => {
+    if (!spinning || countdownSecs < 1) return;
+    setPreCount(countdownSecs);
+    const id = window.setInterval(() => setPreCount((c) => (c > 1 ? c - 1 : c)), 1000);
+    return () => window.clearInterval(id);
+  }, [spinning, countdownSecs]);
+
   useEffect(() => () => timers.current.forEach((t) => clearTimeout(t)), []);
 
   // Sequence driver — plays one pick at a time; re-checks when a pick finishes.
@@ -79,6 +119,11 @@ function PresentationPage() {
     if (playingRef.current) return;
     if (results.length < shownCount) { setShownCount(results.length); setCurrent(null); setPhase("idle"); return; }
     if (results.length <= shownCount) return;
+
+    // Stay live: if several picks landed faster than one animation (Non-Stop, or the
+    // audience joined mid-draw), skip the backlog and animate only the most recent so
+    // the screen mirrors the admin "now" instead of replaying a slow queue.
+    if (results.length - shownCount > 1) { setShownCount(results.length - 1); return; }
 
     playingRef.current = true;
     const pick = results[shownCount];
@@ -102,16 +147,14 @@ function PresentationPage() {
 
   const revealing = phase === "stall" || phase === "celebrate";
   const doneCount = shownCount + (revealing ? 1 : 0);
-  const assigned = useMemo(() => {
-    const s = new Set(results.slice(0, shownCount).map((r) => r.stallNo));
-    if (revealing && current) s.add(current.stallNo);
-    return s;
-  }, [results, shownCount, revealing, current]);
-  const byStall = useMemo(() => {
-    const m = new Map<number, DrawResult>(results.slice(0, shownCount).map((r) => [r.stallNo, r]));
-    if (revealing && current) m.set(current.stallNo, current);
+  // Winners keyed by applicant id (candidateId) — which cell lights up on the map.
+  const wonById = useMemo(() => {
+    const m = new Map<string, DrawResult>(results.slice(0, shownCount).map((r) => [r.candidateId, r]));
+    if (revealing && current) m.set(current.candidateId, current);
     return m;
   }, [results, shownCount, revealing, current]);
+  // The cell being drawn glows through the whole reveal sequence.
+  const currentId = current?.candidateId ?? null;
   const history = useMemo(() => results.slice(0, shownCount).slice(-5).reverse(), [results, shownCount]);
   const complete = target > 0 && shownCount >= target && phase === "idle";
 
@@ -165,10 +208,10 @@ function PresentationPage() {
 
       {/* MAIN — stage + venue/history */}
       <main className="relative z-10 grid flex-1 gap-5 p-6 md:gap-6 md:p-10 lg:grid-cols-[1.55fr_1fr]">
-        <Stage phase={phase} count={count} current={current} complete={complete} target={target} />
+        <Stage phase={phase} count={count} current={current} complete={complete} target={target} spinning={spinning} preCount={preCount} />
 
         <aside className="flex min-h-0 flex-col gap-5">
-          <VenueMap total={totalStalls} assigned={assigned} byStall={byStall} current={revealing ? current : null} />
+          <VenueMap pool={pool} wonById={wonById} currentId={currentId} hopId={hopId} fallbackTotal={totalStalls} />
           <HistoryPanel history={history} />
         </aside>
       </main>
@@ -177,7 +220,7 @@ function PresentationPage() {
 }
 
 /* ============ STAGE ============ */
-function Stage({ phase, count, current, complete, target }: { phase: Phase; count: number; current: DrawResult | null; complete: boolean; target: number }) {
+function Stage({ phase, count, current, complete, target, spinning, preCount }: { phase: Phase; count: number; current: DrawResult | null; complete: boolean; target: number; spinning: boolean; preCount: number }) {
   const { t } = useI18n();
   const palette = current ? colorFor(current.category) : null;
   return (
@@ -188,6 +231,21 @@ function Stage({ phase, count, current, complete, target }: { phase: Phase; coun
             <Trophy className="mx-auto h-16 w-16 text-accent md:h-24 md:w-24" />
             <div className="mt-4 font-display text-4xl font-black md:text-6xl">{t("present.allAssigned").replace("{target}", String(target))}</div>
             <div className="mt-2 font-script text-2xl text-accent md:text-3xl">{t("present.tagline")}</div>
+          </motion.div>
+        ) : phase === "idle" && spinning ? (
+          // Admin has begun the pick — show a countdown instead of a static stage.
+          <motion.div key="count" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
+            <div className="text-sm font-semibold uppercase tracking-[0.4em] text-accent md:text-lg">{t("present.prep")}</div>
+            <motion.div
+              key={preCount}
+              initial={{ scale: 0.4, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.8, opacity: 0 }}
+              className="mt-6 font-display text-[9rem] font-black leading-none text-white drop-shadow-[0_0_50px_rgba(255,201,74,0.7)] md:text-[15rem]"
+            >
+              {preCount}
+            </motion.div>
+            <div className="mt-4 font-display text-2xl font-bold text-white/90 md:text-4xl">{t("present.selecting")}</div>
           </motion.div>
         ) : phase === "idle" ? (
           <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
@@ -279,38 +337,54 @@ function Stage({ phase, count, current, complete, target }: { phase: Phase; coun
 }
 
 /* ============ VENUE MAP ============ */
-function VenueMap({ total, assigned, byStall, current }: { total: number; assigned: Set<number>; byStall: Map<number, DrawResult>; current: DrawResult | null }) {
+// One cell per applicant, labelled by business name. Winners light up in their
+// category colour; the applicant being drawn glows. Falls back to a numbered grid
+// only if the pool hasn't published yet (older season / admin screen not open).
+function VenueMap({ pool, wonById, currentId, hopId, fallbackTotal }: { pool: PoolApplicant[]; wonById: Map<string, DrawResult>; currentId: string | null; hopId: string | null; fallbackTotal: number }) {
   const { t } = useI18n();
-  const stalls = Array.from({ length: total }, (_, i) => i + 1);
   return (
     <div className="rounded-[28px] border border-white/15 bg-black/25 p-4 backdrop-blur-xl md:p-5">
       <div className="mb-3 flex items-center justify-between">
         <div className="text-[10px] font-semibold uppercase tracking-[0.35em] text-accent md:text-xs">{t("present.liveMap")}</div>
-        <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold tabular-nums text-white/80">{assigned.size} {t("present.lit")}</span>
+        <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold tabular-nums text-white/80">{wonById.size} {t("present.lit")}</span>
       </div>
-      <div className="grid grid-cols-10 gap-1">
-        {stalls.map((n) => {
-          const info = byStall.get(n);
-          const isAssigned = assigned.has(n);
-          const isCurrent = current?.stallNo === n;
-          const palette = info ? colorFor(info.category) : null;
-          return (
-            <div
-              key={n}
-              className={`flex aspect-square items-center justify-center rounded-md text-[8px] font-black tabular-nums transition-all md:text-[10px] ${isCurrent ? "animate-pulse-glow" : ""}`}
-              style={{
-                background: palette ? `linear-gradient(180deg, ${palette.bg}, ${palette.canopy})` : "rgba(255,255,255,0.05)",
-                color: isAssigned ? "#fff" : "rgba(255,255,255,0.4)",
-                boxShadow: isCurrent
-                  ? `0 0 0 2px #FFC94A, 0 0 16px 3px ${palette?.ring ?? "rgba(255,201,74,0.7)"}`
-                  : isAssigned ? `0 2px 8px -3px ${palette?.ring ?? "rgba(0,0,0,0.4)"}` : "inset 0 0 0 1px rgba(255,255,255,0.06)",
-              }}
-            >
+      {pool.length === 0 ? (
+        // No published pool yet — keep the original numbered grid so the screen isn't blank.
+        <div className="grid grid-cols-10 gap-1">
+          {Array.from({ length: fallbackTotal }, (_, i) => i + 1).map((n) => (
+            <div key={n} className="flex aspect-square items-center justify-center rounded-md text-[8px] font-black tabular-nums text-white/40 md:text-[10px]" style={{ background: "rgba(255,255,255,0.05)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)" }}>
               {n.toString().padStart(2, "0")}
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-1 sm:grid-cols-4 md:grid-cols-5">
+          {pool.map((a) => {
+            const info = wonById.get(a.id);
+            const won = !!info;
+            const isCurrent = currentId === a.id;
+            const isHop = !isCurrent && !won && hopId === a.id; // lit up as the picker runs
+            const palette = info ? colorFor(info.category) : null;
+            return (
+              <div
+                key={a.id}
+                className={`flex min-h-[3rem] flex-col items-center justify-center gap-0.5 rounded-md px-1.5 py-1 text-center transition-all ${isCurrent ? "animate-pulse-glow" : ""}`}
+                style={{
+                  background: palette ? `linear-gradient(180deg, ${palette.bg}, ${palette.canopy})` : isCurrent || isHop ? "rgba(255,201,74,0.22)" : "rgba(255,255,255,0.05)",
+                  color: won || isCurrent || isHop ? "#fff" : "rgba(255,255,255,0.55)",
+                  boxShadow: isCurrent
+                    ? `0 0 0 2px #FFC94A, 0 0 16px 3px ${palette?.ring ?? "rgba(255,201,74,0.7)"}`
+                    : isHop ? "0 0 0 2px rgba(255,201,74,0.8), 0 0 12px 2px rgba(255,201,74,0.5)"
+                    : won ? `0 2px 8px -3px ${palette?.ring ?? "rgba(0,0,0,0.4)"}` : "inset 0 0 0 1px rgba(255,255,255,0.06)",
+                }}
+              >
+                <span className="line-clamp-2 text-[9px] font-bold leading-tight md:text-[10px]">{a.business}</span>
+                {won && <span className="text-[7px] font-semibold tabular-nums opacity-80">#{info!.stallNo.toString().padStart(2, "0")}</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

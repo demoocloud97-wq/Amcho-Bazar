@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { HelpCircle, Eye, EyeOff, Image as ImageIcon, KeyRound, ListChecks, Loader2, Lock, LogOut, Mail, Shield, ShieldCheck, User, UserCircle, Zap } from "lucide-react";
+import { HelpCircle, Eye, EyeOff, Gauge, Image as ImageIcon, KeyRound, ListChecks, Loader2, Lock, LogOut, Mail, Shield, ShieldCheck, User, UserCircle, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
 import { RequireAuth } from "@/components/site/require-auth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { HeroImageEditor, DrawNonStopToggle, FillSubcatsToggle, FaqEditor } from "@/components/site/admin-settings";
+import { HeroImageEditor, DrawNonStopToggle, LiveDrawPace, FillSubcatsToggle, FaqEditor } from "@/components/site/admin-settings";
 import { useAuth } from "@/lib/auth-context";
 import { changePassword, hasPasswordProvider, logout } from "@/lib/auth";
 import { friendlyAuthError } from "@/lib/firebase-errors";
@@ -47,6 +47,9 @@ function SettingsPage() {
               <SettingSection value="nonstop" icon={<Zap className="h-5 w-5" />} title={t("adm.nonstopTitle")} desc={t("adm.nonstopDesc")}>
                 <DrawNonStopToggle />
               </SettingSection>
+              <SettingSection value="drawpace" icon={<Gauge className="h-5 w-5" />} title={t("adm.drawPaceTitle")} desc={t("adm.drawPaceDesc")}>
+                <LiveDrawPace />
+              </SettingSection>
               <SettingSection value="fillsub" icon={<ListChecks className="h-5 w-5" />} title={t("adm.fillTitle")} desc={t("adm.fillDesc")}>
                 <FillSubcatsToggle />
               </SettingSection>
@@ -64,17 +67,22 @@ function SettingsPage() {
 // A collapsible card. New settings features just drop in as another <SettingSection>.
 function SettingSection({ value, icon, title, desc, children }: { value: string; icon: React.ReactNode; title: string; desc: string; children: React.ReactNode }) {
   return (
-    <AccordionItem value={value} className="overflow-hidden rounded-3xl border border-border bg-card px-5 shadow-card md:px-6">
+    <AccordionItem
+      value={value}
+      className="group overflow-hidden rounded-3xl border border-border bg-card px-5 shadow-card transition-all hover:border-primary/20 data-[state=open]:border-primary/25 data-[state=open]:shadow-glow md:px-6"
+    >
       <AccordionTrigger className="py-5 hover:no-underline">
         <div className="flex items-center gap-3 text-left">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-festive text-white shadow-soft">{icon}</span>
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-festive text-white shadow-soft ring-1 ring-inset ring-white/20 transition-transform group-hover:scale-105">{icon}</span>
           <div>
             <div className="font-display text-base font-bold leading-tight">{title}</div>
             <div className="mt-0.5 text-xs text-muted-foreground">{desc}</div>
           </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="pb-6 pt-1">{children}</AccordionContent>
+      <AccordionContent className="pb-6">
+        <div className="border-t border-border/70 pt-5">{children}</div>
+      </AccordionContent>
     </AccordionItem>
   );
 }

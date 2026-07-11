@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { CheckCircle2, Archive, Pencil, Plus, Trash2, CalendarDays, DatabaseZap, Loader2, Store, Trophy, Wallet, MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CheckCircle2, Archive, Pencil, Plus, Trash2, CalendarDays, ClipboardList, DatabaseZap, Loader2, Store, Wallet, MapPin } from "lucide-react";
+import { watchRegistrations, type Registration } from "@/lib/db";
+import { getAllStalls, type Stall } from "@/lib/stalls-db";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
 import { RequireAdmin } from "@/components/site/require-admin";
@@ -56,6 +58,19 @@ function SeasonsPage() {
   const [editing, setEditing] = useState<Season | null>(null);
   const [delTarget, setDelTarget] = useState<Season | null>(null);
   const [migrating, setMigrating] = useState(false);
+
+  // Live registrations + all stalls → real per-season counts on each card (old
+  // Seasons 1/2 have archived stalls but no registrations, so show their seller count).
+  const [regs, setRegs] = useState<Registration[]>([]);
+  const [stalls, setStalls] = useState<Stall[]>([]);
+  useEffect(() => watchRegistrations(setRegs), []);
+  useEffect(() => { getAllStalls().then(setStalls).catch(() => {}); }, []);
+  // Total registrations for a season — every applicant (approved, waitlist, all),
+  // matched by seasonId OR legacy numeric season so none are missed.
+  const regsFor = (s: Season) => regs.filter((r) => r.seasonId === s.id || r.season === s.seasonNumber).length;
+  // Match the stall directory: by seasonId OR legacy numeric season, so old Season
+  // 1/2 stalls (numeric-only, or a stale seasonId) still count.
+  const sellersFor = (s: Season) => stalls.filter((st) => st.seasonId === s.id || st.season === s.seasonNumber).length;
 
   async function migrate() {
     setMigrating(true);
@@ -154,9 +169,9 @@ function SeasonsPage() {
                   )}
 
                   <div className="mt-4 grid grid-cols-3 gap-2">
-                    <Stat icon={<Store className="h-full w-full" />} label={t("sea.stalls")} value={s.maximumStalls} />
-                    <Stat icon={<Trophy className="h-full w-full" />} label={t("sea.winners")} value={s.maximumSelectedStalls} />
-                    <Stat icon={<Wallet className="h-full w-full" />} label={t("sea.fee")} value={`Rs ${s.registrationFee}`} />
+                    <Stat icon={<ClipboardList className="h-full w-full" />} label={t("sea.regs")} value={regsFor(s)} />
+                    <Stat icon={<Store className="h-full w-full" />} label={t("sea.sellers")} value={sellersFor(s)} />
+                    <Stat icon={<Wallet className="h-full w-full" />} label={t("sea.fee")} value={`Rs ${s.registrationFee.toLocaleString("en-IN")}`} />
                   </div>
 
                   <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -231,7 +246,9 @@ function SeasonFormDialog({
     if (!form.seasonName.trim()) { toast.error(t("sea.nameReq")); return; }
     setBusy(true);
     try {
-      const data = { ...form, guidelines: (form.guidelines ?? []).map((g) => g.trim()).filter(Boolean) };
+      // No separate stall cap anymore — every winner gets a stall, so stalls = winners.
+      // Kept in sync so admin/present/login (which read maximumStalls) stay valid.
+      const data = { ...form, maximumStalls: form.maximumSelectedStalls, guidelines: (form.guidelines ?? []).map((g) => g.trim()).filter(Boolean) };
       if (editing?.id) await updateSeason(editing.id, data);
       else await createSeason(data);
       await onSaved();
@@ -279,8 +296,7 @@ function SeasonFormDialog({
             <Field label={t("sea.f.regOpens")}><input type="date" value={form.registrationStartDate} onChange={(e) => set("registrationStartDate", e.target.value)} className={inputCls} /></Field>
             <Field label={t("sea.f.regCloses")}><input type="date" value={form.registrationEndDate} onChange={(e) => set("registrationEndDate", e.target.value)} className={inputCls} /></Field>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <Field label={t("sea.f.maxStalls")}><input type="number" value={form.maximumStalls} onChange={(e) => set("maximumStalls", Number(e.target.value))} className={inputCls} /></Field>
+          <div className="grid grid-cols-2 gap-3">
             <Field label={t("sea.f.maxWinners")}><input type="number" value={form.maximumSelectedStalls} onChange={(e) => set("maximumSelectedStalls", Number(e.target.value))} className={inputCls} /></Field>
             <Field label={t("sea.f.fee")}><input type="number" value={form.registrationFee} onChange={(e) => set("registrationFee", Number(e.target.value))} className={inputCls} /></Field>
           </div>

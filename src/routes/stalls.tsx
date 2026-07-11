@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Search, Store, Loader2, Upload, X } from "lucide-react";
+import { Search, Store, Loader2, Trash2, Upload, X, CheckSquare, Check, MoreVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getStallsBySeasonId, getStallsBySeason, createStall, type Stall } from "@/lib/stalls-db";
+import { ConfirmDialog } from "@/components/site/confirm-dialog";
+import { getStallsBySeasonId, getStallsBySeason, createStall, deleteStallsBySeason, deleteStall, type Stall } from "@/lib/stalls-db";
 import { getCategories, type Category } from "@/lib/categories-db";
 import { useSeason } from "@/lib/season-context";
 import { useAuth } from "@/lib/auth-context";
@@ -48,6 +50,46 @@ function StallsPage() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("All");
   const [refresh, setRefresh] = useState(0);
+  const [clearing, setClearing] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmClearSel, setConfirmClearSel] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  function exitSelect() { setSelectMode(false); setSelectedIds(new Set()); }
+  async function clearSeasonStalls() {
+    if (!tab) return;
+    setClearing(true);
+    try {
+      const n = await deleteStallsBySeason(tab.seasonId, tab.season);
+      setConfirmClear(false);
+      toast.success(`${n} ${t("stalls.cleared")}`);
+      setRefresh((x) => x + 1);
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setClearing(false);
+    }
+  }
+  async function clearSelectedStalls() {
+    if (selectedIds.size === 0) return;
+    setClearing(true);
+    try {
+      const ids = [...selectedIds];
+      await Promise.all(ids.map((id) => deleteStall(id)));
+      setConfirmClearSel(false);
+      exitSelect();
+      toast.success(`${ids.length} ${t("stalls.cleared")}`);
+      setRefresh((x) => x + 1);
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setClearing(false);
+    }
+  }
 
   // Always show Season 1..N; a real Season entity (if seeded) supplies its name
   // + id, otherwise a numeric-season fallback keeps that tab browsable.
@@ -189,9 +231,57 @@ function StallsPage() {
             {loading ? t("common.loading") : <><span className="tabular-nums font-semibold text-foreground">{filtered.length}</span> {t("stalls.count")}</>}
             {tab && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{tab.label}</span>}
           </span>
-          {isAdmin && tab
-            ? <BulkImportStalls tab={tab} onDone={() => setRefresh((x) => x + 1)} />
-            : <span className="inline-flex items-center gap-2"><Store className="h-4 w-4 text-primary" /> {t("stalls.hall")}</span>}
+          {isAdmin && tab ? (
+            <div className="flex items-center gap-2">
+              {selectMode ? (
+                <>
+                  <button
+                    onClick={() => setConfirmClearSel(true)}
+                    disabled={clearing || selectedIds.size === 0}
+                    className="inline-flex items-center gap-2 rounded-full border border-destructive/40 px-4 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                  >
+                    {clearing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} {t("stalls.clearSelected")} {selectedIds.size > 0 && `(${selectedIds.size})`}
+                  </button>
+                  <button
+                    onClick={exitSelect}
+                    disabled={clearing}
+                    className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground/70 transition-colors hover:bg-muted disabled:opacity-50"
+                  >
+                    <X className="h-4 w-4" /> {t("stalls.cancel")}
+                  </button>
+                </>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      aria-label={t("stalls.actions")}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground/70 shadow-soft transition-colors hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 data-[state=open]:bg-muted data-[state=open]:text-primary"
+                    >
+                      {clearing ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem onSelect={() => setSelectMode(true)} disabled={stalls.length === 0}>
+                      <CheckSquare className="h-4 w-4" /> {t("stalls.select")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setBulkOpen(true)}>
+                      <Upload className="h-4 w-4" /> {t("stalls.bulkImport")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() => setConfirmClear(true)}
+                      disabled={stalls.length === 0 || clearing}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" /> {t("stalls.clear")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          ) : (
+            <span className="inline-flex items-center gap-2"><Store className="h-4 w-4 text-primary" /> {t("stalls.hall")}</span>
+          )}
         </div>
 
         {loading ? (
@@ -202,15 +292,23 @@ function StallsPage() {
           </div>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((s, i) => (
+            {filtered.map((s, i) => {
+              const selected = selectMode && !!s.id && selectedIds.has(s.id);
+              return (
               <motion.div
                 key={s.id}
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.35, delay: (i % 12) * 0.03 }}
-                className="group overflow-hidden rounded-3xl border border-border bg-card shadow-card transition-all hover:-translate-y-1 hover:shadow-glow"
+                onClick={selectMode && s.id ? () => toggleSelected(s.id!) : undefined}
+                className={`group relative overflow-hidden rounded-3xl border bg-card shadow-card transition-all hover:-translate-y-1 hover:shadow-glow ${selectMode ? "cursor-pointer" : ""} ${selected ? "border-primary ring-2 ring-primary" : "border-border"}`}
               >
+                {selectMode && (
+                  <div className={`absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border-2 shadow-soft transition-colors ${selected ? "border-primary bg-primary text-white" : "border-white/70 bg-black/30 text-transparent backdrop-blur"}`}>
+                    <Check className="h-4 w-4" />
+                  </div>
+                )}
                 <StallImage src={s.imageUrl} alt={s.name} />
                 <div className="p-5">
                   <div className="flex flex-wrap items-center gap-1.5">
@@ -225,10 +323,31 @@ function StallsPage() {
                   {s.owner && <div className="text-sm text-muted-foreground">by {s.owner}</div>}
                 </div>
               </motion.div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
+
+      <ConfirmDialog
+        open={confirmClear}
+        onOpenChange={(o) => !o && !clearing && setConfirmClear(false)}
+        title={t("stalls.clearTitle")}
+        description={t("stalls.clearDesc").replace("{season}", tab?.label ?? "")}
+        confirmLabel={t("stalls.clear")}
+        onConfirm={clearSeasonStalls}
+      />
+
+      <ConfirmDialog
+        open={confirmClearSel}
+        onOpenChange={(o) => !o && !clearing && setConfirmClearSel(false)}
+        title={t("stalls.clearSelTitle")}
+        description={t("stalls.clearSelDesc").replace("{n}", String(selectedIds.size))}
+        confirmLabel={t("stalls.clearSelected")}
+        onConfirm={clearSelectedStalls}
+      />
+
+      {tab && <BulkImportStalls tab={tab} open={bulkOpen} onOpenChange={setBulkOpen} onDone={() => setRefresh((x) => x + 1)} />}
     </div>
   );
 }
@@ -280,9 +399,9 @@ function StallImage({ src, alt }: { src?: string | null; alt: string }) {
 }
 
 // Admin: paste a JSON array of { season, src, caption } to create many stalls at once.
-function BulkImportStalls({ tab, onDone }: { tab: Tab; onDone: () => void }) {
+// Controlled from the parent's actions menu (no own trigger button).
+function BulkImportStalls({ tab, open, onOpenChange, onDone }: { tab: Tab; open: boolean; onOpenChange: (o: boolean) => void; onDone: () => void }) {
   const { seasons } = useSeason();
-  const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const idByNumber = useMemo(() => new Map(seasons.map((s) => [s.seasonNumber, s.id])), [seasons]);
@@ -316,7 +435,7 @@ function BulkImportStalls({ tab, onDone }: { tab: Tab; onDone: () => void }) {
       }
       toast.success(`${done} stalls imported`);
       setText("");
-      setOpen(false);
+      onOpenChange(false);
       onDone();
     } catch (err) {
       toast.error(friendlyAuthError(err));
@@ -326,31 +445,23 @@ function BulkImportStalls({ tab, onDone }: { tab: Tab; onDone: () => void }) {
   }
 
   return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-primary shadow-soft transition-colors hover:bg-muted"
-      >
-        <Upload className="h-4 w-4" /> Bulk import
-      </button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Bulk import stalls</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Paste an array of {"{ season, src, caption }"} rows. Google Drive links work.</p>
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={'[ { "season": 1, "src": "https://…", "caption": "Stall name" } ]'}
-            className="mt-2 min-h-[220px] w-full rounded-xl border border-border bg-white/70 p-3 font-mono text-xs outline-none ring-primary/20 focus:ring-4"
-          />
-          <div className="mt-3 flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className="rounded-full border border-border px-4 py-2 text-sm font-medium">Cancel</button>
-            <button type="button" onClick={run} disabled={busy} className="inline-flex items-center gap-2 rounded-full bg-festive px-5 py-2 text-sm font-semibold text-white shadow-soft disabled:opacity-50">
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />} Import
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>Bulk import stalls</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">Paste an array of {"{ season, src, caption }"} rows. Google Drive links work.</p>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={'[ { "season": 1, "src": "https://…", "caption": "Stall name" } ]'}
+          className="mt-2 min-h-[220px] w-full rounded-xl border border-border bg-white/70 p-3 font-mono text-xs outline-none ring-primary/20 focus:ring-4"
+        />
+        <div className="mt-3 flex justify-end gap-2">
+          <button type="button" onClick={() => onOpenChange(false)} className="rounded-full border border-border px-4 py-2 text-sm font-medium">Cancel</button>
+          <button type="button" onClick={run} disabled={busy} className="inline-flex items-center gap-2 rounded-full bg-festive px-5 py-2 text-sm font-semibold text-white shadow-soft disabled:opacity-50">
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Import
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

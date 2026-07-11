@@ -1,5 +1,6 @@
-import { collection, doc, writeBatch, serverTimestamp } from "firebase/firestore";
+import { collection, doc, getDocs, deleteDoc, query, where, writeBatch, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
+import { deleteStallForRegistration } from "./stalls-db";
 import { AMCHO_BAZAR_EVENT_ID } from "./events-db";
 
 // Name pools for believable dummy sellers (women-only community festival).
@@ -45,4 +46,17 @@ export async function seedApprovedRegistrations(seasonId: string, seasonNumber: 
   }
   await batch.commit();
   return count;
+}
+
+// Remove only the seeded dummy sellers (isSeedDummy=true) for a season, plus any
+// stalls materialised from them. Real registrations are untouched. Returns count.
+export async function clearSeededRegistrations(seasonId: string): Promise<number> {
+  // Single equality filter (no composite index) + client-side season match.
+  const snap = await getDocs(query(collection(db, "registrations"), where("isSeedDummy", "==", true)));
+  const docs = snap.docs.filter((d) => d.data().seasonId === seasonId);
+  await Promise.all(docs.map(async (d) => {
+    await deleteStallForRegistration(d.id).catch(() => {});
+    await deleteDoc(d.ref);
+  }));
+  return docs.length;
 }

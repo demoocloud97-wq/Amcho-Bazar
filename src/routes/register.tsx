@@ -3,10 +3,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, PartyPopper, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ImagePlus, Loader2, PartyPopper, Sparkles, X } from "lucide-react";
+import { uploadToCloudinary, cloudinaryReady } from "@/lib/cloudinary";
 import { CATEGORIES, EVENT, type CategoryKey } from "@/lib/dummy-data";
 import { createRegistration, getRegistrationsBySeasonId } from "@/lib/db";
 import { getCategories, getSubCategories, type Category, type SubCategory } from "@/lib/categories-db";
+import { getUserProfile } from "@/lib/profile-db";
 import { useSeason } from "@/lib/season-context";
 import { useI18n } from "@/lib/i18n";
 import { friendlyAuthError } from "@/lib/firebase-errors";
@@ -67,12 +69,13 @@ function RegisterPage() {
   const [data, setData] = useState({
     fullName: "",
     phone: "",
-    email: "",
+    email: user?.email ?? "", // taken from the logged-in account, not entered manually
     city: "Karachi",
     business: "",
     tagline: "",
     yearsRunning: "",
     instagram: "",
+    logoUrl: "",
     products: "",
     category: "",
     categoryId: "",
@@ -85,6 +88,25 @@ function RegisterPage() {
   function update<K extends keyof typeof data>(k: K, v: (typeof data)[K]) {
     setData((d) => ({ ...d, [k]: v }));
   }
+
+  // Email always comes from the signed-in account (no manual field); sync if auth hydrates late.
+  useEffect(() => {
+    if (user?.email) setData((d) => (d.email === user.email ? d : { ...d, email: user.email! }));
+  }, [user?.email]);
+
+  // Pre-fill name/phone/city from the profile captured at sign-up (only empty fields,
+  // so we never clobber what the user has already typed). Name falls back to displayName.
+  useEffect(() => {
+    if (!user?.uid) return;
+    getUserProfile(user.uid).then((p) => {
+      setData((d) => ({
+        ...d,
+        fullName: d.fullName || p?.fullName || user.displayName || "",
+        phone: d.phone || p?.phone || "",
+        city: d.city !== "Karachi" ? d.city : (p?.city || d.city),
+      }));
+    }).catch(() => {});
+  }, [user?.uid, user?.displayName]);
 
   // Toggle a category in/out of the multi-select; keep primary = first chosen.
   function toggleCategory(name: string, id: string) {
@@ -114,6 +136,10 @@ function RegisterPage() {
           season: activeSeason?.seasonNumber ?? EVENT.seasonNumber,
           seller: data.fullName,
           business: data.business,
+          tagline: data.tagline || undefined,
+          yearsRunning: data.yearsRunning || undefined,
+          instagram: data.instagram || undefined,
+          city: data.city || undefined,
           category: (data.categories[0] || "Others") as CategoryKey,
           categoryId: data.categoryIds[0] || undefined,
           categories: data.categories.length ? data.categories : undefined,
@@ -122,6 +148,7 @@ function RegisterPage() {
           subcategory: data.subcategory || undefined,
           phone: data.phone,
           email: data.email || user?.email || "",
+          logoUrl: data.logoUrl || undefined,
           products: data.products
             .split(",")
             .map((p) => p.trim())
@@ -144,8 +171,8 @@ function RegisterPage() {
   }
 
   const canContinue =
-    (step === 0 && data.fullName && data.phone) ||
-    (step === 1 && data.business) ||
+    (step === 0 && data.fullName.trim() && data.phone.trim()) ||
+    (step === 1 && data.business.trim() && data.yearsRunning.trim() && data.products.trim()) ||
     (step === 2 && data.categories.length > 0) ||
     step === 3;
 
@@ -276,10 +303,10 @@ function RegisterPage() {
   );
 }
 
-function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+function Field({ label, children, hint, required = false }: { label: string; children: React.ReactNode; hint?: string; required?: boolean }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}{required && <span className="text-destructive"> *</span>}</span>
       {children}
       {hint && <span className="mt-1 block text-xs text-muted-foreground/80">{hint}</span>}
     </label>
@@ -297,14 +324,11 @@ function StepPersonal({ data, update }: any) {
         <p className="mt-1 text-sm text-muted-foreground">{t("reg.personal.sub")}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label={t("reg.f.fullName")}>
+        <Field label={t("reg.f.fullName")} required>
           <input value={data.fullName} onChange={(e) => update("fullName", e.target.value)} autoComplete="name" className={inputCls} placeholder="Ayesha Sherif" />
         </Field>
-        <Field label={t("reg.f.phone")}>
+        <Field label={t("reg.f.phone")} required>
           <input value={data.phone} onChange={(e) => update("phone", e.target.value)} type="tel" inputMode="tel" autoComplete="tel" className={inputCls} placeholder="+91 98800 12345" />
-        </Field>
-        <Field label={t("reg.f.email")}>
-          <input value={data.email} onChange={(e) => update("email", e.target.value)} type="email" inputMode="email" autoComplete="email" className={inputCls} placeholder="ayesha@example.com" />
         </Field>
         <Field label={t("reg.f.city")}>
           <input value={data.city} onChange={(e) => update("city", e.target.value)} autoComplete="address-level2" className={inputCls} />
@@ -316,6 +340,22 @@ function StepPersonal({ data, update }: any) {
 
 function StepBusiness({ data, update }: any) {
   const { t } = useI18n();
+  const [uploading, setUploading] = useState(false);
+
+  async function onLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    setUploading(true);
+    try {
+      update("logoUrl", await uploadToCloudinary(file));
+    } catch (err) {
+      toast.error(friendlyAuthError(err));
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -323,20 +363,47 @@ function StepBusiness({ data, update }: any) {
         <p className="mt-1 text-sm text-muted-foreground">{t("reg.business.sub")}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label={t("reg.f.business")}>
+        <Field label={t("reg.f.business")} required>
           <input value={data.business} onChange={(e) => update("business", e.target.value)} className={inputCls} placeholder="Ayesha's Kitchen" />
         </Field>
         <Field label={t("reg.f.tagline")} hint={t("reg.f.taglineHint")}>
           <input value={data.tagline} onChange={(e) => update("tagline", e.target.value)} className={inputCls} placeholder="Homemade biryani, made with love." />
         </Field>
-        <Field label={t("reg.f.years")}>
+        <Field label={t("reg.f.years")} required>
           <input value={data.yearsRunning} onChange={(e) => update("yearsRunning", e.target.value)} className={inputCls} placeholder="2 years" />
         </Field>
         <Field label={t("reg.f.instagram")}>
           <input value={data.instagram} onChange={(e) => update("instagram", e.target.value)} className={inputCls} placeholder="@ayeshas.kitchen" />
         </Field>
+        {cloudinaryReady && (
+          <div className="md:col-span-2">
+            <Field label={t("reg.f.logo")} hint={t("reg.f.logoHint")}>
+              <div className="flex items-center gap-4">
+                {data.logoUrl ? (
+                  <div className="relative">
+                    <img src={data.logoUrl} alt="" className="h-16 w-16 rounded-2xl border border-border object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => update("logoUrl", "")}
+                      aria-label="Remove logo"
+                      className="absolute -right-2 -top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-white shadow-soft"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-border bg-white/70 px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                    {uploading ? t("reg.f.logoUploading") : t("reg.f.logo")}
+                    <input type="file" accept="image/*" onChange={onLogo} disabled={uploading} className="hidden" />
+                  </label>
+                )}
+              </div>
+            </Field>
+          </div>
+        )}
         <div className="md:col-span-2">
-          <Field label={t("reg.f.sell")} hint={t("reg.f.sellHint")}>
+          <Field label={t("reg.f.sell")} hint={t("reg.f.sellHint")} required>
             <textarea value={data.products} onChange={(e) => update("products", e.target.value)} className={`${inputCls} min-h-[100px]`} placeholder="Chicken biryani, kheema samosa, date rolls…" />
           </Field>
         </div>
@@ -419,6 +486,8 @@ function StepCategory({ data, update, toggleCategory, counts, seasonName, fsCats
 
 function StepReview({ data }: any) {
   const { t } = useI18n();
+  const { activeSeason } = useSeason();
+  const fee = activeSeason?.registrationFee ?? EVENT.registrationFee;
   const rows = [
     [t("reg.row.name"), data.fullName], [t("reg.row.phone"), data.phone], [t("reg.row.email"), data.email], [t("reg.row.city"), data.city],
     [t("reg.row.business"), data.business], [t("reg.row.tagline"), data.tagline], [t("reg.row.years"), data.yearsRunning], [t("reg.row.instagram"), data.instagram],
@@ -437,7 +506,7 @@ function StepReview({ data }: any) {
         ))}
       </div>
       <div className="mt-4 rounded-2xl bg-accent/20 p-4 text-sm text-primary">
-        {t("reg.review.fee").replace("{fee}", EVENT.registrationFee.toLocaleString("en-IN"))}
+        {t("reg.review.fee").replace("{fee}", fee.toLocaleString("en-IN"))}
       </div>
     </div>
   );

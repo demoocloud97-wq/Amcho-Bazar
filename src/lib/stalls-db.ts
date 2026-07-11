@@ -39,7 +39,7 @@ export type Stall = {
 // deterministic doc id so re-approving never creates a duplicate.
 export async function setStallForRegistration(
   registrationId: string,
-  data: { name: string; owner: string; categoryId: string; status?: StallStatus; season?: number; seasonId?: string; subcategoryId?: string | null }
+  data: { name: string; owner: string; categoryId: string; status?: StallStatus; season?: number; seasonId?: string; subcategoryId?: string | null; imageUrl?: string | null }
 ) {
   const payload: DocumentData = {
     registrationId,
@@ -48,6 +48,7 @@ export async function setStallForRegistration(
     status: data.status ?? "assigned",
     categoryId: data.categoryId,
     subcategoryId: data.subcategoryId ?? null,
+    imageUrl: data.imageUrl ?? null,
     season: data.season ?? EVENT.seasonNumber,
     eventId: AMCHO_BAZAR_EVENT_ID,
     createdAt: serverTimestamp(),
@@ -83,6 +84,7 @@ export async function materializeRegistrationStalls(
       owner: r.seller,
       categoryId: cid,
       subcategoryId: subParent === cid ? r.subcategoryId! : null,
+      imageUrl: r.logoUrl ?? null, // seller's uploaded logo → shown on the stall card
       status: "assigned",
       season: seasonNumber,
       seasonId,
@@ -132,6 +134,20 @@ export async function getStallsBySeason(season: number): Promise<Stall[]> {
   const q = query(collection(db, STALLS), where("season", "==", season));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as DocumentData) })) as Stall[];
+}
+
+// Delete every stall for a season — matched by seasonId AND legacy numeric season, so
+// it clears exactly what the directory shows (including stalls not linked to a
+// registration). Returns how many were removed.
+export async function deleteStallsBySeason(seasonId: string | undefined, season: number): Promise<number> {
+  const snaps = await Promise.all([
+    seasonId ? getDocs(query(collection(db, STALLS), where("seasonId", "==", seasonId))) : Promise.resolve(null),
+    getDocs(query(collection(db, STALLS), where("season", "==", season))),
+  ]);
+  const ids = new Set<string>();
+  snaps.forEach((snap) => snap?.docs.forEach((d) => ids.add(d.id)));
+  await Promise.all([...ids].map((id) => deleteDoc(doc(db, STALLS, id))));
+  return ids.size;
 }
 
 // Season-scoped read (source of truth). Use this in the app.

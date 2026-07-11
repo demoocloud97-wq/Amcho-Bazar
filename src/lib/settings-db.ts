@@ -81,6 +81,58 @@ export function watchDrawLive(cb: (on: boolean) => void) {
   );
 }
 
+/* ---- Live Draw countdown/reveal pace the admin picks (drives the audience view) ---- */
+export type DrawSpeed = "slow" | "medium" | "fast";
+const isSpeed = (v: unknown): v is DrawSpeed => v === "slow" || v === "medium" || v === "fast";
+
+export async function getDrawSpeed(): Promise<DrawSpeed> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS, SITE));
+    const v = snap.exists() ? snap.data().drawSpeed : undefined;
+    return isSpeed(v) ? v : "medium";
+  } catch {
+    return "medium";
+  }
+}
+
+export async function setDrawSpeed(speed: DrawSpeed): Promise<void> {
+  await setDoc(doc(db, SETTINGS, SITE), { drawSpeed: speed, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+// Live so the audience view picks up a pace change without a reload.
+export function watchDrawSpeed(cb: (speed: DrawSpeed) => void) {
+  return onSnapshot(
+    doc(db, SETTINGS, SITE),
+    (snap) => cb(isSpeed(snap.exists() ? snap.data().drawSpeed : undefined) ? (snap.data()!.drawSpeed as DrawSpeed) : "medium"),
+    () => cb("medium")
+  );
+}
+
+/* ---- Live Draw countdown: seconds counted down before each pick reveals ---- */
+const DEFAULT_COUNTDOWN = 3;
+const asCountdown = (v: unknown): number => (typeof v === "number" && v >= 0 && v <= 10 ? Math.round(v) : DEFAULT_COUNTDOWN);
+
+export async function getDrawCountdown(): Promise<number> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS, SITE));
+    return asCountdown(snap.exists() ? snap.data().drawCountdown : undefined);
+  } catch {
+    return DEFAULT_COUNTDOWN;
+  }
+}
+
+export async function setDrawCountdown(seconds: number): Promise<void> {
+  await setDoc(doc(db, SETTINGS, SITE), { drawCountdown: asCountdown(seconds), updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export function watchDrawCountdown(cb: (seconds: number) => void) {
+  return onSnapshot(
+    doc(db, SETTINGS, SITE),
+    (snap) => cb(asCountdown(snap.exists() ? snap.data().drawCountdown : undefined)),
+    () => cb(DEFAULT_COUNTDOWN)
+  );
+}
+
 /* ---- Admin-editable FAQ (single-language, overrides the built-in defaults) ---- */
 export type Faq = { q: string; a: string };
 

@@ -3,8 +3,9 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { Check, Eye, EyeOff, Heart, Lock, Mail, Phone, Sparkles, User } from "lucide-react";
+import { Check, Eye, EyeOff, Heart, Lock, Mail, MapPin, Phone, Sparkles, User } from "lucide-react";
 import { signUpWithEmail } from "@/lib/auth";
+import { saveUserProfile } from "@/lib/profile-db";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 import { useI18n } from "@/lib/i18n";
 
@@ -27,6 +28,7 @@ function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [agree, setAgree] = useState(false);
@@ -38,7 +40,9 @@ function SignupPage() {
     if (!agree) return;
     setLoading(true);
     try {
-      await signUpWithEmail(email, password, fullName);
+      const user = await signUpWithEmail(email, password, fullName);
+      // Persist name/phone/city so the seller registration can pre-fill them.
+      await saveUserProfile(user.uid, { fullName, phone, city, email }).catch(() => {});
       confetti({
         particleCount: 120,
         spread: 80,
@@ -86,6 +90,9 @@ function SignupPage() {
             </Field>
             <Field icon={<Phone className="h-4 w-4" />} label={t("signup.phone")}>
               <input required type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98xxxxxxxx" className="input-festive" />
+            </Field>
+            <Field icon={<MapPin className="h-4 w-4" />} label={t("signup.city")}>
+              <input required type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Bhatkal" className="input-festive" />
             </Field>
             <Field icon={<Lock className="h-4 w-4" />} label={t("auth.password")}>
               <div className="relative">

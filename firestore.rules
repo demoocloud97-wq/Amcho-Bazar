@@ -43,8 +43,14 @@ service cloud.firestore {
     match /seasons/{docId}  { allow read: if true; allow write: if request.auth != null; }
     // Draw results — readable by anyone, writable by signed-in admins.
     match /drawResults/{docId} { allow read: if true; allow write: if request.auth != null; }
+    // Draw pool — name-only applicant list (no contact info) for the public live
+    // map. Readable by anyone, published by signed-in admins from the draw screen.
+    match /drawPools/{docId} { allow read: if true; allow write: if request.auth != null; }
     // Payments — signed-in only (financial data; not public).
     match /payments/{docId} { allow read, write: if request.auth != null; }
+
+    // User profiles — each user can read/write only their own (uid == doc id).
+    match /users/{uid} { allow read, write: if request.auth != null && request.auth.uid == uid; }
 
     // Everything else locked by default.
     match /{document=**} {

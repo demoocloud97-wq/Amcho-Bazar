@@ -4,6 +4,7 @@ import { useState } from "react";
 import confetti from "canvas-confetti";
 import { Check, CreditCard, Download, ShieldCheck, Sparkles, Wallet } from "lucide-react";
 import { EVENT } from "@/lib/dummy-data";
+import { useSeason } from "@/lib/season-context";
 
 export const Route = createFileRoute("/payment")({
   head: () => ({
@@ -18,6 +19,8 @@ export const Route = createFileRoute("/payment")({
 });
 
 function PaymentPage() {
+  const { activeSeason } = useSeason();
+  const fee = activeSeason?.registrationFee ?? EVENT.registrationFee;
   const [paid, setPaid] = useState(false);
   const [method, setMethod] = useState<"upi" | "card" | "netbanking">("upi");
   const [processing, setProcessing] = useState(false);
@@ -51,7 +54,7 @@ function PaymentPage() {
               <ShieldCheck className="h-3 w-3" /> Refundable if rejected
             </span>
           </div>
-          <div className="mt-2 font-display text-6xl font-black text-primary">Rs {EVENT.registrationFee.toLocaleString("en-PK")}</div>
+          <div className="mt-2 font-display text-6xl font-black text-primary">Rs {fee.toLocaleString("en-PK")}</div>
           <div className="mt-4 space-y-2 text-sm text-muted-foreground">
             <Row label="Stall + table + chair" v="Included" />
             <Row label="Décor & signage" v="Included" />
@@ -84,7 +87,7 @@ function PaymentPage() {
               disabled={processing}
               className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-festive px-6 py-4 text-sm font-semibold text-white shadow-glow transition-transform hover:scale-[1.02] disabled:opacity-70"
             >
-              {processing ? "Processing…" : `Pay Rs ${EVENT.registrationFee.toLocaleString("en-PK")} now`}
+              {processing ? "Processing…" : `Pay Rs ${fee.toLocaleString("en-PK")} now`}
             </button>
           )}
 
@@ -106,7 +109,7 @@ function PaymentPage() {
                 </div>
                 <div className="mt-4 grid gap-2 text-sm">
                   <Row label="Transaction ID" v={<span className="font-mono">{txn}</span>} />
-                  <Row label="Amount" v={`Rs ${EVENT.registrationFee.toLocaleString("en-PK")}`} />
+                  <Row label="Amount" v={`Rs ${fee.toLocaleString("en-PK")}`} />
                   <Row label="Method" v={method.toUpperCase()} />
                   <Row label="Status" v={<span className="font-semibold text-teal">Paid</span>} />
                 </div>

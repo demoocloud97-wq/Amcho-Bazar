@@ -6,6 +6,8 @@ import { useI18n } from "@/lib/i18n";
 import {
   getHeroImage, setHeroImage, normalizeImageUrl, DEFAULT_HERO_IMAGE,
   getDrawNonStop, setDrawNonStop, getFillSubcatsEnabled, setFillSubcatsEnabled,
+  getDrawSpeed, setDrawSpeed, type DrawSpeed,
+  getDrawCountdown, setDrawCountdown,
   getFaqs, saveFaqs, type Faq,
 } from "@/lib/settings-db";
 
@@ -103,6 +105,67 @@ export function DrawNonStopToggle() {
     }
   }
   return <Switch on={on} busy={busy} onToggle={toggle} label="Toggle Non-Stop button on the Live Draw screen" />;
+}
+
+// Segmented pill picker used inside the Live Draw settings.
+function PillRow({ label, value, options, onPick, busy }: {
+  label: string; value: string; options: { v: string; label: string }[]; onPick: (v: string) => void; busy: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <span className="text-sm font-medium text-foreground/80">{label}</span>
+      <div className="inline-flex rounded-full border border-border bg-muted/40 p-1">
+        {options.map((o) => (
+          <button
+            key={o.v}
+            onClick={() => onPick(o.v)}
+            disabled={busy}
+            aria-pressed={value === o.v}
+            className={`min-w-[52px] rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${
+              value === o.v ? "bg-festive text-white shadow-soft" : "text-foreground/70 hover:text-foreground"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function LiveDrawPace() {
+  const { t } = useI18n();
+  const [speed, setSpeed] = useState<DrawSpeed>("medium");
+  const [secs, setSecs] = useState(3);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    getDrawSpeed().then(setSpeed).catch(() => {});
+    getDrawCountdown().then(setSecs).catch(() => {});
+  }, []);
+  async function save(fn: () => Promise<void>, apply: () => void) {
+    setBusy(true);
+    try { await fn(); apply(); toast.success(t("adm.drawSpeedSaved")); }
+    catch (e) { toast.error(friendlyAuthError(e)); } finally { setBusy(false); }
+  }
+  return (
+    <div className="space-y-4">
+      <PillRow
+        label={t("adm.drawCountdownLabel")}
+        value={String(secs)}
+        options={[{ v: "3", label: "3s" }, { v: "5", label: "5s" }, { v: "10", label: "10s" }]}
+        onPick={(v) => save(() => setDrawCountdown(Number(v)), () => setSecs(Number(v)))}
+        busy={busy}
+      />
+      <div className="h-px bg-border" />
+      <PillRow
+        label={t("adm.drawSpeedLabel")}
+        value={speed}
+        options={(["slow", "medium", "fast"] as DrawSpeed[]).map((o) => ({ v: o, label: t(`adm.drawSpeed.${o}`) }))}
+        onPick={(v) => save(() => setDrawSpeed(v as DrawSpeed), () => setSpeed(v as DrawSpeed))}
+        busy={busy}
+      />
+    </div>
+  );
 }
 
 export function FillSubcatsToggle() {

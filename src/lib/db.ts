@@ -25,6 +25,10 @@ export type Registration = {
   season: number;    // legacy numeric season (kept during migration)
   seller: string;
   business: string;
+  tagline?: string;        // one-line business tagline
+  yearsRunning?: string;   // how long the business has run
+  instagram?: string;      // seller's Instagram handle
+  city?: string;
   category: CategoryKey;   // primary (first) category — kept for back-compat
   categoryId?: string;     // primary category doc id
   categories?: string[];   // all chosen category names (multi-select)
@@ -33,6 +37,7 @@ export type Registration = {
   subcategory?: string;   // its name (for display)
   phone: string;
   email?: string;
+  logoUrl?: string; // Cloudinary URL of the business logo, if uploaded
   products: string[];
   status: "pending" | "approved" | "waitlist" | "paid";
   stall?: number | null;
@@ -66,6 +71,11 @@ export async function createRegistration(
   if (data.categoryIds?.length) payload.categoryIds = data.categoryIds;
   if (data.subcategoryId) payload.subcategoryId = data.subcategoryId;
   if (data.subcategory) payload.subcategory = data.subcategory;
+  if (data.tagline) payload.tagline = data.tagline;
+  if (data.yearsRunning) payload.yearsRunning = data.yearsRunning;
+  if (data.instagram) payload.instagram = data.instagram;
+  if (data.city) payload.city = data.city;
+  if (data.logoUrl) payload.logoUrl = data.logoUrl;
   const ref = await addDoc(collection(db, REGISTRATIONS), payload);
   return ref.id;
 }

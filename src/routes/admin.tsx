@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { Activity, BarChart3, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Hourglass, LayoutGrid, Loader2, MonitorPlay, MoreVertical, Plus, Receipt, Sparkles, Store, Trash2, TrendingUp, Users } from "lucide-react";
+import { Activity, BarChart3, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Download, Hourglass, LayoutGrid, Loader2, MonitorPlay, MoreVertical, Plus, Receipt, Sparkles, Store, Trash2, TrendingUp, Users, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { EVENT } from "@/lib/dummy-data";
 import { AnimatedCounter } from "@/components/site/animated-counter";
@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { getRegistrationsForAdmin, watchRegistrationsForAdmin, getRegistrationsBySeasonId, createRegistration, updateRegistration, deleteRegistration, type Registration } from "@/lib/db";
 import { getCategories, fillDefaultSubcategories, type Category } from "@/lib/categories-db";
 import { deleteStallForRegistration, materializeRegistrationStalls } from "@/lib/stalls-db";
-import { seedApprovedRegistrations } from "@/lib/seed-registrations";
+import { seedApprovedRegistrations, clearSeededRegistrations } from "@/lib/seed-registrations";
 import { getFillSubcatsEnabled } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
 import { friendlyAuthError } from "@/lib/firebase-errors";
@@ -205,16 +205,56 @@ function AdminPage() {
     }
   }
 
+  const [clearingDummy, setClearingDummy] = useState(false);
+  const [confirmClearDummy, setConfirmClearDummy] = useState(false);
+  async function clearDummy() {
+    if (!seasonId) { toast.error(t("adm.selectFirst")); return; }
+    setClearingDummy(true);
+    try {
+      const n = await clearSeededRegistrations(seasonId);
+      setConfirmClearDummy(false);
+      toast.success(t("adm.dummyCleared").replace("{n}", String(n)));
+      await reload();
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setClearingDummy(false);
+    }
+  }
+
+  // Export every seller's full details for this season as a CSV (opens in Excel).
+  function exportCsv() {
+    if (registrations.length === 0) { toast.message(t("adm.noRegs")); return; }
+    const cols = ["Seller", "Business", "Tagline", "Years", "Instagram", "City", "Category", "Sub-category", "Phone", "Email", "Products", "Status", "Season"];
+    const esc = (v: unknown) => {
+      const s = v == null ? "" : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows = registrations.map((r) => [
+      r.seller, r.business, r.tagline ?? "", r.yearsRunning ?? "", r.instagram ?? "", r.city ?? "",
+      r.categories?.length ? r.categories.join(" | ") : r.category, r.subcategory ?? "",
+      r.phone, r.email ?? "", (r.products ?? []).join(" | "), r.status, r.season ?? "",
+    ].map(esc).join(","));
+    const csv = "﻿" + [cols.join(","), ...rows].join("\n"); // BOM so Excel reads UTF-8
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sellers-${(season?.seasonName ?? "season").replace(/\s+/g, "-").toLowerCase()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const totalRegistrations = registrations.length;
   const approved = registrations.filter((r) => r.status === "approved").length;
   const waitingList = registrations.filter((r) => r.status === "waitlist").length;
   const paid = registrations.filter((r) => r.status === "paid").length;
-  const remainingStalls = (season?.maximumStalls ?? EVENT.totalStalls) - registrations.filter((r) => r.stall != null).length;
 
-  // Real category breakdown from this season's registrations.
+  // Live breakdown of drawn winners (approved/paid) per category — fills as the draw
+  // approves sellers and empties on reset (winners revert to waitlist).
   const breakdown = useMemo(() => {
     const counts = new Map<string, number>();
     for (const r of registrations) {
+      if (r.status !== "approved" && r.status !== "paid") continue;
       const names = r.categories?.length ? r.categories : [r.category];
       for (const n of names) if (n) counts.set(n, (counts.get(n) ?? 0) + 1);
     }
@@ -281,33 +321,35 @@ function AdminPage() {
               {fillingSubs ? <Loader2 className="h-4 w-4 animate-spin" /> : <LayoutGrid className="h-4 w-4" />} {t("cat.fill")}
             </button>
           )}
-          {/* Dev utilities — visually de-emphasised */}
-          <button
-            onClick={seedSellers}
-            disabled={seeding}
-            title={t("adm.seedTitle")}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-dashed border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />} {seeding ? t("adm.seeding") : t("adm.seedBtn")}
-          </button>
-          <button
-            onClick={addTestSeller}
-            disabled={addingTest}
-            title={t("adm.addTest")}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-dashed border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {addingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {addingTest ? t("adm.adding") : t("adm.addTest")}
-          </button>
+          {/* Data / dev tools — tucked into a menu so the header stays clean */}
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex min-h-11 items-center gap-2 rounded-full border border-dashed border-border px-4 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <Wrench className="h-4 w-4" /> {t("adm.tools")}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 rounded-xl">
+              <DropdownMenuItem onSelect={seedSellers} disabled={seeding} className="gap-2">
+                {seeding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />} {seeding ? t("adm.seeding") : t("adm.seedBtn")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={addTestSeller} disabled={addingTest} className="gap-2">
+                {addingTest ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {addingTest ? t("adm.adding") : t("adm.addTest")}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setConfirmClearDummy(true)} disabled={clearingDummy} className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive">
+                <Trash2 className="h-4 w-4" /> {t("adm.clearDummy")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {/* Metric cards */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Metric icon={<ClipboardList />} label={t("adm.mRegistrations")} value={totalRegistrations} tone="primary" />
         <Metric icon={<CheckCircle2 />} label={t("adm.mApproved")} value={approved} tone="teal" />
         <Metric icon={<Receipt />} label={t("adm.mPayments")} value={paid} tone="orange" />
         <Metric icon={<Users />} label={t("adm.mWaiting")} value={waitingList} tone="gold" />
-        <Metric icon={<Store />} label={t("adm.mRemaining")} value={remainingStalls} tone="primary" />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -367,14 +409,6 @@ function AdminPage() {
               ))}
             </ul>
           )}
-
-          <div className="mt-6 grid grid-cols-2 gap-2">
-            {[t("adm.approveBatch"), t("adm.sendWhatsapp"), t("adm.exportCsv"), t("adm.triggerDraw")].map((q) => (
-              <button key={q} disabled title={t("adm.comingSoon")} className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-border bg-muted/40 px-3 py-2 text-xs font-semibold text-muted-foreground opacity-70">
-                {q} <span className="rounded-full bg-accent/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary">{t("adm.soon")}</span>
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -388,9 +422,18 @@ function AdminPage() {
               <div className="font-display text-lg font-semibold leading-tight">{t("adm.readyReview")}</div>
             </div>
           </div>
-          <span className="rounded-full bg-muted/60 px-3 py-1 text-xs font-medium tabular-nums text-muted-foreground">
-            {loading ? t("common.loading") : `${t("adm.showing")} ${registrations.length === 0 ? 0 : curPage * PAGE_SIZE + 1}–${Math.min((curPage + 1) * PAGE_SIZE, registrations.length)} ${t("adm.of")} ${registrations.length}`}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-muted/60 px-3 py-1 text-xs font-medium tabular-nums text-muted-foreground">
+              {loading ? t("common.loading") : `${t("adm.showing")} ${registrations.length === 0 ? 0 : curPage * PAGE_SIZE + 1}–${Math.min((curPage + 1) * PAGE_SIZE, registrations.length)} ${t("adm.of")} ${registrations.length}`}
+            </span>
+            <button
+              onClick={exportCsv}
+              disabled={registrations.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-muted disabled:opacity-50"
+            >
+              <Download className="h-3.5 w-3.5" /> {t("adm.export")}
+            </button>
+          </div>
         </div>
         {/* Bulk action bar */}
         {sel.size > 0 && (
@@ -437,28 +480,40 @@ function AdminPage() {
               <tbody className="divide-y divide-border">
                 {shown.map((r) => (
                   <tr key={r.id} className={`text-foreground/90 transition-colors ${sel.has(r.id!) ? "bg-primary/5" : "hover:bg-muted/40"}`}>
-                    <td className="py-3 pl-3 pr-2">
+                    <td className="py-3.5 pl-3 pr-2 align-middle">
                       <input type="checkbox" checked={sel.has(r.id!)} onChange={() => toggleSel(r.id!)} aria-label={`Select ${r.seller}`} className="h-4 w-4 cursor-pointer rounded border-border accent-[color:var(--color-primary)]" />
                     </td>
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="grid h-8 w-8 place-items-center rounded-full bg-festive text-xs font-bold text-white ring-2 ring-accent/40">
-                          {(r.seller || "?").charAt(0).toUpperCase()}
-                        </span>
-                        <span className="font-medium">{r.seller}</span>
-                        {!r.seasonId && <span className="rounded-full bg-secondary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-secondary" title="No season yet">{t("adm.unassigned")}</span>}
+                    <td className="px-3 py-3.5 align-middle">
+                      <div className="flex items-center gap-2.5">
+                        {r.logoUrl ? (
+                          <img src={r.logoUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-accent/40" />
+                        ) : (
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-festive text-xs font-bold text-white ring-2 ring-accent/40">
+                            {(r.seller || "?").charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-foreground">{r.seller}</span>
+                            {!r.seasonId && <span className="rounded-full bg-secondary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-secondary" title="No season yet">{t("adm.unassigned")}</span>}
+                          </div>
+                          {r.email && <div className="truncate text-xs text-muted-foreground">{r.email}</div>}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-3 py-3">{r.business}</td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3.5 align-middle">
+                      <div className="font-medium text-foreground">{r.business}</div>
+                      {r.tagline && <div className="max-w-[220px] truncate text-xs text-muted-foreground">{r.tagline}</div>}
+                    </td>
+                    <td className="px-3 py-3.5 align-middle">
                       <div className="flex flex-wrap gap-1">
                         {(r.categories?.length ? r.categories : [r.category]).map((c) => (
                           <span key={c} className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{c}</span>
                         ))}
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-muted-foreground">{r.phone || "—"}</td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3.5 align-middle tabular-nums text-muted-foreground">{r.phone || "—"}</td>
+                    <td className="px-3 py-3.5 align-middle">
                       <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ${
                         r.status === "approved" || r.status === "paid" ? "bg-teal/15 text-teal" : r.status === "pending" ? "bg-accent/25 text-primary" : "bg-secondary/15 text-secondary"
                       }`}>
@@ -466,7 +521,7 @@ function AdminPage() {
                         {t(`myreg.status.${r.status}`)}
                       </span>
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-3.5 align-middle">
                       <div className="flex justify-end">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -535,6 +590,15 @@ function AdminPage() {
         description={t("adm.bulkDeleteDesc").replace("{n}", String(sel.size))}
         confirmLabel={t("adm.bulkDelete")}
         onConfirm={bulkDelete}
+      />
+
+      <ConfirmDialog
+        open={confirmClearDummy}
+        onOpenChange={(o) => !o && !clearingDummy && setConfirmClearDummy(false)}
+        title={t("adm.clearDummyTitle")}
+        description={t("adm.clearDummyDesc")}
+        confirmLabel={t("adm.clearDummy")}
+        onConfirm={clearDummy}
       />
     </div>
   );
