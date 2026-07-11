@@ -419,7 +419,8 @@ function CommunityStory() {
       <div className="relative mx-auto max-w-7xl px-6">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           {/* LEFT — image showcase */}
-          <div className="relative mx-auto aspect-square w-full max-w-[340px]">
+          <div className="relative mx-auto w-full max-w-[340px]">
+            <div className="relative aspect-square">
             {/* Rotating gradient border */}
             <div aria-hidden className="absolute inset-0 rounded-[2rem] animate-spin-slow" style={{ background: CONIC, filter: "blur(1px)", opacity: 0.55 }} />
             {/* Glass frame holding the photo */}
@@ -467,9 +468,10 @@ function CommunityStory() {
                 );
               })}
             </div>
-            {/* Quote chip */}
+            </div>
+            {/* Quote chip — stacks below the poster on mobile (no overlap), floats beside it on desktop. */}
             {t("home.story.quote") && (
-              <div className="absolute -bottom-8 -right-6 z-10 max-w-[280px] rounded-2xl p-4 md:-bottom-12 md:-right-44" style={{ border: "1.5px solid color-mix(in oklch, var(--color-gold) 55%, transparent)" }}>
+              <div className="relative z-10 mt-6 rounded-2xl p-4 md:absolute md:-bottom-12 md:-right-44 md:mt-0 md:max-w-[280px]" style={{ border: "1.5px solid color-mix(in oklch, var(--color-gold) 55%, transparent)" }}>
                 <div className="font-display text-base font-semibold italic leading-snug" style={{ color: "var(--color-maroon)" }}>&ldquo;{t("home.story.quote")}&rdquo;</div>
                 {t("home.story.quoteBy") && <div className="mt-1.5 text-xs" style={{ color: "color-mix(in oklch, var(--color-maroon) 65%, black)" }}>{t("home.story.quoteBy")}</div>}
               </div>
