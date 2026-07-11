@@ -1,1 +1,0 @@
-import{n as e}from"./createLucideIcon-C-QYgx1g.js";import{t}from"./require-admin-Ca5elJab.js";import{Kt as n}from"./index-Du1Mj3mh.js";var r=e(),i=()=>(0,r.jsx)(t,{children:(0,r.jsx)(n,{})});export{i as component};
