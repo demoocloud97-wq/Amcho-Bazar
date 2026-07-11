@@ -181,10 +181,11 @@ export function GoogleTranslate() {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="inline-flex h-11 items-center gap-1.5 rounded-full border border-border bg-card px-3.5 text-sm font-semibold text-foreground shadow-soft transition-colors hover:border-primary/40 hover:bg-primary/[0.04]"
+        className="inline-flex h-11 items-center gap-1.5 rounded-full border border-border bg-card px-2.5 text-sm font-semibold text-foreground shadow-soft transition-colors hover:border-primary/40 hover:bg-primary/[0.04] sm:px-3.5"
       >
         <Globe className="h-4 w-4 text-primary" />
-        <span className="max-w-[7rem] truncate">{curLabel}</span>
+        {/* Hide the language label on mobile so the menu button always fits. */}
+        <span className="hidden max-w-[7rem] truncate sm:inline">{curLabel}</span>
         <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
