@@ -1,0 +1,1 @@
+import"./firebase-Ba9ge-rU.js";var e=`amcho-bazar`;export{e as t};

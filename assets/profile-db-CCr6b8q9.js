@@ -1,1 +1,0 @@
-import{_ as e,f as t,n,o as r,v as i}from"./firebase-D1oXhAv2.js";var a=`users`;async function o(r,o){let s=Object.fromEntries(Object.entries(o).filter(([,e])=>e!=null&&e!==``));await t(e(n,a,r),{...s,updatedAt:i()},{merge:!0})}async function s(t){let i=await r(e(n,a,t));return i.exists()?i.data():null}export{o as n,s as t};
