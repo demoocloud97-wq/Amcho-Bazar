@@ -867,6 +867,7 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
 
   /* ---- Presentation ---- */
   "present.progress":  { en: "Progress", ur: "پیش رفت", "ur-roman": "Progress", hi: "प्रगति", ar: "التقدّم" },
+  "present.live":      { en: "Live", ur: "لائیو", "ur-roman": "Live", hi: "लाइव", ar: "مباشر" },
   "present.stageSet":  { en: "The stage is set", ur: "اسٹیج تیار ہے", "ur-roman": "Stage tayar hai", hi: "मंच तैयार है", ar: "المسرح جاهز" },
   "present.waiting":   { en: "Waiting for the next lucky draw…", ur: "اگلے خوش قسمت ڈرا کا انتظار…", "ur-roman": "Agle khush-qismat draw ka intzar…", hi: "अगले भाग्यशाली ड्रॉ की प्रतीक्षा…", ar: "بانتظار السحب المحظوظ التالي…" },
   "present.prep":      { en: "Preparing Next Draw…", ur: "اگلا ڈرا تیار ہو رہا ہے…", "ur-roman": "Agla draw tayar ho raha hai…", hi: "अगला ड्रॉ तैयार हो रहा है…", ar: "تجهيز السحب التالي…" },

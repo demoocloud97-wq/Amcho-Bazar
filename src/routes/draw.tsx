@@ -370,7 +370,8 @@ function DrawPage() {
           <StatChip label={t("draw.progress")} value={`${selected.length}/${TARGET}`} accent />
         </div>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <div className="mx-auto mt-8 flex w-fit max-w-full flex-col items-center gap-3 rounded-3xl border border-white/12 bg-black/20 p-3.5 shadow-glow backdrop-blur-xl">
+          <div className="flex flex-wrap items-center justify-center gap-3">
           {nonStop && phase !== "done" && !running && (
             <button
               onClick={startNonStop}
@@ -407,8 +408,8 @@ function DrawPage() {
           </button>
         </div>
 
-        {/* Broadcast: when ON, every visitor sees a "watch live" banner → /present */}
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          {/* Broadcast: when ON, every visitor sees a "watch live" banner → /present */}
+          <div className="flex flex-wrap items-center justify-center gap-3">
           <button
             onClick={toggleLive}
             disabled={liveBusy}
@@ -430,6 +431,7 @@ function DrawPage() {
             )}
             {live ? t("draw.liveOnBtn") : t("draw.goLive")}
           </button>
+          </div>
         </div>
       </section>
 
@@ -485,11 +487,9 @@ function DrawPage() {
 /* ==== small chip ==== */
 function StatChip({ label, value, accent = false }: { label: string; value: number | string; accent?: boolean }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl border p-4 backdrop-blur-xl transition-transform hover:-translate-y-0.5 ${accent ? "border-accent/40 bg-gradient-to-br from-festive/45 to-festive/10 shadow-glow" : "border-white/15 bg-white/[0.07]"}`}>
-      <span className={`pointer-events-none absolute inset-x-0 top-0 h-0.5 ${accent ? "bg-accent" : "bg-white/25"}`} />
-      <span className={`pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full blur-2xl ${accent ? "bg-accent/40" : "bg-white/10"}`} />
-      <div className="relative text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60">{label}</div>
-      <div className="relative mt-1.5 font-display text-3xl font-black tabular-nums text-white md:text-4xl">{value}</div>
+    <div className={`rounded-2xl border p-4 text-center backdrop-blur-xl ${accent ? "border-accent/40 bg-white/10 shadow-soft" : "border-white/12 bg-white/[0.06]"}`}>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60">{label}</div>
+      <div className={`mt-1.5 font-display text-3xl font-black tabular-nums md:text-4xl ${accent ? "text-accent" : "text-white"}`}>{value}</div>
     </div>
   );
 }

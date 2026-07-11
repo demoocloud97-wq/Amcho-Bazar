@@ -175,21 +175,30 @@ function PresentationPage() {
             <Sparkles className="h-6 w-6 md:h-7 md:w-7" />
           </div>
           <div>
-            <div className="font-display text-lg font-black leading-none tracking-tight md:text-2xl">AMCHO BAZAR</div>
-            <div className="font-script text-sm text-accent md:text-base">{show?.seasonName ?? EVENT.season}</div>
+            <div className="flex items-center gap-2">
+              <span className="font-display text-lg font-black leading-none tracking-tight md:text-2xl">AMCHO BAZAR</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-white ring-1 ring-white/20 md:text-[10px]">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-80" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
+                </span>
+                {t("present.live")}
+              </span>
+            </div>
+            <div className="mt-1 font-script text-sm text-accent md:text-base">{show?.seasonName ?? EVENT.season}</div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.35em] text-white/60 md:text-xs">{t("present.progress")}</div>
-            <div className="font-display text-2xl font-black tabular-nums md:text-4xl">
-              {doneCount}<span className="text-white/50">/{target}</span>
+        <div className="flex items-center gap-3">
+          <div className="rounded-2xl border border-white/15 bg-white/[0.07] px-4 py-2 text-right backdrop-blur-xl">
+            <div className="text-[9px] font-semibold uppercase tracking-[0.35em] text-white/55 md:text-[10px]">{t("present.progress")}</div>
+            <div className="font-display text-2xl font-black tabular-nums leading-none md:text-4xl">
+              {doneCount}<span className="text-white/40">/{target}</span>
             </div>
           </div>
           <button
             onClick={goFullscreen}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/80 backdrop-blur transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white/80 backdrop-blur transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             aria-label="Enter fullscreen"
           >
             <Maximize className="h-5 w-5" />
