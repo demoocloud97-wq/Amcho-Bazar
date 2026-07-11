@@ -20,8 +20,8 @@ const PRODUCTS: Record<string, string[]> = {
   Stationery: ["Planners", "Art prints", "Journals"],
 };
 
-// One-time dev seed: create `count` approved registrations for a season so the
-// draw pool is populated. Uses a single batched write. Returns rows created.
+// One-time dev seed: create `count` waitlisted registrations for a season so the
+// draw pool is populated (same flow as a real signup). Single batched write.
 export async function seedApprovedRegistrations(seasonId: string, seasonNumber: number, count: number): Promise<number> {
   const batch = writeBatch(db);
   for (let i = 0; i < count; i++) {
@@ -37,7 +37,7 @@ export async function seedApprovedRegistrations(seasonId: string, seasonNumber: 
       categories: [category],
       phone: `03${String(100000000 + i).slice(0, 9)}`,
       products: PRODUCTS[category] ?? [],
-      status: "approved",
+      status: "waitlist",
       isSeedDummy: true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),

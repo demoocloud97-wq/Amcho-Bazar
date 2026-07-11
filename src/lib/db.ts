@@ -93,12 +93,28 @@ export function watchRegistrations(cb: (regs: Registration[]) => void) {
   });
 }
 
-// Admin view: this season's registrations PLUS orphans (no seasonId yet) so a
-// request submitted before a season was active still surfaces for review.
-export async function getRegistrationsForAdmin(seasonId: string): Promise<Registration[]> {
+// Which registrations belong to the season the admin is viewing. Mirrors the draw:
+// match by seasonId, by legacy numeric season, OR orphans (no seasonId yet) — so the
+// admin metrics/table see exactly the same applicants the draw pool does.
+function belongsToSeason(r: Registration, seasonId: string, seasonNumber?: number): boolean {
+  return r.seasonId === seasonId || !r.seasonId || (seasonNumber != null && r.season === seasonNumber);
+}
+
+// Admin view: this season's registrations PLUS orphans/legacy so a request submitted
+// before a season was active (or matched only by number) still surfaces for review.
+export async function getRegistrationsForAdmin(seasonId: string, seasonNumber?: number): Promise<Registration[]> {
   const snap = await getDocs(collection(db, REGISTRATIONS));
   const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as DocumentData) })) as Registration[];
-  return list.filter((r) => r.seasonId === seasonId || !r.seasonId).sort(byNewest);
+  return list.filter((r) => belongsToSeason(r, seasonId, seasonNumber)).sort(byNewest);
+}
+
+// Live version of getRegistrationsForAdmin — keeps the admin screen (metrics,
+// category breakdown, table, activity) in sync with the live draw in real time.
+export function watchRegistrationsForAdmin(seasonId: string, seasonNumber: number | undefined, cb: (regs: Registration[]) => void) {
+  return onSnapshot(collection(db, REGISTRATIONS), (snap) => {
+    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as DocumentData) })) as Registration[];
+    cb(list.filter((r) => belongsToSeason(r, seasonId, seasonNumber)).sort(byNewest));
+  });
 }
 
 // Move a registration to another season (admin correction).

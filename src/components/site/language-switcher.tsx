@@ -27,7 +27,8 @@ export function LanguageSwitcher() {
   const current = LANGS.find((l) => l.code === lang);
 
   return (
-    <DropdownMenu>
+    // Non-modal: avoids the body scroll-lock that breaks the sticky header mid-scroll.
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <button
           aria-label={t("menu.language")}

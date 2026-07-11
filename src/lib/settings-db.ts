@@ -8,13 +8,14 @@ const SITE = "site";
 // Bundled poster in /public — used until an admin sets a custom URL.
 export const DEFAULT_HERO_IMAGE = asset("/Amchi bazar.png");
 
-// Google Drive links → public thumbnail endpoint that hotlinks reliably in <img>
-// (works for logged-out/mobile too, if the file is "Anyone with the link").
-// Anything else (other hosts, local /public paths) passes through unchanged.
+// Google Drive links → Google's photo CDN (lh3), which hotlinks in <img> far more
+// reliably than drive.google.com/thumbnail (that endpoint rate-limits under load and
+// starts returning broken images). Works for "Anyone with the link" files, logged-out
+// and mobile too. Anything else (other hosts, local /public paths) passes through.
 export function normalizeImageUrl(url: string): string {
   if (!url.includes("google")) return url;
   const id = url.match(/[?&]id=([^&]+)/)?.[1] ?? url.match(/\/d\/([^/=?]+)/)?.[1];
-  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w1600` : url;
+  return id ? `https://lh3.googleusercontent.com/d/${id}=w1600` : url;
 }
 
 export async function getHeroImage(): Promise<string> {

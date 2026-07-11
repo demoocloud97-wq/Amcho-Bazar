@@ -29,6 +29,15 @@ export const Route = createFileRoute("/stalls")({
   component: StallsPage,
 });
 
+// Explicit Season-1 name → category overrides (admin-provided, beat the name guess).
+const NAME_CATEGORY: Record<string, string> = {
+  "khao piyoo": "Food", "amchay nonchay stall": "Food", "choco bities": "Food", "taste fusion": "Food", "little star s": "Food",
+  "aizal games": "Game", "play to win it": "Game", "the games and juice corner": "Game", "amcho bazar final": "Game",
+  "the craft studio": "Jewellery", "hand craft and show pieces": "Jewellery", "shahkar": "Jewellery",
+  "clean and gleam": "Shopping", "azlaan plastic & crockery": "Shopping", "house hold items": "Shopping",
+  "bake shop": "Food",
+};
+
 function StallsPage() {
   const { seasons } = useSeason();
   const { isAdmin } = useAuth();
@@ -78,13 +87,43 @@ function StallsPage() {
   }, [tab?.key, refresh]);
 
   const catName = useMemo(() => new Map(cats.map((c) => [c.id!, c.name])), [cats]);
+  const catByName = useMemo(() => new Map(cats.map((c) => [c.name.trim().toLowerCase(), c.name])), [cats]);
+  // Guess a category from the stall name for Season 1 stalls (imported with no category
+  // at all). ponytail: keyword heuristic — good-enough, not exhaustive; specific
+  // categories are tested before the generic Food/Shopping catch-alls so they win.
+  const guessCategory = (name: string): string => {
+    const n = ` ${name.toLowerCase()} `;
+    const RULES: [string, string[]][] = [
+      ["Jewellery", ["jewel", "gems", "gehna", "adorn", "ornament", "bangle", "smj"]],
+      ["Beauty", ["beauty", "cosmetic", "makeup", "make up", "skincare", "herbal", "glow", "aiesh", "salon", "henna", "mehndi"]],
+      ["Clothing", ["cloth", "fashion", "hajar", "abaya", "dress", "apparel", "wear", "boutique", "stitch"]],
+      ["Stationery", ["stationery", "calligraph", "journal", "planner", "notebook", "paper", "art print"]],
+      ["Gifts", ["gift", "blissful", "surprise", "hamper", "keepsake"]],
+      ["Kids", ["kids", "kid ", "toy", "baby", "children"]],
+      ["Food", ["food", "biryani", "cake", "dhaba", "snack", "khana", "khaana", "khausey", "khausay", "khausy", "crave", "bites", "platter", "beverage", "chatkhara", "masala", "baker", "dessert", "sweet", "pizza", "burger", "kabab", "tasty", "foodi", "chai", "samosa", "pakora", "roll", "grill", "tikka", "karahi", "nihari", "haleem", "paratha", "cafe", "dhaaba", "peena"]],
+      ["Shopping", ["store", "shop", "gadget", "mart", "one stop"]],
+    ];
+    for (const [cat, kws] of RULES) if (kws.some((k) => n.includes(k))) return catByName.get(cat.toLowerCase()) ?? cat;
+    return "";
+  };
+  const canonical = (cat: string) => catByName.get(cat.toLowerCase()) ?? cat;
+  // Resolve by id → name → raw categoryId; when nothing is stored, use an explicit
+  // name override, else guess from the name.
+  const resolveCat = (catId?: string, name?: string) => {
+    const byIdOrName = catId ? (catName.get(catId) ?? catByName.get(catId.trim().toLowerCase()) ?? catId) : "";
+    if (byIdOrName) return byIdOrName;
+    if (!name) return "";
+    const override = NAME_CATEGORY[name.trim().toLowerCase()];
+    return override ? canonical(override) : guessCategory(name);
+  };
   const catOptions = useMemo(
-    () => [...new Set(stalls.map((s) => catName.get(s.categoryId) ?? "").filter(Boolean))].sort(),
-    [stalls, catName]
+    () => [...new Set(stalls.map((s) => resolveCat(s.categoryId, s.name)).filter(Boolean))].sort(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [stalls, catName, catByName]
   );
 
   const filtered = stalls.filter((s) => {
-    const cname = catName.get(s.categoryId) ?? "";
+    const cname = resolveCat(s.categoryId, s.name);
     if (cat !== "All" && cname !== cat) return false;
     if (!q) return true;
     return `${s.name} ${s.owner} ${cname}`.toLowerCase().includes(q.toLowerCase());
@@ -176,7 +215,7 @@ function StallsPage() {
                 <div className="p-5">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-                      {catName.get(s.categoryId) ?? t("stalls.uncat")}
+                      {resolveCat(s.categoryId, s.name) || t("stalls.uncat")}
                     </span>
                     <span className="rounded-full bg-accent/20 px-2.5 py-1 text-[11px] font-semibold text-primary">
                       Season {s.season}

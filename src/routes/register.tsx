@@ -109,6 +109,7 @@ function RegisterPage() {
       try {
         await createRegistration({
           uid: user?.uid,
+          status: "waitlist", // new flow: everyone waits; live-draw winners get approved
           seasonId: activeSeason?.id,
           season: activeSeason?.seasonNumber ?? EVENT.seasonNumber,
           seller: data.fullName,

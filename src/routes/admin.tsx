@@ -1,15 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { Activity, BarChart3, CheckCircle2, ClipboardList, Hourglass, LayoutGrid, Loader2, MonitorPlay, MoreVertical, Plus, Receipt, Sparkles, Store, Trash2, TrendingUp, Users } from "lucide-react";
+import { Activity, BarChart3, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Hourglass, LayoutGrid, Loader2, MonitorPlay, MoreVertical, Plus, Receipt, Sparkles, Store, Trash2, TrendingUp, Users } from "lucide-react";
 import { toast } from "sonner";
 import { EVENT } from "@/lib/dummy-data";
 import { AnimatedCounter } from "@/components/site/animated-counter";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { getRegistrationsForAdmin, getRegistrationsBySeasonId, createRegistration, updateRegistration, deleteRegistration, type Registration } from "@/lib/db";
-import { getCategories, getSubCategories, fillDefaultSubcategories, type Category } from "@/lib/categories-db";
-import { setStallForRegistration, deleteStallForRegistration } from "@/lib/stalls-db";
+import { getRegistrationsForAdmin, watchRegistrationsForAdmin, getRegistrationsBySeasonId, createRegistration, updateRegistration, deleteRegistration, type Registration } from "@/lib/db";
+import { getCategories, fillDefaultSubcategories, type Category } from "@/lib/categories-db";
+import { deleteStallForRegistration, materializeRegistrationStalls } from "@/lib/stalls-db";
 import { seedApprovedRegistrations } from "@/lib/seed-registrations";
 import { getFillSubcatsEnabled } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
@@ -48,20 +48,26 @@ function AdminPage() {
     getRegistrationsBySeasonId(prev.id).then((r) => setPrevCount(r.length)).catch(() => setPrevCount(null));
   }, [seasons, season?.seasonNumber]);
 
+  // Manual refetch (used right after an admin action for instant feedback);
+  // the live listener below also keeps this in sync, so no loading flash here.
   async function reload() {
-    if (!seasonId) { setRegistrations([]); setLoading(false); return; }
-    setLoading(true);
+    if (!seasonId) { setRegistrations([]); return; }
     try {
-      setRegistrations(await getRegistrationsForAdmin(seasonId));
+      setRegistrations(await getRegistrationsForAdmin(seasonId, season?.seasonNumber));
     } catch (e) {
       console.error("Failed to load registrations", e);
-    } finally {
-      setLoading(false);
     }
   }
 
-  // Every widget reflects the season selected in the global switcher.
-  useEffect(() => { reload(); /* eslint-disable-next-line */ }, [seasonId]);
+  // Live: every widget (metrics, category breakdown, table, activity) reflects the
+  // selected season AND updates in real time as the live draw approves winners.
+  useEffect(() => {
+    if (!seasonId) { setRegistrations([]); setLoading(false); return; }
+    setLoading(true);
+    const unsub = watchRegistrationsForAdmin(seasonId, season?.seasonNumber, (regs) => { setRegistrations(regs); setLoading(false); });
+    return unsub;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seasonId, season?.seasonNumber]);
 
   // Approve / waitlist a request — always assign it to the season the admin is
   // viewing, so an approved seller shows up in that season everywhere (admin
@@ -73,32 +79,8 @@ function AdminPage() {
       // Approved/paid sellers become a stall in their category's directory;
       // otherwise remove any stall that was materialised earlier.
       if (status === "approved" || status === "paid") {
-        // Resolve every chosen category to an id (fall back to name matching).
-        let categoryIds = (r.categoryIds?.length ? r.categoryIds : (r.categoryId ? [r.categoryId] : [])).filter(Boolean);
-        if (categoryIds.length === 0) {
-          const cats = await getCategories();
-          const names = r.categories?.length ? r.categories : [r.category];
-          categoryIds = names.map((n) => cats.find((c) => (c.name || "").toLowerCase() === (n || "").toLowerCase())?.id).filter(Boolean) as string[];
-        }
-        if (categoryIds.length) {
-          // The sub-category (if any) only applies to the category it belongs to.
-          let subParent: string | undefined;
-          if (r.subcategoryId) subParent = (await getSubCategories()).find((s) => s.id === r.subcategoryId)?.categoryId;
-          await deleteStallForRegistration(r.id!); // clear stale category stalls first
-          for (const cid of categoryIds) {
-            await setStallForRegistration(r.id!, {
-              name: r.business || r.seller,
-              owner: r.seller,
-              categoryId: cid,
-              subcategoryId: subParent === cid ? r.subcategoryId! : null,
-              status: "assigned",
-              season: season?.seasonNumber,
-              seasonId,
-            });
-          }
-        } else {
-          toast.message(t("adm.noCatYet"));
-        }
+        const { created } = await materializeRegistrationStalls(r, seasonId, season?.seasonNumber);
+        if (!created) toast.message(t("adm.noCatYet"));
       } else {
         await deleteStallForRegistration(r.id!).catch(() => {});
       }
@@ -132,7 +114,8 @@ function AdminPage() {
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmBulk, setConfirmBulk] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
-  useEffect(() => { setSel(new Set()); }, [seasonId]);
+  const [page, setPage] = useState(0);
+  useEffect(() => { setSel(new Set()); setPage(0); }, [seasonId]);
   function toggleSel(id: string) {
     setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
@@ -196,7 +179,7 @@ function AdminPage() {
         category: "Food",
         phone: "0000000000",
         products: ["Biryani", "Samosa"],
-        status: "pending",
+        status: "waitlist",
       });
       toast.success(t("adm.dummyAdded"));
       await reload();
@@ -224,7 +207,6 @@ function AdminPage() {
 
   const totalRegistrations = registrations.length;
   const approved = registrations.filter((r) => r.status === "approved").length;
-  const pending = registrations.filter((r) => r.status === "pending").length;
   const waitingList = registrations.filter((r) => r.status === "waitlist").length;
   const paid = registrations.filter((r) => r.status === "paid").length;
   const remainingStalls = (season?.maximumStalls ?? EVENT.totalStalls) - registrations.filter((r) => r.stall != null).length;
@@ -258,7 +240,11 @@ function AdminPage() {
       .slice(0, 6);
   }, [registrations]);
 
-  const shown = registrations.slice(0, 12);
+  const PAGE_SIZE = 12;
+  const pageCount = Math.max(1, Math.ceil(registrations.length / PAGE_SIZE));
+  const curPage = Math.min(page, pageCount - 1); // clamp when the list shrinks (e.g. after a bulk delete)
+  useEffect(() => { if (page > pageCount - 1) setPage(pageCount - 1); }, [page, pageCount]);
+  const shown = registrations.slice(curPage * PAGE_SIZE, curPage * PAGE_SIZE + PAGE_SIZE);
   // "Select all" grabs every seller in the season, not just the visible rows.
   const allSel = registrations.length > 0 && registrations.every((r) => sel.has(r.id!));
   function toggleAll() { setSel(allSel ? new Set() : new Set(registrations.map((r) => r.id!))); }
@@ -316,13 +302,12 @@ function AdminPage() {
       </div>
 
       {/* Metric cards */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Metric icon={<ClipboardList />} label={t("adm.mRegistrations")} value={totalRegistrations} tone="primary" />
         <Metric icon={<CheckCircle2 />} label={t("adm.mApproved")} value={approved} tone="teal" />
         <Metric icon={<Receipt />} label={t("adm.mPayments")} value={paid} tone="orange" />
         <Metric icon={<Users />} label={t("adm.mWaiting")} value={waitingList} tone="gold" />
         <Metric icon={<Store />} label={t("adm.mRemaining")} value={remainingStalls} tone="primary" />
-        <Metric icon={<Hourglass />} label={t("adm.mPending")} value={pending} tone="orange" />
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -404,7 +389,7 @@ function AdminPage() {
             </div>
           </div>
           <span className="rounded-full bg-muted/60 px-3 py-1 text-xs font-medium tabular-nums text-muted-foreground">
-            {loading ? t("common.loading") : `${t("adm.showing")} ${Math.min(8, registrations.length)} ${t("adm.of")} ${registrations.length}`}
+            {loading ? t("common.loading") : `${t("adm.showing")} ${registrations.length === 0 ? 0 : curPage * PAGE_SIZE + 1}–${Math.min((curPage + 1) * PAGE_SIZE, registrations.length)} ${t("adm.of")} ${registrations.length}`}
           </span>
         </div>
         {/* Bulk action bar */}
@@ -413,9 +398,6 @@ function AdminPage() {
             <span className="text-sm font-semibold text-foreground">{sel.size} {t("adm.bulkSelected")}</span>
             <div className="flex flex-wrap items-center gap-2">
               <button onClick={() => setSel(new Set())} className="rounded-full px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted">{t("adm.bulkClear")}</button>
-              <button disabled={bulkBusy} onClick={() => bulkStatus("approved")} className="inline-flex items-center gap-1.5 rounded-full bg-teal px-4 py-1.5 text-xs font-bold text-white shadow-soft transition-transform hover:scale-[1.03] disabled:opacity-50">
-                <CheckCircle2 className="h-3.5 w-3.5" /> {t("adm.approve")} ({sel.size})
-              </button>
               <button disabled={bulkBusy} onClick={() => bulkStatus("waitlist")} className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-4 py-1.5 text-xs font-bold text-white shadow-soft transition-transform hover:scale-[1.03] disabled:opacity-50">
                 <Hourglass className="h-3.5 w-3.5" /> {t("adm.waitlist")}
               </button>
@@ -433,31 +415,32 @@ function AdminPage() {
               ))}
             </div>
           ) : registrations.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
-              {t("adm.noRegs")}
+            <div className="flex flex-col items-center gap-3 py-14 text-center">
+              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-muted text-muted-foreground"><ClipboardList className="h-5 w-5" /></span>
+              <p className="text-sm font-medium text-muted-foreground">{t("adm.noRegs")}</p>
             </div>
           ) : (
             <table className="w-full min-w-[860px] text-left text-sm">
               <thead>
-                <tr className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                  <th className="pb-3 pl-1 pr-2 w-8">
+                <tr className="rounded-xl text-[11px] uppercase tracking-wider text-muted-foreground [&>th]:bg-muted/40 [&>th]:py-2.5 [&>th:first-child]:rounded-l-xl [&>th:last-child]:rounded-r-xl">
+                  <th className="pl-3 pr-2 w-8">
                     <input type="checkbox" checked={allSel} onChange={toggleAll} aria-label={t("adm.bulkSelectAll")} className="h-4 w-4 cursor-pointer rounded border-border accent-[color:var(--color-primary)]" />
                   </th>
-                  <th className="pb-3">{t("adm.thSeller")}</th>
-                  <th className="pb-3">{t("adm.thBusiness")}</th>
-                  <th className="pb-3">{t("adm.thCategory")}</th>
-                  <th className="pb-3">{t("adm.thPhone")}</th>
-                  <th className="pb-3">{t("adm.thStatus")}</th>
-                  <th className="pb-3 text-right">{t("adm.thActions")}</th>
+                  <th className="px-3">{t("adm.thSeller")}</th>
+                  <th className="px-3">{t("adm.thBusiness")}</th>
+                  <th className="px-3">{t("adm.thCategory")}</th>
+                  <th className="px-3">{t("adm.thPhone")}</th>
+                  <th className="px-3">{t("adm.thStatus")}</th>
+                  <th className="px-3 text-right">{t("adm.thActions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {shown.map((r) => (
                   <tr key={r.id} className={`text-foreground/90 transition-colors ${sel.has(r.id!) ? "bg-primary/5" : "hover:bg-muted/40"}`}>
-                    <td className="py-3 pl-1 pr-2">
+                    <td className="py-3 pl-3 pr-2">
                       <input type="checkbox" checked={sel.has(r.id!)} onChange={() => toggleSel(r.id!)} aria-label={`Select ${r.seller}`} className="h-4 w-4 cursor-pointer rounded border-border accent-[color:var(--color-primary)]" />
                     </td>
-                    <td className="py-3">
+                    <td className="px-3 py-3">
                       <div className="flex items-center gap-2">
                         <span className="grid h-8 w-8 place-items-center rounded-full bg-festive text-xs font-bold text-white ring-2 ring-accent/40">
                           {(r.seller || "?").charAt(0).toUpperCase()}
@@ -466,21 +449,24 @@ function AdminPage() {
                         {!r.seasonId && <span className="rounded-full bg-secondary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-secondary" title="No season yet">{t("adm.unassigned")}</span>}
                       </div>
                     </td>
-                    <td className="py-3">{r.business}</td>
-                    <td className="py-3">
+                    <td className="px-3 py-3">{r.business}</td>
+                    <td className="px-3 py-3">
                       <div className="flex flex-wrap gap-1">
                         {(r.categories?.length ? r.categories : [r.category]).map((c) => (
                           <span key={c} className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">{c}</span>
                         ))}
                       </div>
                     </td>
-                    <td className="py-3 text-muted-foreground">{r.phone || "—"}</td>
-                    <td className="py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${
+                    <td className="px-3 py-3 text-muted-foreground">{r.phone || "—"}</td>
+                    <td className="px-3 py-3">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize ${
                         r.status === "approved" || r.status === "paid" ? "bg-teal/15 text-teal" : r.status === "pending" ? "bg-accent/25 text-primary" : "bg-secondary/15 text-secondary"
-                      }`}>{t(`myreg.status.${r.status}`)}</span>
+                      }`}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+                        {t(`myreg.status.${r.status}`)}
+                      </span>
                     </td>
-                    <td className="py-3">
+                    <td className="px-3 py-3">
                       <div className="flex justify-end">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -492,11 +478,6 @@ function AdminPage() {
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="rounded-xl">
-                            {r.status !== "approved" && r.status !== "paid" && (
-                              <DropdownMenuItem onSelect={() => setStatus(r, "approved")} className="gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-teal" /> {t("adm.approve")}
-                              </DropdownMenuItem>
-                            )}
                             {r.status !== "waitlist" && (
                               <DropdownMenuItem onSelect={() => setStatus(r, "waitlist")} className="gap-2">
                                 <Hourglass className="h-4 w-4 text-secondary" /> {t("adm.waitlist")}
@@ -516,6 +497,26 @@ function AdminPage() {
             </table>
           )}
         </div>
+        {/* Pagination — only when the list spills past one page */}
+        {!loading && pageCount > 1 && (
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={curPage === 0}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-card px-4 py-1.5 text-sm font-semibold text-primary transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft className="h-4 w-4" /> {t("adm.prev")}
+            </button>
+            <span className="text-xs font-medium tabular-nums text-muted-foreground">{t("adm.page")} {curPage + 1} / {pageCount}</span>
+            <button
+              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+              disabled={curPage >= pageCount - 1}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-card px-4 py-1.5 text-sm font-semibold text-primary transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {t("adm.next")} <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       <ConfirmDialog

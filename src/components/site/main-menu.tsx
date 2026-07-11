@@ -48,7 +48,10 @@ export function MainMenu() {
   }
 
   return (
-    <DropdownMenu>
+    // Non-modal: Radix's modal scroll-lock sets body overflow:hidden, which breaks the
+    // sticky header (it sticks to document-top instead of the viewport) when opened
+    // mid-scroll. Non-modal still closes on outside-click / Esc.
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <button
           aria-label={t("menu.menu")}

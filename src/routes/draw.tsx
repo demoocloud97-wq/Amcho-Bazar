@@ -9,7 +9,8 @@ import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { EVENT } from "@/lib/dummy-data";
 import { getDrawNonStop, getDrawLive, setDrawLive } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
-import { getRegistrationsBySeasonId, getRegistrations, type Registration } from "@/lib/db";
+import { getRegistrationsBySeasonId, getRegistrations, updateRegistration, type Registration } from "@/lib/db";
+import { materializeRegistrationStalls } from "@/lib/stalls-db";
 import { getDrawResultsBySeasonId, saveDrawResult, clearDrawResultsBySeasonId } from "@/lib/draw-results-db";
 import { RequireAdmin } from "@/components/site/require-admin";
 import { RedDart } from "@/components/site/dartboard";
@@ -76,6 +77,7 @@ function DrawPage() {
   const selectedRef = useRef<Selected[]>([]); // latest picks for the fast loop (avoids stale closures)
   const candidatesRef = useRef<Candidate[]>([]); // latest candidates for the fast loop
   const spinStallRef = useRef<number | null>(null); // cell the picker is currently on → where the dart lands
+  const regByIdRef = useRef<Map<string, Registration>>(new Map()); // full registrations, to approve a winner
 
   useEffect(() => { getDrawNonStop().then(setNonStop).catch(() => {}); }, []);
   useEffect(() => { getDrawLive().then(setLive).catch(() => {}); }, []);
@@ -118,9 +120,11 @@ function DrawPage() {
         // nothing from other seasons.
         const map = new Map<string, Registration>();
         [...byId, ...byNum].forEach((r) => { if (r.id) map.set(r.id, r); });
-        // Only admin-approved applicants enter the draw (approved or already paid).
+        regByIdRef.current = map; // full lookup so a winner can be approved + listed
+        // Waitlisted (and any legacy pending) applicants enter the draw; winning
+        // is what approves them. Already-approved/paid are past winners — excluded.
         const cands = [...map.values()]
-          .filter((r) => r.status === "approved" || r.status === "paid")
+          .filter((r) => r.status === "waitlist" || r.status === "pending")
           .map((r) => ({ id: r.id!, seller: r.seller, business: r.business, category: r.category as string, avatar: avatarFor(r.id!) }));
         setCandidates(cands);
         const picks: Selected[] = results.map((r) => ({
@@ -161,12 +165,17 @@ function DrawPage() {
   }
 
   // Persist a pick to this season's results (fire-and-forget; season-scoped).
+  // A winner is also approved and listed in the stall directory — the draw is
+  // what promotes waitlisted applicants to sellers.
   function persist(s: Selected) {
     if (!seasonId) return;
     saveDrawResult({
       seasonId, order: s.order, stallNo: s.stallNo, candidateId: s.id,
       seller: s.seller, business: s.business, category: s.category, at: s.at,
     }).catch(() => {});
+    updateRegistration(s.id, { status: "approved", seasonId, season: season?.seasonNumber }).catch(() => {});
+    const reg = regByIdRef.current.get(s.id);
+    if (reg) materializeRegistrationStalls(reg, seasonId, season?.seasonNumber).catch(() => {});
   }
 
   function runOne() {

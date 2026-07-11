@@ -14,6 +14,8 @@ import {
 import { db } from "./firebase";
 import { EVENT } from "./dummy-data";
 import { AMCHO_BAZAR_EVENT_ID } from "./events-db";
+import { getCategories, getSubCategories } from "./categories-db";
+import type { Registration } from "./db";
 
 export type StallStatus = "available" | "assigned" | "pending";
 
@@ -54,6 +56,39 @@ export async function setStallForRegistration(
   if (data.seasonId) payload.seasonId = data.seasonId;
   // One stall per (registration, category) — a seller may register in several categories.
   await setDoc(doc(db, STALLS, `reg_${registrationId}_${data.categoryId}`), payload, { merge: true });
+}
+
+/** Approve-time side effect: list a registration in the stall directory across its
+ *  chosen categories (resolving names→ids when needed). Returns how many category
+ *  stalls were created — 0 means no matching category exists yet. Clears stale
+ *  stalls first so re-running never duplicates. Shared by admin approve + live draw. */
+export async function materializeRegistrationStalls(
+  r: Registration, seasonId: string, seasonNumber?: number
+): Promise<{ created: number }> {
+  let categoryIds = (r.categoryIds?.length ? r.categoryIds : (r.categoryId ? [r.categoryId] : [])).filter(Boolean) as string[];
+  if (categoryIds.length === 0) {
+    const cats = await getCategories();
+    const names = r.categories?.length ? r.categories : [r.category];
+    categoryIds = names
+      .map((n) => cats.find((c) => (c.name || "").toLowerCase() === (String(n) || "").toLowerCase())?.id)
+      .filter(Boolean) as string[];
+  }
+  if (categoryIds.length === 0) { await deleteStallForRegistration(r.id!).catch(() => {}); return { created: 0 }; }
+  let subParent: string | undefined;
+  if (r.subcategoryId) subParent = (await getSubCategories()).find((s) => s.id === r.subcategoryId)?.categoryId;
+  await deleteStallForRegistration(r.id!); // clear stale category stalls first
+  for (const cid of categoryIds) {
+    await setStallForRegistration(r.id!, {
+      name: r.business || r.seller,
+      owner: r.seller,
+      categoryId: cid,
+      subcategoryId: subParent === cid ? r.subcategoryId! : null,
+      status: "assigned",
+      season: seasonNumber,
+      seasonId,
+    });
+  }
+  return { created: categoryIds.length };
 }
 
 // Remove every stall materialised from a registration (across its categories).
