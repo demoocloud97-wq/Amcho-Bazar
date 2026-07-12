@@ -101,11 +101,11 @@ function StepLegend() {
       </span>
       <span className="inline-flex items-center gap-2">
         <span className="grid h-6 w-6 place-items-center rounded-full bg-festive text-[10px] font-bold text-white shadow-glow">▶</span>
-        You are here
+        In progress
       </span>
       <span className="inline-flex items-center gap-2">
         <span className="grid h-6 w-6 place-items-center rounded-full border border-border bg-muted text-[10px] font-bold text-muted-foreground">•</span>
-        Next
+        Incomplete
       </span>
     </div>
   );
@@ -178,7 +178,7 @@ function TimelineStep({ n, icon, title, sub, state, last }: { n: number; icon: R
             {icon}
           </span>
           <span className="font-display text-base font-bold leading-tight">{title}</span>
-          {active && <span className="ms-auto shrink-0 rounded-full bg-festive px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">You are here</span>}
+          {active && <span className="ms-auto shrink-0 rounded-full bg-festive px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">In progress</span>}
         </div>
         <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{sub}</p>
       </div>
