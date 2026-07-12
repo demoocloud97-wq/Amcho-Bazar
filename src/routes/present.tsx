@@ -7,7 +7,7 @@ import { EVENT } from "@/lib/dummy-data";
 import { useSeason } from "@/lib/season-context";
 import { watchDrawResultsBySeasonId, type DrawResult } from "@/lib/draw-results-db";
 import { watchDrawPool, type PoolApplicant } from "@/lib/draw-pool-db";
-import { watchDrawSpeed, watchDrawCountdown } from "@/lib/settings-db";
+import { watchDrawSpeed, watchDrawCountdown, watchDrawLive } from "@/lib/settings-db";
 import { colorFor } from "@/lib/category-colors";
 import { Dartboard, RedDart } from "@/components/site/dartboard";
 import { StallArena, type Selected } from "./draw";
@@ -44,6 +44,10 @@ function PresentationPage() {
   // Admin-selected pre-pick countdown length (seconds), live from Settings.
   const [countdownSecs, setCountdownSecs] = useState(3);
   useEffect(() => watchDrawCountdown(setCountdownSecs), []);
+  // Broadcast gate: the public screen only shows the draw while the admin is Live
+  // (null = still checking, so we don't flash content before the flag loads).
+  const [live, setLive] = useState<boolean | null>(null);
+  useEffect(() => watchDrawLive(setLive), []);
   const speed = useMemo<Speed>(() => {
     const s = params.get("speed");
     return s === "slow" || s === "medium" || s === "fast" ? s : settingSpeed;
@@ -73,9 +77,10 @@ function PresentationPage() {
   const timers = useRef<number[]>([]);
   const [tick, setTick] = useState(0);
 
-  // Live mirror of the admin's draw for this season.
+  // Live mirror of the admin's draw for this season. Only subscribe while live —
+  // the rules deny public reads when off, so there's nothing to fetch otherwise.
   useEffect(() => {
-    if (!show?.id) return;
+    if (!show?.id || live !== true) return;
     initRef.current = false;
     const unsub = watchDrawResultsBySeasonId(show.id, (list) => {
       setResults(list);
@@ -83,17 +88,17 @@ function PresentationPage() {
       if (!initRef.current) { initRef.current = true; setShownCount(list.length); }
     });
     return () => unsub();
-  }, [show?.id]);
+  }, [show?.id, live]);
 
   // Live applicant pool (name-only) + spinning flag → named cells + hop on the map.
   useEffect(() => {
-    if (!show?.id) { setPool([]); setSpinning(false); return; }
+    if (!show?.id || live !== true) { setPool([]); setSpinning(false); return; }
     const unsub = watchDrawPool(show.id, ({ applicants, spinning }) => {
       setPool([...applicants].sort((a, b) => a.id.localeCompare(b.id)));
       setSpinning(spinning);
     });
     return () => unsub();
-  }, [show?.id]);
+  }, [show?.id, live]);
 
   // While the admin's picker spins, hop a random applicant cell so the public map
   // "runs" the instant Begin is clicked. Landing/reveal comes from drawResults.
@@ -171,6 +176,9 @@ function PresentationPage() {
     document.documentElement.requestFullscreen?.().catch(() => {});
   }
 
+  // Not live (or still checking) → the public sees a holding screen, never the draw.
+  if (live !== true) return <NotLive checking={live === null} />;
+
   return (
     <div className="relative flex min-h-dvh flex-col overflow-hidden bg-hero text-white">
       <div className="pointer-events-none absolute inset-0 pattern-dots opacity-20" />
@@ -233,6 +241,24 @@ function PresentationPage() {
           <HistoryPanel history={history} />
         </aside>
       </main>
+    </div>
+  );
+}
+
+/* ============ NOT-LIVE HOLDING SCREEN ============ */
+function NotLive({ checking }: { checking: boolean }) {
+  const { t } = useI18n();
+  return (
+    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-hero px-6 text-center text-white">
+      <div className="pointer-events-none absolute inset-0 pattern-dots opacity-20" />
+      <div className="pointer-events-none absolute -right-40 -top-40 h-[36rem] w-[36rem] rounded-full bg-warm opacity-25 blur-3xl" />
+      <div className="relative">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-festive shadow-glow md:h-24 md:w-24">
+          <Sparkles className="h-9 w-9 md:h-11 md:w-11" />
+        </div>
+        <div className="mt-6 font-display text-3xl font-black md:text-5xl">{t("present.offTitle")}</div>
+        <div className="mt-3 max-w-md text-white/70 md:text-lg">{checking ? t("present.offChecking") : t("present.offBody")}</div>
+      </div>
     </div>
   );
 }

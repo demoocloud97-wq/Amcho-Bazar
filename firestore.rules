@@ -43,11 +43,17 @@ service cloud.firestore {
     // Events & Seasons — readable by anyone, writable by signed-in admins.
     match /events/{docId}   { allow read: if true; allow write: if request.auth != null; }
     match /seasons/{docId}  { allow read: if true; allow write: if request.auth != null; }
-    // Draw results — readable by anyone, writable by signed-in admins.
-    match /drawResults/{docId} { allow read: if true; allow write: if request.auth != null; }
+    // Live-broadcast gate: the public may read the draw only while the admin has
+    // "Go Live" turned ON (settings/site.drawLiveEnabled). Admins can always read.
+    function drawIsLive() {
+      return exists(/databases/$(database)/documents/settings/site)
+        && get(/databases/$(database)/documents/settings/site).data.drawLiveEnabled == true;
+    }
+    // Draw results — public only while live; writable by signed-in admins.
+    match /drawResults/{docId} { allow read: if request.auth != null || drawIsLive(); allow write: if request.auth != null; }
     // Draw pool — name-only applicant list (no contact info) for the public live
-    // map. Readable by anyone, published by signed-in admins from the draw screen.
-    match /drawPools/{docId} { allow read: if true; allow write: if request.auth != null; }
+    // map. Public only while live; published by signed-in admins from the draw screen.
+    match /drawPools/{docId} { allow read: if request.auth != null || drawIsLive(); allow write: if request.auth != null; }
     // Payments — signed-in only (financial data; not public).
     match /payments/{docId} { allow read, write: if request.auth != null; }
 

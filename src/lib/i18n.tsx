@@ -870,6 +870,9 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
   /* ---- Presentation ---- */
   "present.progress":  { en: "Progress", ur: "پیش رفت", "ur-roman": "Progress", hi: "प्रगति", ar: "التقدّم" },
   "present.live":      { en: "Live", ur: "لائیو", "ur-roman": "Live", hi: "लाइव", ar: "مباشر" },
+  "present.offTitle":   { en: "The draw isn’t live right now", ur: "ڈرا ابھی لائیو نہیں ہے", "ur-roman": "Draw abhi live nahi hai", hi: "ड्रॉ अभी लाइव नहीं है", ar: "السحب ليس مباشرًا الآن" },
+  "present.offBody":    { en: "The live ceremony hasn’t started or has ended. Please check back when the organisers go live.", ur: "لائیو تقریب شروع نہیں ہوئی یا ختم ہو چکی ہے۔ منتظمین کے لائیو آنے پر دوبارہ دیکھیں۔", "ur-roman": "Live taqreeb shuru nahi hui ya khatam ho chuki hai. Muntazimeen ke live aane par dobara dekhein.", hi: "लाइव समारोह शुरू नहीं हुआ या समाप्त हो गया है। आयोजकों के लाइव आने पर फिर देखें।", ar: "لم يبدأ الحفل المباشر أو انتهى. يُرجى العودة عندما يبدأ المنظّمون البث." },
+  "present.offChecking":{ en: "Checking the live status…", ur: "لائیو اسٹیٹس چیک ہو رہا ہے…", "ur-roman": "Live status check ho raha hai…", hi: "लाइव स्थिति जाँची जा रही है…", ar: "جارٍ التحقّق من حالة البث…" },
   "present.stageSet":  { en: "The stage is set", ur: "اسٹیج تیار ہے", "ur-roman": "Stage tayar hai", hi: "मंच तैयार है", ar: "المسرح جاهز" },
   "present.waiting":   { en: "Waiting for the next lucky draw…", ur: "اگلے خوش قسمت ڈرا کا انتظار…", "ur-roman": "Agle khush-qismat draw ka intzar…", hi: "अगले भाग्यशाली ड्रॉ की प्रतीक्षा…", ar: "بانتظار السحب المحظوظ التالي…" },
   "present.prep":      { en: "Preparing Next Draw…", ur: "اگلا ڈرا تیار ہو رہا ہے…", "ur-roman": "Agla draw tayar ho raha hai…", hi: "अगला ड्रॉ तैयार हो रहा है…", ar: "تجهيز السحب التالي…" },
