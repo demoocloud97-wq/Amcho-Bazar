@@ -13,7 +13,6 @@ import { useSeason } from "@/lib/season-context";
 import { useI18n } from "@/lib/i18n";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 import { useAuth } from "@/lib/auth-context";
-import { RequireAuth } from "@/components/site/require-auth";
 import { PresentedBy } from "@/components/site/presented-by";
 import { RegistrationFlow, FlowModal } from "@/components/site/auth-flow";
 
@@ -26,11 +25,7 @@ export const Route = createFileRoute("/register")({
       { property: "og:description", content: "Multi-step, joyful seller registration for women entrepreneurs." },
     ],
   }),
-  component: () => (
-    <RequireAuth>
-      <RegisterPage />
-    </RequireAuth>
-  ),
+  component: RegisterPage, // open to everyone — no login required to become a seller
 });
 
 const STEPS = ["reg.step.personal", "reg.step.business", "reg.step.category", "reg.step.review", "reg.step.submitted"];
@@ -345,6 +340,9 @@ function StepPersonal({ data, update }: any) {
         </Field>
         <Field label={t("reg.f.phone")} required>
           <input value={data.phone} onChange={(e) => update("phone", e.target.value)} type="tel" inputMode="tel" autoComplete="tel" className={inputCls} placeholder="+91 98800 12345" />
+        </Field>
+        <Field label={t("reg.f.email")}>
+          <input value={data.email} onChange={(e) => update("email", e.target.value)} type="email" inputMode="email" autoComplete="email" className={inputCls} placeholder="ayesha@example.com" />
         </Field>
         <Field label={t("reg.f.city")}>
           <input value={data.city} onChange={(e) => update("city", e.target.value)} autoComplete="address-level2" className={inputCls} />

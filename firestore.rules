@@ -5,8 +5,10 @@ service cloud.firestore {
     // Registrations — any signed-in user can create/read/update/delete.
     // (Admin gating is enforced in the app UI. Tighten with custom claims
     //  later for backend-level enforcement.)
+    // Anyone can submit a seller registration (no login required); only signed-in
+    // admins can read/update/delete (records hold phone/email — not public).
     match /registrations/{docId} {
-      allow create: if request.auth != null;
+      allow create: if true;
       allow read, update, delete: if request.auth != null;
     }
 
