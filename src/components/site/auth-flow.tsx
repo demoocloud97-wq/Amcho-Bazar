@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode } from "react";
-import { ChevronDown, GitBranch, LogIn, Check, X, ShieldQuestion, Maximize2, Sparkles, User, Store, LayoutGrid, ClipboardCheck, Trophy } from "lucide-react";
+import { GitBranch, Check, X, ShieldQuestion, Maximize2, Sparkles, User, Store, LayoutGrid, ClipboardCheck, Trophy, Chrome, Mail, KeyRound } from "lucide-react";
 
 /* Lightweight, theme-matched flow charts for the auth screens.
    Opened in a modal popup from the Login and Register pages. */
@@ -49,37 +49,6 @@ export function FlowModal({ label, buttonClassName, children }: { label: string;
   );
 }
 
-function Node({ children, tone = "step", icon, className = "" }: { children: ReactNode; tone?: "step" | "term" | "decision" | "action"; icon?: ReactNode; className?: string }) {
-  const tones: Record<string, string> = {
-    step: "border-border bg-card hover:border-primary/25",
-    term: "border-transparent bg-festive text-white",
-    decision: "border-accent/60 bg-gradient-to-br from-accent/25 to-accent/10",
-    action: "border-primary/25 bg-gradient-to-br from-primary/[0.07] to-secondary/[0.05]",
-  };
-  return (
-    <div className={`flex w-full max-w-[420px] items-center gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${tones[tone]} ${className}`}>
-      {icon && (
-        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${tone === "term" ? "bg-white/20 text-white" : tone === "decision" ? "bg-accent/40 text-primary" : "bg-primary/10 text-primary"}`}>
-          {icon}
-        </span>
-      )}
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
-  );
-}
-
-const Title = ({ children }: { children: ReactNode }) => <div className="text-sm font-semibold leading-snug">{children}</div>;
-const Sub = ({ children }: { children: ReactNode }) => <div className="mt-0.5 text-xs opacity-80">{children}</div>;
-const Fn = ({ children }: { children: ReactNode }) => <code className="rounded-md border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[11px] font-medium text-primary">{children}</code>;
-
-// Directional connector — a soft gradient line ending in a chevron.
-const Conn = ({ short = false }: { short?: boolean }) => (
-  <div className="flex flex-col items-center" aria-hidden>
-    <div className={`w-px bg-gradient-to-b from-border to-primary/30 ${short ? "h-4" : "h-6"}`} />
-    <ChevronDown className="-mt-2 h-3.5 w-3.5 text-primary/40" />
-  </div>
-);
-
 function Outcome({ tone, title, sub }: { tone: "ok" | "err" | "muted"; title: ReactNode; sub?: ReactNode }) {
   const tones = {
     ok: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -96,25 +65,6 @@ function Outcome({ tone, title, sub }: { tone: "ok" | "err" | "muted"; title: Re
         <div className="text-[13px] font-bold leading-tight">{title}</div>
         {sub && <div className="mt-0.5 text-[11px] opacity-90">{sub}</div>}
       </div>
-    </div>
-  );
-}
-
-const BLabel = ({ children, tone = "opt" }: { children: ReactNode; tone?: "opt" | "yes" | "no" }) => {
-  const tones = {
-    opt: "border-primary/25 bg-primary/5 text-primary",
-    yes: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    no: "border-rose-200 bg-rose-50 text-rose-700",
-  } as const;
-  return <span className={`rounded-full border px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide ${tones[tone]}`}>{children}</span>;
-};
-
-// A visual swim-lane grouping one branch's path.
-function Lane({ label, tone, basis = "240px", children }: { label: string; tone?: "opt" | "yes" | "no"; basis?: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-1 flex-col items-center gap-2 rounded-2xl border border-dashed border-border bg-muted/20 p-3" style={{ flexBasis: basis }}>
-      <BLabel tone={tone}>{label}</BLabel>
-      {children}
     </div>
   );
 }
@@ -141,53 +91,65 @@ function Wrapper({ title, note, badge, children }: { title: string; note: string
   );
 }
 
-// Plain "done / here / next" key — no technical jargon.
+// Plain key — the markers match the timeline dots so it's obvious what each means.
 function StepLegend() {
   return (
-    <div className="mb-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 rounded-2xl border border-border bg-muted/30 px-4 py-2.5 text-[11px] font-medium text-muted-foreground">
-      <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /> Done</span>
-      <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-festive" /> You are here</span>
-      <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" /> Next</span>
+    <div className="mb-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-2xl border border-border bg-muted/40 px-4 py-3 text-xs font-semibold text-foreground">
+      <span className="inline-flex items-center gap-2">
+        <span className="grid h-6 w-6 place-items-center rounded-full bg-emerald-500 text-white"><Check className="h-3.5 w-3.5" strokeWidth={3} /></span>
+        Done
+      </span>
+      <span className="inline-flex items-center gap-2">
+        <span className="grid h-6 w-6 place-items-center rounded-full bg-festive text-[10px] font-bold text-white shadow-glow">▶</span>
+        You are here
+      </span>
+      <span className="inline-flex items-center gap-2">
+        <span className="grid h-6 w-6 place-items-center rounded-full border border-border bg-muted text-[10px] font-bold text-muted-foreground">•</span>
+        Next
+      </span>
+    </div>
+  );
+}
+
+// One sign-in method as a clear card: icon, numbered steps, and what happens next.
+function MethodCard({ icon, title, steps, children }: { icon: ReactNode; title: string; steps: string[]; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <div className="flex items-center gap-2.5">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-festive text-white">{icon}</span>
+        <span className="font-display text-base font-bold leading-tight">{title}</span>
+      </div>
+      <ol className="space-y-1.5">
+        {steps.map((s, i) => (
+          <li key={i} className="flex items-start gap-2 text-[13px] leading-relaxed text-muted-foreground">
+            <span className="mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-primary/10 text-[9px] font-bold text-primary">{i + 1}</span>
+            {s}
+          </li>
+        ))}
+      </ol>
+      <div className="mt-auto space-y-1.5 pt-1">{children}</div>
     </div>
   );
 }
 
 export function LoginFlow() {
   return (
-    <Wrapper title="How signing in works" note="Three ways to sign in: Google, email &amp; password, or reset a forgotten password. Success takes you Home; if it fails, you stay and see a message." badge="3 ways">
-      <Node tone="term" icon={<LogIn className="h-4 w-4" />} className="max-w-[320px]"><Title>User opens Sign In</Title></Node>
-      <Conn />
-      <Node icon={<GitBranch className="h-4 w-4" />}><Title>Choose a method</Title><Sub>Google · Email &amp; password · Forgot password</Sub></Node>
-      <Conn />
-      <div className="flex w-full flex-wrap justify-center gap-4">
-        <Lane label="Google">
-          <Node tone="action"><Title>Continue with Google</Title><Sub><Fn>signInWithGoogle()</Fn></Sub></Node>
-          <Conn short />
-          <Outcome tone="ok" title="Welcome back" sub="toast + redirect Home" />
-          <Conn short />
-          <Outcome tone="err" title="Sign-in failed" sub="error toast · stay" />
-        </Lane>
-        <Lane label="Email + password">
-          <Node><Title>Submit credentials</Title><Sub>email · password (required)</Sub></Node>
-          <Conn short />
-          <Node tone="action"><Title>Authenticate</Title><Sub><Fn>signInWithEmail()</Fn></Sub></Node>
-          <Conn short />
-          <Outcome tone="ok" title="Welcome back" sub="toast + redirect Home" />
-          <Conn short />
-          <Outcome tone="err" title="Wrong email / password" sub="error toast · stay" />
-        </Lane>
-        <Lane label="Forgot password">
-          <Node tone="decision" icon={<ShieldQuestion className="h-4 w-4" />}><Title>Email field filled?</Title></Node>
-          <Conn short />
-          <Outcome tone="muted" title="Empty → “Enter your email”" sub="info toast · no email" />
-          <Conn short />
-          <Node tone="action"><Title>Send reset link</Title><Sub><Fn>resetPassword()</Fn></Sub></Node>
-          <Conn short />
-          <Outcome tone="ok" title="Reset email sent" sub="check inbox" />
-        </Lane>
+    <Wrapper title="How signing in works" note="Pick one of three ways to sign in. If it works, you’re taken Home. If not, you stay on the page and see a friendly message telling you what to fix." badge="3 ways">
+      <div className="grid w-full gap-4 sm:grid-cols-3">
+        <MethodCard icon={<Chrome className="h-4 w-4" />} title="With Google" steps={["Tap “Continue with Google”.", "Choose your Google account."]}>
+          <Outcome tone="ok" title="Signed in" sub="Taken to Home" />
+          <Outcome tone="err" title="Didn’t work" sub="Stay and see a message" />
+        </MethodCard>
+        <MethodCard icon={<Mail className="h-4 w-4" />} title="Email & password" steps={["Type your email and password.", "Tap Sign in."]}>
+          <Outcome tone="ok" title="Signed in" sub="Taken to Home" />
+          <Outcome tone="err" title="Wrong email or password" sub="Try again" />
+        </MethodCard>
+        <MethodCard icon={<KeyRound className="h-4 w-4" />} title="Forgot password" steps={["Type your email in the box.", "Tap “Forgot password?”."]}>
+          <Outcome tone="ok" title="Reset link sent" sub="Check your inbox" />
+          <Outcome tone="muted" title="No email typed?" sub="You’ll be asked to add it first" />
+        </MethodCard>
       </div>
-      <Conn />
-      <Node><Title>New here?</Title><Sub>“Create account” → <Fn>/signup</Fn></Sub></Node>
+      <p className="mt-5 text-center text-sm text-muted-foreground">New here? Tap <span className="font-semibold text-primary">Create account</span> to sign up.</p>
     </Wrapper>
   );
 }
