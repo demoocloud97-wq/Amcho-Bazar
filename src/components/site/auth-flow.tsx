@@ -1,6 +1,5 @@
 import { useState, useEffect, type ReactNode } from "react";
-import { ChevronDown, GitBranch, LogIn, Check, X, ShieldQuestion, Database, ArrowRight, Maximize2 } from "lucide-react";
-import { AL_FAJR_LOGO } from "./presented-by";
+import { ChevronDown, GitBranch, LogIn, Check, X, ShieldQuestion, Maximize2, Sparkles, User, Store, LayoutGrid, ClipboardCheck, Trophy } from "lucide-react";
 
 /* Lightweight, theme-matched flow charts for the auth screens.
    Opened in a modal popup from the Login and Register pages. */
@@ -120,55 +119,42 @@ function Lane({ label, tone, basis = "240px", children }: { label: string; tone?
   );
 }
 
-const LEGEND: { c: string; label: string }[] = [
-  { c: "bg-festive", label: "Start / step" },
-  { c: "bg-accent", label: "Decision" },
-  { c: "bg-primary/40", label: "Firebase call" },
-  { c: "bg-emerald-400", label: "Success" },
-  { c: "bg-rose-400", label: "Failure" },
-];
-
-function Wrapper({ title, route, note, badge, children }: { title: string; route: string; note: string; badge?: ReactNode; children: ReactNode }) {
+function Wrapper({ title, note, badge, children }: { title: string; note: string; badge?: ReactNode; children: ReactNode }) {
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-border bg-card/80 p-6 shadow-card backdrop-blur-xl md:p-8">
-      <img
-        src={AL_FAJR_LOGO}
-        alt=""
-        referrerPolicy="no-referrer"
-        className="pointer-events-none absolute left-1/2 top-1/2 w-[560px] max-w-[85%] -translate-x-1/2 -translate-y-1/2 select-none opacity-[0.22]"
-      />
-      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-accent/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+    <div className="relative overflow-hidden rounded-[28px] border border-border bg-card p-6 shadow-card md:p-8">
+      <div className="pointer-events-none absolute -right-20 -top-20 h-44 w-44 rounded-full bg-accent/15 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 -left-20 h-44 w-44 rounded-full bg-primary/10 blur-3xl" />
       <div className="relative flex items-center gap-3">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-festive text-white shadow-glow">
-          <GitBranch className="h-5 w-5" />
+          <Sparkles className="h-5 w-5" />
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="font-display text-xl font-bold leading-tight md:text-2xl">{title}</h3>
-          <code className="mt-0.5 inline-block rounded-md border border-secondary/30 bg-secondary/10 px-2 py-0.5 font-mono text-[11px] text-secondary">{route}</code>
         </div>
         {badge && (
           <span className="shrink-0 rounded-full border border-primary/25 bg-primary/5 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-primary">{badge}</span>
         )}
       </div>
-      <p className="relative mt-3 max-w-xl text-[13px] leading-relaxed text-muted-foreground">{note}</p>
-
-      <div className="relative mt-4 flex flex-wrap gap-x-4 gap-y-1.5 rounded-2xl border border-border bg-muted/30 px-4 py-2.5">
-        {LEGEND.map((l) => (
-          <span key={l.label} className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
-            <span className={`h-2.5 w-2.5 rounded-full ${l.c}`} /> {l.label}
-          </span>
-        ))}
-      </div>
-
+      <p className="relative mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">{note}</p>
       <div className="relative mt-7 flex flex-col items-center">{children}</div>
+    </div>
+  );
+}
+
+// Plain "done / here / next" key — no technical jargon.
+function StepLegend() {
+  return (
+    <div className="mb-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 rounded-2xl border border-border bg-muted/30 px-4 py-2.5 text-[11px] font-medium text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /> Done</span>
+      <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-festive" /> You are here</span>
+      <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" /> Next</span>
     </div>
   );
 }
 
 export function LoginFlow() {
   return (
-    <Wrapper title="Sign-in flow" route="/login" note="Google, email + password, ya password reset. Success → Home; fail → toast, wahi rehte hain." badge="3 paths">
+    <Wrapper title="How signing in works" note="Three ways to sign in: Google, email &amp; password, or reset a forgotten password. Success takes you Home; if it fails, you stay and see a message." badge="3 ways">
       <Node tone="term" icon={<LogIn className="h-4 w-4" />} className="max-w-[320px]"><Title>User opens Sign In</Title></Node>
       <Conn />
       <Node icon={<GitBranch className="h-4 w-4" />}><Title>Choose a method</Title><Sub>Google · Email &amp; password · Forgot password</Sub></Node>
@@ -206,68 +192,67 @@ export function LoginFlow() {
   );
 }
 
-function Step({ n, title, sub, gate, state = "todo" }: { n: number; title: string; sub: ReactNode; gate: string; state?: "todo" | "active" | "done" }) {
-  const box =
-    state === "done" ? "border-emerald-300 bg-emerald-50/70"
-    : state === "active" ? "border-primary ring-2 ring-primary/25 bg-primary/[0.06]"
-    : "border-border bg-card opacity-70";
-  const badge =
-    state === "done" ? "bg-emerald-500 text-white"
-    : state === "active" ? "bg-festive text-white animate-pulse-glow"
-    : "bg-muted text-muted-foreground";
+type StepState = "todo" | "active" | "done";
+
+// One row of the registration timeline — a numbered dot on a connecting line.
+function TimelineStep({ n, icon, title, sub, state, last }: { n: number; icon: ReactNode; title: string; sub: ReactNode; state: StepState; last?: boolean }) {
+  const done = state === "done", active = state === "active";
   return (
-    <div className={`grid w-full max-w-[560px] grid-cols-[40px_1fr_auto] items-center gap-3 rounded-2xl border px-4 py-3 shadow-sm transition-all duration-300 ${box}`}>
-      <div className={`grid h-9 w-9 place-items-center rounded-full font-display text-sm font-bold shadow-soft ${badge}`}>{state === "done" ? <Check className="h-4 w-4" /> : n}</div>
-      <div className="min-w-0">
-        <div className="text-sm font-semibold">{title}</div>
-        <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>
+    <li className={`relative flex gap-4 ${last ? "" : "pb-4"}`}>
+      <span
+        className={`relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full font-display text-sm font-bold ring-4 ring-card transition-all ${
+          done ? "bg-emerald-500 text-white" : active ? "bg-festive text-white shadow-glow" : "border border-border bg-muted text-muted-foreground"
+        }`}
+      >
+        {done ? <Check className="h-5 w-5" strokeWidth={2.5} /> : n}
+      </span>
+      <div
+        className={`flex-1 rounded-2xl border p-4 transition-all ${
+          done ? "border-emerald-200 bg-emerald-50/60" : active ? "border-primary/40 bg-primary/[0.05] shadow-sm ring-2 ring-primary/15" : "border-border bg-card"
+        }`}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${done ? "bg-emerald-500/15 text-emerald-600" : active ? "bg-festive text-white" : "bg-primary/10 text-primary"}`}>
+            {icon}
+          </span>
+          <span className="font-display text-base font-bold leading-tight">{title}</span>
+          {active && <span className="ms-auto shrink-0 rounded-full bg-festive px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">You are here</span>}
+        </div>
+        <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{sub}</p>
       </div>
-      <div className={`inline-flex items-center gap-1 whitespace-nowrap rounded-lg border px-2.5 py-1 text-[11px] font-bold ${state === "done" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : state === "active" ? "border-primary/30 bg-primary/10 text-primary" : "border-border bg-muted/50 text-muted-foreground"}`}>
-        {state === "done" ? "done" : gate} {state !== "done" && <ArrowRight className="h-3 w-3" />}
-      </div>
-    </div>
+    </li>
   );
 }
 
 export function RegistrationFlow({ currentStep = -1 }: { currentStep?: number }) {
-  // wizard step index → flow step: 0 Personal · 1 Business · 2 Category · 3 Review · 4 Submitted
-  const st = (idx: number): "todo" | "active" | "done" =>
-    currentStep < 0 ? "todo" : currentStep > idx ? "done" : currentStep === idx ? "active" : "todo";
+  const steps: { icon: ReactNode; title: string; sub: ReactNode }[] = [
+    { icon: <User className="h-4 w-4" />, title: "Your details", sub: "Tell us who you are. Your full name and phone number are required — we’ll contact you on this number. City and email are optional." },
+    { icon: <Store className="h-4 w-4" />, title: "Your business", sub: "Your business name is required. Add how long you’ve been running and list what you sell (separate items with commas). A tagline, Instagram, and a logo are optional — the logo shows on your stall card." },
+    { icon: <LayoutGrid className="h-4 w-4" />, title: "Choose categories", sub: "Pick every category that fits what you sell — you can choose more than one. Then choose one or more sub-categories under it (required); this helps us place your stall in the right corner." },
+    { icon: <ClipboardCheck className="h-4 w-4" />, title: "Review & send", sub: "See all your details in one place, go back and fix anything, then tap Submit. There’s a registration fee, but you only pay it after you’re approved." },
+    { icon: <Trophy className="h-4 w-4" />, title: "You’re on the waiting list! 🎉", sub: "Your registration is saved. Sellers are chosen live in the draw ceremony — if your name is drawn you become a confirmed seller and get a stall, then you’re asked to pay the fee." },
+  ];
+  const stateFor = (i: number): StepState => {
+    if (i === 4) return currentStep >= 4 ? "done" : "todo";
+    if (currentStep < 0) return "todo";
+    return currentStep > i ? "done" : currentStep === i ? "active" : "todo";
+  };
   return (
-    <Wrapper title="Seller registration flow" route="/register" note="Guarded 5-step wizard. Har step required field bharne pe next unlock; Review step Firestore mein save karta hai." badge={currentStep >= 0 ? `Step ${Math.min(currentStep + 1, 5)} of 5` : undefined}>
-      <Node tone="decision" icon={<ShieldQuestion className="h-4 w-4" />}><Title>Signed in?</Title><Sub>route wrapped in <Fn>RequireAuth</Fn></Sub></Node>
-      <Conn short />
-      <div className="flex w-full max-w-[560px] flex-wrap justify-center gap-4">
-        <Lane label="No" tone="no" basis="220px">
-          <Outcome tone="err" title="Redirect to /login" sub="sign in, phir wapas" />
-        </Lane>
-        <Lane label="Yes" tone="yes" basis="220px">
-          <Outcome tone="ok" title="Enter the wizard" sub="Step 1 se start" />
-        </Lane>
+    <Wrapper
+      title="How to become a seller"
+      note="Just 5 easy steps — a couple of minutes, and no account needed. Fill each step and tap Continue; you can only move on once the required fields (marked *) are filled."
+      badge={currentStep >= 0 ? `Step ${Math.min(currentStep + 1, 5)} of 5` : undefined}
+    >
+      <div className="w-full max-w-[520px]">
+        <StepLegend />
+        <ol className="relative mt-3">
+          {/* the line that links the numbered dots */}
+          <span aria-hidden className="absolute bottom-6 left-5 top-6 w-0.5 -translate-x-1/2 bg-border" />
+          {steps.map((s, i) => (
+            <TimelineStep key={i} n={i + 1} icon={s.icon} title={s.title} sub={s.sub} state={stateFor(i)} last={i === steps.length - 1} />
+          ))}
+        </ol>
       </div>
-      <Conn />
-      <div className="flex w-full flex-col items-center gap-2">
-        <Step n={1} title="Personal details" sub="Full name * · Phone * · Email · City" gate="name + phone" state={st(0)} />
-        <Conn short />
-        <Step n={2} title="Business" sub="Business name * · tagline · years · Instagram · products" gate="business" state={st(1)} />
-        <Conn short />
-        <Step n={3} title="Category" sub="1+ category * · optional sub-category · live seller counts" gate="1+ chosen" state={st(2)} />
-        <Conn short />
-        <Step n={4} title="Review & submit" sub="Read-back + fee → createRegistration() → Firestore" gate="submit" state={st(3)} />
-      </div>
-      <Conn />
-      <Node tone="action" icon={<Database className="h-4 w-4" />}><Title>Save registration</Title><Sub><Fn>createRegistration()</Fn> → Firestore</Sub></Node>
-      <Conn short />
-      <div className="flex w-full max-w-[560px] flex-wrap justify-center gap-4">
-        <Lane label="Error" tone="no" basis="220px">
-          <Outcome tone="err" title="Couldn’t submit" sub="toast · stay on Review" />
-        </Lane>
-        <Lane label="Saved" tone="yes" basis="220px">
-          <Outcome tone="ok" title="🎉 Confetti + toast" sub="advance to Step 5" />
-        </Lane>
-      </div>
-      <Conn />
-      <Step n={5} title="You’re in — welcome!" sub="Success screen → My Registration or Home" gate="done" state={currentStep >= 4 ? "done" : "todo"} />
     </Wrapper>
   );
 }

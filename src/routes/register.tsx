@@ -30,11 +30,24 @@ export const Route = createFileRoute("/register")({
 
 const STEPS = ["reg.step.personal", "reg.step.business", "reg.step.category", "reg.step.review", "reg.step.submitted"];
 
+// Valid Pakistani mobile: 03XXXXXXXXX (11 digits) or +92 / 92 3XXXXXXXXX.
+// Spaces, dashes and parens are ignored before checking.
+const isValidPhone = (p: string) => /^(\+?92|0)3\d{9}$/.test(p.replace(/[\s\-()]/g, ""));
+
+// Persist the in-progress registration so an accidental refresh doesn't wipe it.
+const DRAFT_KEY = "amcho-register-draft-v1";
+function loadDraft(): { data?: Record<string, unknown>; step?: number } | null {
+  try { const s = localStorage.getItem(DRAFT_KEY); return s ? JSON.parse(s) : null; } catch { return null; }
+}
+
 function RegisterPage() {
   const { user } = useAuth();
   const { activeSeason } = useSeason();
   const { t } = useI18n();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() => {
+    const s = loadDraft()?.step; // restore where they left off (never the submitted screen)
+    return typeof s === "number" && s >= 0 && s < 4 ? s : 0;
+  });
   const [submitting, setSubmitting] = useState(false);
   const [catCounts, setCatCounts] = useState<Record<string, number>>({});
   const [fsCats, setFsCats] = useState<Category[]>([]);
@@ -61,30 +74,41 @@ function RegisterPage() {
       })
       .catch(() => {});
   }, [activeSeason?.id]);
-  const [data, setData] = useState({
-    fullName: "",
-    phone: "",
-    email: user?.email ?? "", // taken from the logged-in account, not entered manually
-    city: "Karachi",
-    business: "",
-    tagline: "",
-    yearsRunning: "",
-    instagram: "",
-    logoUrl: "",
-    products: "",
-    category: "",
-    categoryId: "",
-    categories: [] as string[],
-    categoryIds: [] as string[],
-    subcategory: "",
-    subcategoryId: "",
-    subcategories: [] as string[],
-    subcategoryIds: [] as string[],
+  const [data, setData] = useState(() => {
+    const base = {
+      fullName: "",
+      phone: "",
+      email: user?.email ?? "", // taken from the logged-in account, not entered manually
+      city: "Karachi",
+      business: "",
+      tagline: "",
+      yearsRunning: "",
+      instagram: "",
+      logoUrl: "",
+      products: "",
+      category: "",
+      categoryId: "",
+      categories: [] as string[],
+      categoryIds: [] as string[],
+      subcategory: "",
+      subcategoryId: "",
+      subcategories: [] as string[],
+      subcategoryIds: [] as string[],
+    };
+    const saved = loadDraft()?.data; // restore a refreshed draft, keeping the shape above
+    return saved ? { ...base, ...saved } : base;
   });
 
   function update<K extends keyof typeof data>(k: K, v: (typeof data)[K]) {
     setData((d) => ({ ...d, [k]: v }));
   }
+
+  // Auto-save the draft on every change so a refresh mid-flow doesn't lose anything.
+  // (Skip the final "submitted" step — the draft is cleared on success below.)
+  useEffect(() => {
+    if (step >= 4) return;
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ data, step })); } catch { /* storage full/blocked */ }
+  }, [data, step]);
 
   // Email always comes from the signed-in account (no manual field); sync if auth hydrates late.
   useEffect(() => {
@@ -169,6 +193,7 @@ function RegisterPage() {
             .map((p) => p.trim())
             .filter(Boolean),
         });
+        try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ } // draft submitted — clear it
         confetti({ particleCount: 160, spread: 90, origin: { y: 0.4 }, colors: ["#7A1E3D", "#F26B2A", "#FFC94A", "#1FA7A6"] });
         toast.success(t("reg.toast.submitted"));
         setStep(4);
@@ -188,7 +213,7 @@ function RegisterPage() {
   // Sub-categories available for the chosen category (drives the required check below).
   const selCatSubs = data.categoryIds.length ? subs.filter((s) => data.categoryIds.includes(s.categoryId)) : [];
   const canContinue =
-    (step === 0 && data.fullName.trim() && data.phone.trim()) ||
+    (step === 0 && data.fullName.trim() && isValidPhone(data.phone)) ||
     (step === 1 && data.business.trim() && data.yearsRunning.trim() && data.products.trim()) ||
     (step === 2 && data.categories.length > 0 && (selCatSubs.length === 0 || data.subcategoryIds.length > 0)) ||
     step === 3;
@@ -345,7 +370,10 @@ function StepPersonal({ data, update }: any) {
           <input value={data.fullName} onChange={(e) => update("fullName", e.target.value)} autoComplete="name" className={inputCls} placeholder="Ayesha Sherif" />
         </Field>
         <Field label={t("reg.f.phone")} required>
-          <input value={data.phone} onChange={(e) => update("phone", e.target.value)} type="tel" inputMode="tel" autoComplete="tel" className={inputCls} placeholder="+91 98800 12345" />
+          <input value={data.phone} onChange={(e) => update("phone", e.target.value)} type="tel" inputMode="tel" autoComplete="tel" className={inputCls} placeholder="03XX XXXXXXX" />
+          {data.phone.trim() && !isValidPhone(data.phone) && (
+            <span className="mt-1 block text-xs font-medium text-destructive">{t("reg.f.phoneError")}</span>
+          )}
         </Field>
         <Field label={t("reg.f.email")}>
           <input value={data.email} onChange={(e) => update("email", e.target.value)} type="email" inputMode="email" autoComplete="email" className={inputCls} placeholder="ayesha@example.com" />

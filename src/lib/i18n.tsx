@@ -264,6 +264,7 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
   "reg.personal.sub": { en: "A few personal details so we can reach you on the day.", ur: "چند ذاتی تفصیلات تاکہ ہم اس دن آپ سے رابطہ کر سکیں۔", "ur-roman": "Chand zaati tafseelat taake hum us din aap se rabta kar sakein.", hi: "कुछ व्यक्तिगत विवरण ताकि हम उस दिन आपसे संपर्क कर सकें।", ar: "بعض التفاصيل الشخصية لنتواصل معك في اليوم." },
   "reg.f.fullName": { en: "Full name", ur: "پورا نام", "ur-roman": "Poora naam", hi: "पूरा नाम", ar: "الاسم الكامل" },
   "reg.f.phone":    { en: "Phone (WhatsApp)", ur: "فون (واٹس ایپ)", "ur-roman": "Phone (WhatsApp)", hi: "फ़ोन (व्हाट्सएप)", ar: "الهاتف (واتساب)" },
+  "reg.f.phoneError": { en: "Enter a valid number.", ur: "درست نمبر درج کریں۔", "ur-roman": "Sahi number darj karein.", hi: "मान्य नंबर दर्ज करें।", ar: "أدخلي رقمًا صالحًا." },
   "reg.f.email":    { en: "Email", ur: "ای میل", "ur-roman": "Email", hi: "ईमेल", ar: "البريد الإلكتروني" },
   "reg.f.city":     { en: "City", ur: "شہر", "ur-roman": "Sheher", hi: "शहर", ar: "المدينة" },
 
