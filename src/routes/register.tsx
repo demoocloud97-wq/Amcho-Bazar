@@ -83,6 +83,8 @@ function RegisterPage() {
     categoryIds: [] as string[],
     subcategory: "",
     subcategoryId: "",
+    subcategories: [] as string[],
+    subcategoryIds: [] as string[],
   });
 
   function update<K extends keyof typeof data>(k: K, v: (typeof data)[K]) {
@@ -108,18 +110,28 @@ function RegisterPage() {
     }).catch(() => {});
   }, [user?.uid, user?.displayName]);
 
-  // Toggle a category in/out of the multi-select; keep primary = first chosen.
+  // Single-select category: choosing one replaces any prior choice (and resets its
+  // sub-categories). Clicking the selected one again clears it.
   function toggleCategory(name: string, id: string) {
     setData((d) => {
       const has = d.categories.includes(name);
-      const categories = has ? d.categories.filter((c) => c !== name) : [...d.categories, name];
-      let categoryIds = d.categoryIds.filter(Boolean);
-      if (id) categoryIds = has ? categoryIds.filter((x) => x !== id) : [...categoryIds, id];
+      const cleared = { subcategory: "", subcategoryId: "", subcategories: [] as string[], subcategoryIds: [] as string[] };
+      if (has) return { ...d, categories: [], categoryIds: [], category: "", categoryId: "", ...cleared };
+      return { ...d, categories: [name], categoryIds: id ? [id] : [], category: name, categoryId: id ?? "", ...cleared };
+    });
+  }
+
+  // Toggle a sub-category in/out of the multi-select; keep primary = first chosen.
+  function toggleSubcategory(name: string, id: string) {
+    setData((d) => {
+      const has = d.subcategories.includes(name);
+      const subcategories = has ? d.subcategories.filter((s) => s !== name) : [...d.subcategories, name];
+      let subcategoryIds = d.subcategoryIds.filter(Boolean);
+      if (id) subcategoryIds = has ? subcategoryIds.filter((x) => x !== id) : [...subcategoryIds, id];
       return {
-        ...d, categories, categoryIds,
-        category: categories[0] ?? "",
-        categoryId: categoryIds[0] ?? "",
-        subcategory: "", subcategoryId: "",
+        ...d, subcategories, subcategoryIds,
+        subcategory: subcategories[0] ?? "",
+        subcategoryId: subcategoryIds[0] ?? "",
       };
     });
   }
@@ -146,6 +158,8 @@ function RegisterPage() {
           categoryIds: data.categoryIds.length ? data.categoryIds : undefined,
           subcategoryId: data.subcategoryId || undefined,
           subcategory: data.subcategory || undefined,
+          subcategoryIds: data.subcategoryIds.length ? data.subcategoryIds : undefined,
+          subcategories: data.subcategories.length ? data.subcategories : undefined,
           phone: data.phone,
           email: data.email || user?.email || "",
           logoUrl: data.logoUrl || undefined,
@@ -170,10 +184,12 @@ function RegisterPage() {
     setStep((s) => Math.max(0, s - 1));
   }
 
+  // Sub-categories available for the chosen category (drives the required check below).
+  const selCatSubs = data.categoryIds.length ? subs.filter((s) => data.categoryIds.includes(s.categoryId)) : [];
   const canContinue =
     (step === 0 && data.fullName.trim() && data.phone.trim()) ||
     (step === 1 && data.business.trim() && data.yearsRunning.trim() && data.products.trim()) ||
-    (step === 2 && data.categories.length > 0) ||
+    (step === 2 && data.categories.length > 0 && (selCatSubs.length === 0 || data.subcategoryIds.length > 0)) ||
     step === 3;
 
   // Registration follows the active season's status: open only when RegistrationOpen.
@@ -263,7 +279,7 @@ function RegisterPage() {
                 <StepBusiness data={data} update={update} />
               )}
               {step === 2 && (
-                <StepCategory data={data} update={update} toggleCategory={toggleCategory} counts={catCounts} seasonName={activeSeason?.seasonName} fsCats={fsCats} subs={subs} />
+                <StepCategory data={data} update={update} toggleCategory={toggleCategory} toggleSubcategory={toggleSubcategory} counts={catCounts} seasonName={activeSeason?.seasonName} fsCats={fsCats} subs={subs} />
               )}
               {step === 3 && <StepReview data={data} />}
               {step === 4 && <StepSubmitted />}
@@ -377,14 +393,17 @@ function StepBusiness({ data, update }: any) {
         </Field>
         {cloudinaryReady && (
           <div className="md:col-span-2">
-            <Field label={t("reg.f.logo")} hint={t("reg.f.logoHint")}>
+            {/* Not a <label> (Field): a label forwards clicks to its nested button, so
+                clicking the preview would remove the logo. Only the ✕ should remove it. */}
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("reg.f.logo")}</span>
+            <div>
               <div className="flex items-center gap-4">
                 {data.logoUrl ? (
                   <div className="relative">
                     <img src={data.logoUrl} alt="" className="h-16 w-16 rounded-2xl border border-border object-cover" />
                     <button
                       type="button"
-                      onClick={() => update("logoUrl", "")}
+                      onClick={(e) => { e.stopPropagation(); update("logoUrl", ""); }}
                       aria-label="Remove logo"
                       className="absolute -right-2 -top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-white shadow-soft"
                     >
@@ -399,7 +418,8 @@ function StepBusiness({ data, update }: any) {
                   </label>
                 )}
               </div>
-            </Field>
+              <span className="mt-1 block text-xs text-muted-foreground/80">{t("reg.f.logoHint")}</span>
+            </div>
           </div>
         )}
         <div className="md:col-span-2">
@@ -412,7 +432,7 @@ function StepBusiness({ data, update }: any) {
   );
 }
 
-function StepCategory({ data, update, toggleCategory, counts, seasonName, fsCats, subs }: { data: any; update: any; toggleCategory: (name: string, id: string) => void; counts: Record<string, number>; seasonName?: string; fsCats: Category[]; subs: SubCategory[] }) {
+function StepCategory({ data, update, toggleCategory, toggleSubcategory, counts, seasonName, fsCats, subs }: { data: any; update: any; toggleCategory: (name: string, id: string) => void; toggleSubcategory: (name: string, id: string) => void; counts: Record<string, number>; seasonName?: string; fsCats: Category[]; subs: SubCategory[] }) {
   const { t } = useI18n();
   // Prefer real Firestore categories (so a chosen category has a known id and its
   // sub-categories link reliably); fall back to the static list if none exist.
@@ -456,19 +476,16 @@ function StepCategory({ data, update, toggleCategory, counts, seasonName, fsCats
       {data.categories.length > 0 && catSubs.length > 0 && (
         <div className="mt-8">
           <h3 className="font-display text-lg font-semibold">
-            {t("reg.sub.h3")} <span className="text-sm font-normal text-muted-foreground">{t("reg.sub.optional")}</span>
+            {t("reg.sub.h3")} <span className="text-sm font-semibold text-destructive">*</span> <span className="text-xs font-normal text-muted-foreground">{t("reg.sub.pickAll")}</span>
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">{t("reg.sub.help")}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {catSubs.map((s) => {
-              const on = data.subcategoryId === s.id;
+              const on = data.subcategoryIds.includes(s.id);
               return (
                 <button
                   key={s.id}
-                  onClick={() => {
-                    if (on) { update("subcategory", ""); update("subcategoryId", ""); }
-                    else { update("subcategory", s.name); update("subcategoryId", s.id!); }
-                  }}
+                  onClick={() => toggleSubcategory(s.name, s.id!)}
                   className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                     on ? "border-transparent bg-festive text-white shadow-soft" : "border-border bg-white/70 hover:border-primary/30 hover:text-primary"
                   }`}
@@ -491,7 +508,7 @@ function StepReview({ data }: any) {
   const rows = [
     [t("reg.row.name"), data.fullName], [t("reg.row.phone"), data.phone], [t("reg.row.email"), data.email], [t("reg.row.city"), data.city],
     [t("reg.row.business"), data.business], [t("reg.row.tagline"), data.tagline], [t("reg.row.years"), data.yearsRunning], [t("reg.row.instagram"), data.instagram],
-    [t("reg.row.products"), data.products], [t("reg.row.categories"), (data.categories || []).join(", ")], [t("reg.row.subcategory"), data.subcategory],
+    [t("reg.row.products"), data.products], [t("reg.row.categories"), (data.categories || []).join(", ")], [t("reg.row.subcategory"), (data.subcategories || []).join(", ") || data.subcategory],
   ];
   return (
     <div>

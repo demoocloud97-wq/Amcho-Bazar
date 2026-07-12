@@ -33,8 +33,10 @@ export type Registration = {
   categoryId?: string;     // primary category doc id
   categories?: string[];   // all chosen category names (multi-select)
   categoryIds?: string[];  // all chosen category doc ids
-  subcategoryId?: string; // chosen sub-category (of the category), if any
+  subcategoryId?: string; // primary (first) sub-category doc id
   subcategory?: string;   // its name (for display)
+  subcategories?: string[];  // all chosen sub-category names (multi-select)
+  subcategoryIds?: string[]; // all chosen sub-category doc ids
   phone: string;
   email?: string;
   logoUrl?: string; // Cloudinary URL of the business logo, if uploaded
@@ -71,6 +73,8 @@ export async function createRegistration(
   if (data.categoryIds?.length) payload.categoryIds = data.categoryIds;
   if (data.subcategoryId) payload.subcategoryId = data.subcategoryId;
   if (data.subcategory) payload.subcategory = data.subcategory;
+  if (data.subcategoryIds?.length) payload.subcategoryIds = data.subcategoryIds;
+  if (data.subcategories?.length) payload.subcategories = data.subcategories;
   if (data.tagline) payload.tagline = data.tagline;
   if (data.yearsRunning) payload.yearsRunning = data.yearsRunning;
   if (data.instagram) payload.instagram = data.instagram;

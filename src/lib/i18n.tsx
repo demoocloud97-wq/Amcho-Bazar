@@ -281,13 +281,14 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
   "reg.f.sellHint":     { en: "Comma-separated is perfect.", ur: "کوما سے الگ کریں تو بہترین۔", "ur-roman": "Comma se alag karein to behtareen.", hi: "अल्पविराम से अलग करना उत्तम है।", ar: "الفصل بفواصل مثالي." },
 
   "reg.category.h2":  { en: "Choose your categories", ur: "اپنے زمرے منتخب کریں", "ur-roman": "Apne zumre muntakhab karein", hi: "अपनी श्रेणियाँ चुनें", ar: "اختاري فئاتك" },
-  "reg.category.pick":{ en: "Pick one or more.", ur: "ایک یا زیادہ منتخب کریں۔", "ur-roman": "Ek ya zyada muntakhab karein.", hi: "एक या अधिक चुनें।", ar: "اختاري واحدة أو أكثر." },
+  "reg.category.pick":{ en: "Pick one.", ur: "ایک منتخب کریں۔", "ur-roman": "Ek muntakhab karein.", hi: "एक चुनें।", ar: "اختاري واحدة." },
   "reg.category.selected": { en: "selected.", ur: "منتخب۔", "ur-roman": "selected.", hi: "चयनित।", ar: "مُختارة." },
   "reg.category.countsFor":{ en: "Counts shown are for", ur: "دکھائے گئے اعداد اس کے لیے ہیں", "ur-roman": "Dikhaye gaye counts is ke liye hain", hi: "दिखाए गए आँकड़े इसके लिए हैं", ar: "الأعداد المعروضة تخصّ" },
   "reg.seller":     { en: "seller", ur: "بیچنے والی", "ur-roman": "seller", hi: "विक्रेता", ar: "بائعة" },
   "reg.sellers":    { en: "sellers", ur: "بیچنے والیاں", "ur-roman": "sellers", hi: "विक्रेता", ar: "بائعات" },
   "reg.sub.h3":     { en: "Choose a sub-category", ur: "ایک ذیلی زمرہ منتخب کریں", "ur-roman": "Ek zaili zumra muntakhab karein", hi: "एक उप-श्रेणी चुनें", ar: "اختاري فئة فرعية" },
   "reg.sub.optional":{ en: "(optional)", ur: "(اختیاری)", "ur-roman": "(optional)", hi: "(वैकल्पिक)", ar: "(اختياري)" },
+  "reg.sub.pickAll": { en: "select all that apply", ur: "جو لاگو ہوں سب منتخب کریں", "ur-roman": "jo laagu hon sab select karein", hi: "जो लागू हों सभी चुनें", ar: "اختاري كل ما ينطبق" },
   "reg.sub.help":   { en: "Helps us place your stall in the right corner.", ur: "آپ کے اسٹال کو صحیح کونے میں رکھنے میں مدد کرتا ہے۔", "ur-roman": "Aap ke stall ko sahih kone mein rakhne mein madad karta hai.", hi: "आपके स्टॉल को सही कोने में रखने में मदद करता है।", ar: "يساعدنا على وضع كشكك في الركن المناسب." },
 
   "reg.review.h2":  { en: "Review your registration", ur: "اپنی رجسٹریشن کا جائزہ لیں", "ur-roman": "Apni registration ka jaiza lein", hi: "अपने पंजीकरण की समीक्षा करें", ar: "راجعي تسجيلك" },

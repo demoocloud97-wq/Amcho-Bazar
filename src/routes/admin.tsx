@@ -232,7 +232,7 @@ function AdminPage() {
     };
     const rows = registrations.map((r) => [
       r.seller, r.business, r.tagline ?? "", r.yearsRunning ?? "", r.instagram ?? "", r.city ?? "",
-      r.categories?.length ? r.categories.join(" | ") : r.category, r.subcategory ?? "",
+      r.categories?.length ? r.categories.join(" | ") : r.category, r.subcategories?.length ? r.subcategories.join(" | ") : (r.subcategory ?? ""),
       r.phone, r.email ?? "", (r.products ?? []).join(" | "), r.status, r.season ?? "",
     ].map(esc).join(","));
     const csv = "﻿" + [cols.join(","), ...rows].join("\n"); // BOM so Excel reads UTF-8
