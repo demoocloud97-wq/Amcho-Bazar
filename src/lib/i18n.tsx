@@ -281,7 +281,7 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
   "reg.f.sellHint":     { en: "Comma-separated is perfect.", ur: "کوما سے الگ کریں تو بہترین۔", "ur-roman": "Comma se alag karein to behtareen.", hi: "अल्पविराम से अलग करना उत्तम है।", ar: "الفصل بفواصل مثالي." },
 
   "reg.category.h2":  { en: "Choose your categories", ur: "اپنے زمرے منتخب کریں", "ur-roman": "Apne zumre muntakhab karein", hi: "अपनी श्रेणियाँ चुनें", ar: "اختاري فئاتك" },
-  "reg.category.pick":{ en: "Pick one.", ur: "ایک منتخب کریں۔", "ur-roman": "Ek muntakhab karein.", hi: "एक चुनें।", ar: "اختاري واحدة." },
+  "reg.category.pick":{ en: "Pick one or more.", ur: "ایک یا زیادہ منتخب کریں۔", "ur-roman": "Ek ya zyada muntakhab karein.", hi: "एक या अधिक चुनें।", ar: "اختاري واحدة أو أكثر." },
   "reg.category.selected": { en: "selected.", ur: "منتخب۔", "ur-roman": "selected.", hi: "चयनित।", ar: "مُختارة." },
   "reg.category.countsFor":{ en: "Counts shown are for", ur: "دکھائے گئے اعداد اس کے لیے ہیں", "ur-roman": "Dikhaye gaye counts is ke liye hain", hi: "दिखाए गए आँकड़े इसके लिए हैं", ar: "الأعداد المعروضة تخصّ" },
   "reg.seller":     { en: "seller", ur: "بیچنے والی", "ur-roman": "seller", hi: "विक्रेता", ar: "بائعة" },

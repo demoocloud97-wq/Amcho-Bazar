@@ -105,14 +105,20 @@ function RegisterPage() {
     }).catch(() => {});
   }, [user?.uid, user?.displayName]);
 
-  // Single-select category: choosing one replaces any prior choice (and resets its
-  // sub-categories). Clicking the selected one again clears it.
+  // Toggle a category in/out of the multi-select; keep primary = first chosen.
+  // Reset sub-categories whenever the category set changes.
   function toggleCategory(name: string, id: string) {
     setData((d) => {
       const has = d.categories.includes(name);
-      const cleared = { subcategory: "", subcategoryId: "", subcategories: [] as string[], subcategoryIds: [] as string[] };
-      if (has) return { ...d, categories: [], categoryIds: [], category: "", categoryId: "", ...cleared };
-      return { ...d, categories: [name], categoryIds: id ? [id] : [], category: name, categoryId: id ?? "", ...cleared };
+      const categories = has ? d.categories.filter((c) => c !== name) : [...d.categories, name];
+      let categoryIds = d.categoryIds.filter(Boolean);
+      if (id) categoryIds = has ? categoryIds.filter((x) => x !== id) : [...categoryIds, id];
+      return {
+        ...d, categories, categoryIds,
+        category: categories[0] ?? "",
+        categoryId: categoryIds[0] ?? "",
+        subcategory: "", subcategoryId: "", subcategories: [], subcategoryIds: [],
+      };
     });
   }
 
