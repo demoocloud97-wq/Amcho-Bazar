@@ -79,6 +79,7 @@ function DrawPage() {
   const candidatesRef = useRef<Candidate[]>([]); // latest candidates for the fast loop
   const spinRegIdRef = useRef<string | null>(null); // applicant cell the picker is currently on
   const regByIdRef = useRef<Map<string, Registration>>(new Map()); // full registrations, to approve a winner
+  const runningRef = useRef(false); // latest running flag (chained runOne avoids the stale closure)
 
   useEffect(() => { getDrawNonStop().then(setNonStop).catch(() => {}); }, []);
   useEffect(() => { getDrawLive().then(setLive).catch(() => {}); }, []);
@@ -104,6 +105,7 @@ function DrawPage() {
   }
   useEffect(() => { selectedRef.current = selected; }, [selected]);
   useEffect(() => { candidatesRef.current = candidates; }, [candidates]);
+  useEffect(() => { runningRef.current = running; }, [running]);
 
   // One-time per season: load already-saved draw picks and reset the machine.
   useEffect(() => {
@@ -195,21 +197,31 @@ function DrawPage() {
   }
 
   function runOne() {
-    if (selected.length >= TARGET || available.length === 0) {
-      setPhase(selected.length >= TARGET ? "done" : "idle");
+    // Read the LATEST picks/pool from refs so each chained pick excludes prior winners
+    // (a closure over `available`/`selected` would freeze at ceremony start).
+    const cur = selectedRef.current;
+    const usedIds = new Set(cur.map((s) => s.id));
+    const avail = candidatesRef.current.filter((c) => !usedIds.has(c.id));
+    if (cur.length >= TARGET || avail.length === 0) {
+      setPhase(cur.length >= TARGET ? "done" : "idle");
       setRunning(false);
       return;
     }
+    const prevWinnerId = cur[0]?.id ?? null; // the last winner — the next spin starts from its cell
     // Spin for exactly the admin-set countdown (Settings → Live Draw) so the public
     // countdown reaches 1 as the winner reveals.
     const spinMs = Math.max(1, countdownRef.current) * 1000;
     setPhase("spinning");
+    setCurrent(null); // drop the lingering winner glow…
+    // …and start the picker ON that winner's cell so the spin visibly leaves it.
+    spinRegIdRef.current = prevWinnerId;
+    setSpinRegId(prevWinnerId);
     if (seasonId) setPoolSpinning(seasonId, true).catch(() => {}); // public map starts hopping now
     let ticks = 0;
     const maxTicks = Math.round(spinMs / 300);
     const spinId = window.setInterval(() => {
       // Hop across random not-yet-won applicant cells so the picker visibly "runs".
-      const pick = available[Math.floor(Math.random() * available.length)];
+      const pick = avail[Math.floor(Math.random() * avail.length)];
       if (pick) {
         setReel({ seller: pick.seller, business: pick.business });
         spinRegIdRef.current = pick.id;
@@ -223,11 +235,11 @@ function DrawPage() {
     addTimer(() => {
       // The dart lands on the applicant whose cell the spin came to rest on.
       const landed = spinRegIdRef.current;
-      const winner = available.find((c) => c.id === landed) ?? available[Math.floor(Math.random() * available.length)];
+      const winner = avail.find((c) => c.id === landed) ?? avail[Math.floor(Math.random() * avail.length)];
       const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const s: Selected = {
-        order: selected.length + 1,
-        stallNo: selected.length + 1, // sequential stall number, kept for the directory
+        order: cur.length + 1,
+        stallNo: cur.length + 1, // sequential stall number, kept for the directory
         seller: winner.seller,
         business: winner.business,
         category: winner.category,
@@ -235,6 +247,8 @@ function DrawPage() {
         id: winner.id,
         at: nowStr,
       };
+      const next = [s, ...cur];
+      selectedRef.current = next; // update the ref now so the NEXT runOne excludes this winner
       setSpinRegId(null);
       if (seasonId) setPoolSpinning(seasonId, false).catch(() => {}); // stop the public hop; winner reveals
       setCurrent(s);        // dart now strikes this applicant's cell on the venue map
@@ -246,11 +260,12 @@ function DrawPage() {
       const HOLD = 1400;
       addTimer(() => { fireConfetti(); setShowWinner(true); }, HOLD);
       addTimer(() => {
-        setSelected((prev) => [s, ...prev]);
-        setCurrent(null);
+        setSelected(next);
         setShowWinner(false);
         setPhase("idle");
-        if (running) addTimer(runOne, 800);
+        // Keep `current` = winner so its cell stays glowing until the admin clicks
+        // Continue (which clears it and starts the next pick). Non-Stop still auto-chains.
+        if (runningRef.current) { setCurrent(null); addTimer(runOne, 800); }
       }, HOLD + 3400);
     }, spinMs); // spin lasts the admin-set countdown so the public count reaches 1 at reveal
   }
@@ -265,7 +280,8 @@ function DrawPage() {
       toast.error(candidates.length === 0 ? t("draw.noRegs") : t("draw.allAssigned"));
       return;
     }
-    setRunning(true);
+    // Single step: one pick per click. runOne won't auto-chain (running stays false);
+    // the button disables during the pick, then returns as "Continue" for the next.
     runOne();
   }
 
@@ -789,6 +805,7 @@ function SimpleStallGrid({
               }}
             >
               <span className="line-clamp-2 text-[10px] font-bold leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">{r.business}</span>
+              {r.seller && <span className="line-clamp-1 text-[9px] font-medium leading-tight opacity-75">{r.seller}</span>}
               {won && <span className="text-[8px] font-semibold tabular-nums opacity-80">#{info!.stallNo.toString().padStart(2, "0")}</span>}
             </motion.div>
             {/* Thrown dart — strikes the winning applicant's cell */}

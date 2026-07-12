@@ -142,10 +142,11 @@ export function MainMenu() {
           </>
         )}
 
-        {/* Live draw — reachable from the mobile menu (the header nav is desktop-only).
-            Admins always see it (they run it); everyone else only while it's broadcasting. */}
+        {/* Live draw — only when the header's inline nav is hidden (mobile); on desktop
+            the header already shows it, so md:hidden avoids a duplicate. Admins always
+            see it (they run it); everyone else only while it's broadcasting. */}
         {(isAdmin || drawLive) && (
-          <>
+          <div className="md:hidden">
             <DropdownMenuItem asChild className={`${ROW} font-semibold text-secondary focus:bg-secondary/10 focus:text-secondary`}>
               <Link to={isAdmin ? "/draw" : "/present"}>
                 <span className="relative grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-festive text-white">
@@ -156,7 +157,7 @@ export function MainMenu() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-          </>
+          </div>
         )}
 
         {isAdmin ? (

@@ -388,6 +388,7 @@ function VenueMap({ pool, wonById, currentId, hopId, fallbackTotal }: { pool: Po
                 }}
               >
                 <span className="line-clamp-2 text-[9px] font-bold leading-tight md:text-[10px]">{a.business}</span>
+                {a.seller && <span className="line-clamp-1 text-[8px] font-medium leading-tight opacity-75 md:text-[9px]">{a.seller}</span>}
                 {won && <span className="text-[7px] font-semibold tabular-nums opacity-80">#{info!.stallNo.toString().padStart(2, "0")}</span>}
               </div>
             );
