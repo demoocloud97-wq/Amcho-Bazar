@@ -225,7 +225,7 @@ function AdminPage() {
   // Export every seller's full details for this season as a CSV (opens in Excel).
   function exportCsv() {
     if (registrations.length === 0) { toast.message(t("adm.noRegs")); return; }
-    const cols = ["Seller", "Business", "Tagline", "Years", "Instagram", "City", "Category", "Sub-category", "Phone", "Email", "Products", "Status", "Season"];
+    const cols = ["Owner", "Business", "Tagline", "Years", "Instagram", "City", "Category", "Sub-category", "Phone", "Email", "Products", "Status", "Season"];
     const esc = (v: unknown) => {
       const s = v == null ? "" : String(v);
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;

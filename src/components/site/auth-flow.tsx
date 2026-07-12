@@ -192,7 +192,7 @@ export function RegistrationFlow({ currentStep = -1 }: { currentStep?: number })
     { icon: <Store className="h-4 w-4" />, title: "Your business", sub: "Your business name is required. Add how long you’ve been running and list what you sell (separate items with commas). A tagline, Instagram, and a logo are optional — the logo shows on your stall card." },
     { icon: <LayoutGrid className="h-4 w-4" />, title: "Choose categories", sub: "Pick every category that fits what you sell — you can choose more than one. Then choose one or more sub-categories under it (required); this helps us place your stall in the right corner." },
     { icon: <ClipboardCheck className="h-4 w-4" />, title: "Review & send", sub: "See all your details in one place, go back and fix anything, then tap Submit. There’s a registration fee, but you only pay it after you’re approved." },
-    { icon: <Trophy className="h-4 w-4" />, title: "You’re on the waiting list! 🎉", sub: "Your registration is saved. Sellers are chosen live in the draw ceremony — if your name is drawn you become a confirmed seller and get a stall, then you’re asked to pay the fee." },
+    { icon: <Trophy className="h-4 w-4" />, title: "You’re on the waiting list! 🎉", sub: "Your registration is saved. Owners are chosen live in the draw ceremony — if your name is drawn you become a confirmed stall owner and get a stall, then you’re asked to pay the fee." },
   ];
   const stateFor = (i: number): StepState => {
     if (i === 4) return currentStep >= 4 ? "done" : "todo";
@@ -201,7 +201,7 @@ export function RegistrationFlow({ currentStep = -1 }: { currentStep?: number })
   };
   return (
     <Wrapper
-      title="How to become a seller"
+      title="How to become a stall owner"
       note="Just 5 easy steps — a couple of minutes, and no account needed. Fill each step and tap Continue; you can only move on once the required fields (marked *) are filled."
       badge={currentStep >= 0 ? `Step ${Math.min(currentStep + 1, 5)} of 5` : undefined}
     >

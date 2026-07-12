@@ -10,6 +10,7 @@ import { watchDrawPool, type PoolApplicant } from "@/lib/draw-pool-db";
 import { watchDrawSpeed, watchDrawCountdown } from "@/lib/settings-db";
 import { colorFor } from "@/lib/category-colors";
 import { Dartboard, RedDart } from "@/components/site/dartboard";
+import { StallArena, type Selected } from "./draw";
 import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/present")({
@@ -54,8 +55,8 @@ function PresentationPage() {
     () => seasons.find((s) => s.id === seasonParam) ?? activeSeason ?? season,
     [seasons, seasonParam, activeSeason, season]
   );
-  const target = show?.maximumSelectedStalls ?? EVENT.totalWinners;
-  const totalStalls = show?.maximumStalls ?? EVENT.totalStalls;
+  const target = show && show.maximumSelectedStalls > 0 ? show.maximumSelectedStalls : EVENT.totalWinners;
+  const totalStalls = show && show.maximumStalls > 0 ? show.maximumStalls : EVENT.totalStalls;
 
   const [results, setResults] = useState<DrawResult[]>([]);
   const [pool, setPool] = useState<PoolApplicant[]>([]); // all applicants — the live-map cells (by name)
@@ -155,8 +156,16 @@ function PresentationPage() {
   }, [results, shownCount, revealing, current]);
   // The cell being drawn glows through the whole reveal sequence.
   const currentId = current?.candidateId ?? null;
-  const history = useMemo(() => results.slice(0, shownCount).slice(-5).reverse(), [results, shownCount]);
-  const complete = target > 0 && shownCount >= target && phase === "idle";
+  // Draw order — first winner first (matches the admin live feed).
+  const history = useMemo(() => results.slice(0, shownCount), [results, shownCount]);
+  const denom = pool.length || target; // progress shown against how many actually registered
+  // "Complete" = every possible pick is done — target reached, or the whole pool drawn if fewer registered.
+  const complete = shownCount > 0 && shownCount >= Math.min(target, denom) && phase === "idle";
+  // Winners mapped to the arena's shape — rendered on the stage once every pick is done.
+  const arenaSelected = useMemo<Selected[]>(
+    () => results.map((r) => ({ order: r.order, stallNo: r.stallNo, seller: r.seller, business: r.business, category: r.category, avatar: "", id: r.candidateId, at: r.at })),
+    [results]
+  );
 
   function goFullscreen() {
     document.documentElement.requestFullscreen?.().catch(() => {});
@@ -193,7 +202,7 @@ function PresentationPage() {
           <div className="rounded-2xl border border-white/15 bg-white/[0.07] px-4 py-2 text-right backdrop-blur-xl">
             <div className="text-[9px] font-semibold uppercase tracking-[0.35em] text-white/55 md:text-[10px]">{t("present.progress")}</div>
             <div className="font-display text-2xl font-black tabular-nums leading-none md:text-4xl">
-              {doneCount}<span className="text-white/40">/{target}</span>
+              {doneCount}<span className="text-white/40">/{denom}</span>
             </div>
           </div>
           <button
@@ -210,14 +219,14 @@ function PresentationPage() {
       <div className="relative z-10 mx-6 h-1.5 overflow-hidden rounded-full bg-white/10 md:mx-10">
         <motion.div
           className="h-full rounded-full bg-gradient-to-r from-primary via-secondary to-accent"
-          animate={{ width: `${target ? (doneCount / target) * 100 : 0}%` }}
+          animate={{ width: `${denom ? (doneCount / denom) * 100 : 0}%` }}
           transition={{ type: "spring", stiffness: 120, damping: 20 }}
         />
       </div>
 
       {/* MAIN — stage + venue/history */}
       <main className="relative z-10 grid flex-1 gap-5 p-6 md:gap-6 md:p-10 lg:grid-cols-[1.55fr_1fr]">
-        <Stage phase={phase} count={count} current={current} complete={complete} target={target} spinning={spinning} preCount={preCount} />
+        <Stage phase={phase} count={count} current={current} complete={complete} target={target} spinning={spinning} preCount={preCount} arenaSelected={arenaSelected} totalStalls={totalStalls} />
 
         <aside className="flex min-h-0 flex-col gap-5">
           <VenueMap pool={pool} wonById={wonById} currentId={currentId} hopId={hopId} fallbackTotal={totalStalls} />
@@ -229,17 +238,31 @@ function PresentationPage() {
 }
 
 /* ============ STAGE ============ */
-function Stage({ phase, count, current, complete, target, spinning, preCount }: { phase: Phase; count: number; current: DrawResult | null; complete: boolean; target: number; spinning: boolean; preCount: number }) {
+function Stage({ phase, count, current, complete, target, spinning, preCount, arenaSelected, totalStalls }: { phase: Phase; count: number; current: DrawResult | null; complete: boolean; target: number; spinning: boolean; preCount: number; arenaSelected: Selected[]; totalStalls: number }) {
   const { t } = useI18n();
   const palette = current ? colorFor(current.category) : null;
+  const centered = !complete; // arena fills the card; other states stay centred
   return (
-    <section className="relative flex items-center justify-center rounded-[40px] border border-white/15 bg-black/25 p-6 backdrop-blur-xl md:p-10">
+    <section className={`relative flex rounded-[40px] border border-white/15 bg-black/25 p-6 backdrop-blur-xl md:p-10 ${centered ? "items-center justify-center" : "items-stretch"}`}>
       <AnimatePresence mode="wait">
         {complete ? (
-          <motion.div key="complete" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
-            <Trophy className="mx-auto h-16 w-16 text-accent md:h-24 md:w-24" />
-            <div className="mt-4 font-display text-4xl font-black md:text-6xl">{t("present.allAssigned").replace("{target}", String(target))}</div>
-            <div className="mt-2 font-script text-2xl text-accent md:text-3xl">{t("present.tagline")}</div>
+          <motion.div key="complete" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="w-full">
+            <div className="mb-4 text-center">
+              <div className="inline-flex items-center gap-2 rounded-full bg-accent/20 px-4 py-1.5 text-sm font-semibold uppercase tracking-widest text-accent md:text-base">
+                <Trophy className="h-5 w-5" /> {t("present.allAssigned").replace("{target}", String(target))}
+              </div>
+            </div>
+            <StallArena
+              done
+              controls={false}
+              total={totalStalls}
+              target={target}
+              regs={[]}
+              selectedIds={new Set(arenaSelected.map((s) => s.id))}
+              usedStalls={new Set(arenaSelected.map((s) => s.stallNo))}
+              selected={arenaSelected}
+              current={null}
+            />
           </motion.div>
         ) : phase === "idle" && spinning ? (
           // Admin has begun the pick — show a countdown instead of a static stage.
@@ -399,16 +422,19 @@ function VenueMap({ pool, wonById, currentId, hopId, fallbackTotal }: { pool: Po
   );
 }
 
-/* ============ HISTORY (last 5) ============ */
+/* ============ HISTORY (all allotments, newest first) ============ */
 function HistoryPanel({ history }: { history: DrawResult[] }) {
   const { t } = useI18n();
   return (
-    <div className="min-h-0 flex-1 rounded-[28px] border border-white/15 bg-black/25 p-4 backdrop-blur-xl md:p-5">
-      <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.35em] text-accent md:text-xs">{t("present.recentAllot")}</div>
+    <div className="flex min-h-0 flex-1 flex-col rounded-[28px] border border-white/15 bg-black/25 p-4 backdrop-blur-xl md:p-5">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.35em] text-accent md:text-xs">{t("present.recentAllot")}</span>
+        {history.length > 0 && <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-white/70">{history.length}</span>}
+      </div>
       {history.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/15 py-6 text-center text-sm text-white/50">{t("present.selectionsHere")}</div>
       ) : (
-        <div className="space-y-2">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
           <AnimatePresence initial={false}>
             {history.map((r) => {
               const palette = colorFor(r.category);

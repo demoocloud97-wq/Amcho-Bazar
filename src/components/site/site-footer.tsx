@@ -31,7 +31,7 @@ export function SiteFooter() {
   ];
 
   return (
-    <footer className="relative mt-24 overflow-hidden bg-hero text-white">
+    <footer className="relative overflow-hidden bg-hero text-white">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-3 pattern-stripes opacity-90" />
       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-warm opacity-30 blur-3xl" />
       <div className="pointer-events-none absolute -left-24 bottom-0 h-72 w-72 rounded-full bg-accent/40 blur-3xl" />

@@ -8,14 +8,14 @@ export const EVENT = {
   venue: "Nawait Community Hall, Nawayath Colony",
   dateISO: "2026-08-02T10:00:00",
   dateLabel: "August 2, 2026 · 10:00 AM – 9:00 PM",
-  registeredSellers: 120,
+  registeredSellers: 50,
   totalStalls: 75,
   totalWinners: 45,
   registrationFee: 1500,
 };
 
 export const STATS = [
-  { label: "Women Entrepreneurs", value: 120, suffix: "+" },
+  { label: "Women Entrepreneurs", value: 50, suffix: "+" },
   { label: "Local Home Businesses", value: 90, suffix: "" },
   { label: "Community Volunteers", value: 45, suffix: "" },
 ];
@@ -96,9 +96,9 @@ export const FAQS = [
   { q: "Who can attend Amcho Bazar?", a: "Amcho Bazar is a women-only event. Women and children of all ages are warmly welcome. Boys under 10 may accompany their mothers." },
   { q: "Is there an entry fee for visitors?", a: "Entry for visitors is completely free. Come with your friends, family and neighbours." },
   { q: "Where is the event held?", a: "Nawait Community Hall, Nawayath Colony — with ample parking and prayer facilities on site." },
-  { q: "How do I register as a seller?", a: "Head to Become a Seller, complete the 5-step registration and wait for confirmation. A live draw assigns stalls fairly." },
+  { q: "How do I register as an owner?", a: "Head to Become a Stall Owner, complete the 5-step registration and wait for confirmation. A live draw assigns stalls fairly." },
   { q: "What is the registration fee?", a: "Rs 1,500 covers the stall, table, chair, décor kit and marketing for the day. Payment is only after your registration is approved." },
-  { q: "What if my registration is on the waiting list?", a: "You'll be automatically upgraded if a stall opens up. Waiting-list sellers are also invited to the community pop-up in Season 3." },
+  { q: "What if my registration is on the waiting list?", a: "You'll be automatically upgraded if a stall opens up. Waiting-list owners are also invited to the community pop-up in Season 3." },
 ];
 
 export const GALLERY = Array.from({ length: 14 }, (_, i) => ({
@@ -139,8 +139,8 @@ export const GALLERY = Array.from({ length: 14 }, (_, i) => ({
 }));
 
 export const HIGHLIGHTS = [
-  { year: "Season 2 · 2025", title: "Doubled, elevated, celebrated", body: "120 registered sellers, 75 stalls, one grand community draw ceremony — and a whole festival built around each one of them." },
-  { year: "Season 3 · 2026", title: "Bigger, warmer, closer", body: "August 2 — our third season returns to Nawait Community Hall with more sellers, more stalls and the same sisterhood at heart." },
+  { year: "Season 2 · 2025", title: "Doubled, elevated, celebrated", body: "50 registered owners, 75 stalls, one grand community draw ceremony — and a whole festival built around each one of them." },
+  { year: "Season 3 · 2026", title: "Bigger, warmer, closer", body: "August 2 — our third season returns to Nawait Community Hall with more owners, more stalls and the same sisterhood at heart." },
 ];
 
 export const GUIDELINES = [

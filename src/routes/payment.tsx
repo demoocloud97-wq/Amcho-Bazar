@@ -10,7 +10,7 @@ export const Route = createFileRoute("/payment")({
   head: () => ({
     meta: [
       { title: "Payment · Amcho Bazar" },
-      { name: "description", content: "Complete your seller registration payment for Amcho Bazar Season 3." },
+      { name: "description", content: "Complete your owner registration payment for Amcho Bazar Season 3." },
       { property: "og:title", content: "Payment · Amcho Bazar" },
       { property: "og:description", content: "Secure, simple payment for your stall." },
     ],
@@ -59,7 +59,7 @@ function PaymentPage() {
             <Row label="Stall + table + chair" v="Included" />
             <Row label="Décor & signage" v="Included" />
             <Row label="Community marketing" v="Included" />
-            <Row label="Refreshments for seller" v="Included" />
+            <Row label="Refreshments for owner" v="Included" />
           </div>
 
           {/* method */}

@@ -37,7 +37,7 @@ export const Route = createFileRoute("/draw")({
   ),
 });
 
-type Selected = {
+export type Selected = {
   order: number;
   stallNo: number;
   seller: string;
@@ -56,7 +56,7 @@ type Candidate = { id: string; seller: string; business: string; category: strin
 function DrawPage() {
   const { season, seasonId } = useSeason();
   const { t } = useI18n();
-  const TARGET = season?.maximumSelectedStalls || DEFAULT_TARGET;
+  const TARGET = season && season.maximumSelectedStalls > 0 ? season.maximumSelectedStalls : DEFAULT_TARGET;
 
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [allRegs, setAllRegs] = useState<Candidate[]>([]); // every applicant — the venue map cells (by name)
@@ -124,7 +124,7 @@ function DrawPage() {
         })).sort((a, b) => b.order - a.order);
         setSelected(picks);
         selectedRef.current = picks;
-        if (picks.length >= (season?.maximumSelectedStalls ?? DEFAULT_TARGET) && picks.length > 0) setPhase("done");
+        if (picks.length >= TARGET && picks.length > 0) setPhase("done");
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -211,31 +211,40 @@ function DrawPage() {
     // Spin for exactly the admin-set countdown (Settings → Live Draw) so the public
     // countdown reaches 1 as the winner reveals.
     const spinMs = Math.max(1, countdownRef.current) * 1000;
+    // Pick the winner up front, then sweep the picker SEQUENTIALLY (cell by cell, in
+    // order) starting from the previous winner's cell and coming to rest on the new
+    // one — like a wheel that keeps turning from wherever it last stopped.
+    const order = candidatesRef.current; // cells in the same order the grid renders
+    const n = order.length;
+    const winner = avail[Math.floor(Math.random() * avail.length)];
+    const startIdx = prevWinnerId ? Math.max(0, order.findIndex((c) => c.id === prevWinnerId)) : Math.floor(Math.random() * n);
+    const winnerIdx = order.findIndex((c) => c.id === winner.id);
+    const forward = (((winnerIdx - startIdx) % n) + n) % n; // steps forward to reach the winner
+    const totalSteps = forward + n; // one full lap of drama, landing on the winner
+    const tickMs = Math.max(45, Math.round(spinMs / totalSteps));
     setPhase("spinning");
     setCurrent(null); // drop the lingering winner glow…
-    // …and start the picker ON that winner's cell so the spin visibly leaves it.
-    spinRegIdRef.current = prevWinnerId;
-    setSpinRegId(prevWinnerId);
-    if (seasonId) setPoolSpinning(seasonId, true).catch(() => {}); // public map starts hopping now
-    let ticks = 0;
-    const maxTicks = Math.round(spinMs / 300);
+    // …and start the picker ON the previous winner's cell so the sweep visibly leaves it.
+    spinRegIdRef.current = order[startIdx]?.id ?? prevWinnerId;
+    setSpinRegId(spinRegIdRef.current);
+    if (seasonId) setPoolSpinning(seasonId, true).catch(() => {}); // public map starts moving now
+    let step = 0;
+    let idx = startIdx;
     const spinId = window.setInterval(() => {
-      // Hop across random not-yet-won applicant cells so the picker visibly "runs".
-      const pick = avail[Math.floor(Math.random() * avail.length)];
-      if (pick) {
-        setReel({ seller: pick.seller, business: pick.business });
-        spinRegIdRef.current = pick.id;
-        setSpinRegId(pick.id);
+      step++;
+      idx = (idx + 1) % n; // advance one cell, in order
+      const cell = order[idx];
+      if (cell) {
+        setReel({ seller: cell.seller, business: cell.business });
+        spinRegIdRef.current = cell.id;
+        setSpinRegId(cell.id);
       }
-      ticks++;
-      if (ticks >= maxTicks) window.clearInterval(spinId);
-    }, 300);
+      if (step >= totalSteps) window.clearInterval(spinId);
+    }, tickMs);
     timers.current.push(spinId as unknown as number);
 
     addTimer(() => {
-      // The dart lands on the applicant whose cell the spin came to rest on.
-      const landed = spinRegIdRef.current;
-      const winner = avail.find((c) => c.id === landed) ?? avail[Math.floor(Math.random() * avail.length)];
+      // The sweep comes to rest on the pre-chosen winner.
       const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const s: Selected = {
         order: cur.length + 1,
@@ -557,7 +566,7 @@ function RevealOverlay({ s, target }: { s: Selected; target: number }) {
 }
 
 /* ==== STALL ARENA ==== */
-function StallArena({
+export function StallArena({
   total,
   target,
   regs,
@@ -570,6 +579,7 @@ function StallArena({
   phase = "idle",
   reel = null,
   spinRegId = null,
+  controls = true,
 }: {
   total: number;
   target: number;
@@ -583,6 +593,7 @@ function StallArena({
   phase?: string;
   reel?: { seller: string; business: string } | null;
   spinRegId?: string | null;
+  controls?: boolean;
 }) {
   const { t } = useI18n();
   const byStall = new Map(selected.map((s) => [s.stallNo, s]));
@@ -662,6 +673,7 @@ function StallArena({
       {done && (
       <div className="relative rounded-[24px] border border-white/10 bg-gradient-to-b from-white/[0.04] to-white/[0.01] p-3 pt-1.5 md:p-4 md:pt-2">
         {/* Arena size control */}
+        {controls && (
         <div className="mb-1.5 flex items-center justify-end gap-2">
           <span className="text-[9px] font-semibold uppercase tracking-wider text-white/60">{t("draw.arenaSize")}</span>
           <input
@@ -675,6 +687,7 @@ function StallArena({
             className="h-1 w-28 cursor-pointer accent-accent"
           />
         </div>
+        )}
 
         {/* Front stalls banner */}
         <div className="mb-2 flex items-center justify-center gap-2">

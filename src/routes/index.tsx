@@ -436,7 +436,7 @@ function CommunityStory() {
                 referrerPolicy="no-referrer"
                 className="h-full w-full object-cover"
                 src={normalizeImageUrl("https://drive.google.com/file/d/1hXOPpdaFwJ3-V_Uh1HZGHmJsigOO-zHB/view?usp=drive_link")}
-                alt="Amcho Bazar — stalls and sellers"
+                alt="Amcho Bazar — stalls and owners"
               />
               <div aria-hidden className="pointer-events-none absolute inset-0 animate-glow-drift" style={{ background: "radial-gradient(circle at 50% 20%, color-mix(in oklch, var(--color-gold) 35%, transparent), transparent 55%)" }} />
               {/* Floating particles */}
@@ -634,7 +634,7 @@ function catDesc(name: string, existing?: string): string {
   if (/house|home|decor|crockery|kitchenware|plastic|gadget/.test(n)) return "Home decor, kitchenware and everyday essentials with a local touch.";
   if (/handmade|artisan|craft/.test(n)) return "One-of-a-kind creations from artisans across the community.";
   if (/gift/.test(n)) return "Thoughtful gifts, hampers and keepsakes for every occasion.";
-  if (/shop|store|misc/.test(n)) return "A little bit of everything from your favourite local sellers.";
+  if (/shop|store|misc/.test(n)) return "A little bit of everything from your favourite local owners.";
   return "Discover unique products from talented local entrepreneurs.";
 }
 

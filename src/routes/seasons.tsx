@@ -297,8 +297,8 @@ function SeasonFormDialog({
             <Field label={t("sea.f.regCloses")}><input type="date" value={form.registrationEndDate} onChange={(e) => set("registrationEndDate", e.target.value)} className={inputCls} /></Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label={t("sea.f.maxWinners")}><input type="number" value={form.maximumSelectedStalls} onChange={(e) => set("maximumSelectedStalls", Number(e.target.value))} className={inputCls} /></Field>
-            <Field label={t("sea.f.fee")}><input type="number" value={form.registrationFee} onChange={(e) => set("registrationFee", Number(e.target.value))} className={inputCls} /></Field>
+            <Field label={t("sea.f.maxWinners")}><input type="number" min={1} value={form.maximumSelectedStalls} onChange={(e) => set("maximumSelectedStalls", Math.max(1, Number(e.target.value) || 0))} className={inputCls} /></Field>
+            <Field label={t("sea.f.fee")}><input type="number" min={0} value={form.registrationFee} onChange={(e) => set("registrationFee", Math.max(0, Number(e.target.value) || 0))} className={inputCls} /></Field>
           </div>
           <Field label={t("sea.f.status")}>
             <select value={form.status} onChange={(e) => set("status", e.target.value as SeasonStatus)} className={inputCls}>

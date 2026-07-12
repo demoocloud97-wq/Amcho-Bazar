@@ -15,7 +15,7 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       { title: "Sign In · Amcho Bazar" },
-      { name: "description", content: "Welcome back to Amcho Bazar — sign in to manage your seller journey with the Nawait Community." },
+      { name: "description", content: "Welcome back to Amcho Bazar — sign in to manage your stall-owner journey with the Nawait Community." },
       { property: "og:title", content: "Sign In · Amcho Bazar" },
       { property: "og:description", content: "Sign in to the women-only community festival platform." },
     ],

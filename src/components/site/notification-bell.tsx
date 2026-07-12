@@ -18,7 +18,7 @@ export function NotificationBell() {
       const p = regs.filter((r) => r.status === "pending").length;
       if (prev.current !== null && p > prev.current) {
         const latest = regs.find((r) => r.status === "pending");
-        toast.info(latest ? `New registration request from ${latest.seller || "a seller"}` : "New registration request");
+        toast.info(latest ? `New registration request from ${latest.seller || "an owner"}` : "New registration request");
       }
       prev.current = p;
       setPending(p);

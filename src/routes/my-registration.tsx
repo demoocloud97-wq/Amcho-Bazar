@@ -14,7 +14,7 @@ export const Route = createFileRoute("/my-registration")({
       { title: "My Registration · Amcho Bazar" },
       { name: "description", content: "See your registration status, payment and assigned stall for Amcho Bazar Season 3." },
       { property: "og:title", content: "My Registration · Amcho Bazar" },
-      { property: "og:description", content: "Track your seller registration status." },
+      { property: "og:description", content: "Track your owner registration status." },
     ],
   }),
   component: () => (

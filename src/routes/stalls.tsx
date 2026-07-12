@@ -23,9 +23,9 @@ export const Route = createFileRoute("/stalls")({
   head: () => ({
     meta: [
       { title: "Stall Directory · Amcho Bazar" },
-      { name: "description", content: "Browse every stall at Amcho Bazar — meet each seller and their home business, season by season." },
+      { name: "description", content: "Browse every stall at Amcho Bazar — meet each owner and their home business, season by season." },
       { property: "og:title", content: "Stall Directory · Amcho Bazar" },
-      { property: "og:description", content: "Every stall, every seller, every category — searchable." },
+      { property: "og:description", content: "Every stall, every owner, every category — searchable." },
     ],
   }),
   component: StallsPage,

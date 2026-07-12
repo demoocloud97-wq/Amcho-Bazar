@@ -19,10 +19,10 @@ import { RegistrationFlow, FlowModal } from "@/components/site/auth-flow";
 export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
-      { title: "Become a Seller · Amcho Bazar" },
-      { name: "description", content: "Register in 5 warm steps to become a seller at Amcho Bazar Season 3 — the Nawait Community's women-only festival." },
-      { property: "og:title", content: "Become a Seller · Amcho Bazar" },
-      { property: "og:description", content: "Multi-step, joyful seller registration for women entrepreneurs." },
+      { title: "Become a Stall Owner · Amcho Bazar" },
+      { name: "description", content: "Register in 5 warm steps to become a stall owner at Amcho Bazar Season 3 — the Nawait Community's women-only festival." },
+      { property: "og:title", content: "Become a Stall Owner · Amcho Bazar" },
+      { property: "og:description", content: "Multi-step, joyful owner registration for women entrepreneurs." },
     ],
   }),
   component: RegisterPage, // open to everyone — no login required to become a seller
@@ -359,6 +359,7 @@ const inputCls = "w-full rounded-2xl border border-border bg-white/70 px-4 py-3 
 
 function StepPersonal({ data, update }: any) {
   const { t } = useI18n();
+  const [phoneTouched, setPhoneTouched] = useState(false);
   return (
     <div className="space-y-6">
       <div>
@@ -370,8 +371,8 @@ function StepPersonal({ data, update }: any) {
           <input value={data.fullName} onChange={(e) => update("fullName", e.target.value)} autoComplete="name" className={inputCls} placeholder="Ayesha Sherif" />
         </Field>
         <Field label={t("reg.f.phone")} required>
-          <input value={data.phone} onChange={(e) => update("phone", e.target.value)} type="tel" inputMode="tel" autoComplete="tel" className={inputCls} placeholder="03XX XXXXXXX" />
-          {data.phone.trim() && !isValidPhone(data.phone) && (
+          <input value={data.phone} onChange={(e) => update("phone", e.target.value)} onBlur={() => setPhoneTouched(true)} type="tel" inputMode="tel" autoComplete="tel" className={inputCls} placeholder="03XX XXXXXXX" />
+          {phoneTouched && data.phone.trim() && !isValidPhone(data.phone) && (
             <span className="mt-1 block text-xs font-medium text-destructive">{t("reg.f.phoneError")}</span>
           )}
         </Field>
