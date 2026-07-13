@@ -111,7 +111,9 @@ export function watchRegistrations(cb: (regs: Registration[]) => void) {
 // match by seasonId, by legacy numeric season, OR orphans (no seasonId yet) — so the
 // admin metrics/table see exactly the same applicants the draw pool does.
 function belongsToSeason(r: Registration, seasonId: string, seasonNumber?: number): boolean {
-  return r.seasonId === seasonId || !r.seasonId || (seasonNumber != null && r.season === seasonNumber);
+  // Number()-tolerant on `season` — some older records store it as a string, which
+  // a strict === would miss and drop the applicant from the admin view.
+  return r.seasonId === seasonId || !r.seasonId || (seasonNumber != null && Number(r.season) === Number(seasonNumber));
 }
 
 // Admin view: this season's registrations PLUS orphans/legacy so a request submitted
