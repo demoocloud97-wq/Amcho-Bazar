@@ -97,9 +97,13 @@ export async function getSeasons(eventId: string = AMCHO_BAZAR_EVENT_ID): Promis
 // Live seasons list — keeps fee / dates / active-season changes in sync everywhere
 // (registration, home, admin) the moment an admin saves, without a page reload.
 export function watchSeasons(eventId: string = AMCHO_BAZAR_EVENT_ID, cb: (list: Season[]) => void) {
-  return onSnapshot(query(collection(db, SEASONS), where("eventId", "==", eventId)), (snap) => {
-    cb(snap.docs.map((d) => normalize(d.id, d.data())).sort((a, b) => b.seasonNumber - a.seasonNumber));
-  });
+  return onSnapshot(
+    query(collection(db, SEASONS), where("eventId", "==", eventId)),
+    (snap) => cb(snap.docs.map((d) => normalize(d.id, d.data())).sort((a, b) => b.seasonNumber - a.seasonNumber)),
+    // Listener dropped (e.g. transient auth/network) → fall back to a one-time fetch
+    // so the whole app doesn't get stuck with no active season selected.
+    (err) => { console.error("Seasons listener error — refetching", err); getSeasons(eventId).then(cb).catch(() => {}); }
+  );
 }
 
 export async function getSeason(id: string): Promise<Season | null> {

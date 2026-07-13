@@ -125,10 +125,19 @@ export async function getRegistrationsForAdmin(seasonId: string, seasonNumber?: 
 // Live version of getRegistrationsForAdmin — keeps the admin screen (metrics,
 // category breakdown, table, activity) in sync with the live draw in real time.
 export function watchRegistrationsForAdmin(seasonId: string, seasonNumber: number | undefined, cb: (regs: Registration[]) => void) {
-  return onSnapshot(collection(db, REGISTRATIONS), (snap) => {
-    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as DocumentData) })) as Registration[];
-    cb(list.filter((r) => belongsToSeason(r, seasonId, seasonNumber)).sort(byNewest));
-  });
+  return onSnapshot(
+    collection(db, REGISTRATIONS),
+    (snap) => {
+      const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as DocumentData) })) as Registration[];
+      cb(list.filter((r) => belongsToSeason(r, seasonId, seasonNumber)).sort(byNewest));
+    },
+    // If the listener drops (e.g. an auth-token race right after a refresh), fall back
+    // to a one-time fetch so the admin metrics/table aren't stuck showing 0.
+    (err) => {
+      console.error("Registrations listener error — refetching", err);
+      getRegistrationsForAdmin(seasonId, seasonNumber).then(cb).catch(() => {});
+    }
+  );
 }
 
 // Move a registration to another season (admin correction).

@@ -64,6 +64,7 @@ function AdminPage() {
   useEffect(() => {
     if (!seasonId) { setRegistrations([]); setLoading(false); return; }
     setLoading(true);
+    reload(); // immediate fetch so counts show right away, even before the first snapshot
     const unsub = watchRegistrationsForAdmin(seasonId, season?.seasonNumber, (regs) => { setRegistrations(regs); setLoading(false); });
     return unsub;
     // eslint-disable-next-line react-hooks/exhaustive-deps
