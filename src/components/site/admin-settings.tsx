@@ -9,6 +9,7 @@ import {
   getDrawSpeed, setDrawSpeed, type DrawSpeed,
   getDrawCountdown, setDrawCountdown,
   getFaqs, saveFaqs, type Faq,
+  getFooterContact, setFooterContact, DEFAULT_FOOTER, type FooterContact,
 } from "@/lib/settings-db";
 
 // Reusable on/off switch used by the toggle settings below.
@@ -82,6 +83,53 @@ export function HeroImageEditor() {
           {busy && <Loader2 className="h-4 w-4 animate-spin" />} {t("adm.saveImage")}
         </button>
       </div>
+    </div>
+  );
+}
+
+export function FooterContactEditor() {
+  const { t } = useI18n();
+  const [f, setF] = useState<FooterContact>(DEFAULT_FOOTER);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { getFooterContact().then(setF).catch(() => {}); }, []);
+  const upd = (k: keyof FooterContact) => (e: React.ChangeEvent<HTMLInputElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
+  async function save() {
+    setBusy(true);
+    try {
+      await setFooterContact(f);
+      toast.success(t("adm.footerSaved"));
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  const fields: { k: keyof FooterContact; label: string; ph: string }[] = [
+    { k: "phone", label: t("adm.footerPhone"), ph: "+92 3XX XXXXXXX" },
+    { k: "email", label: t("adm.footerEmail"), ph: "hello@amchobazar.com" },
+    { k: "instagram", label: t("adm.footerInstagram"), ph: "@amcho.bazar" },
+  ];
+  return (
+    <div className="space-y-3">
+      {fields.map(({ k, label, ph }) => (
+        <div key={k} className="space-y-1.5">
+          <label htmlFor={`footer-${k}`} className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+          <input
+            id={`footer-${k}`}
+            value={f[k]}
+            onChange={upd(k)}
+            placeholder={ph}
+            className="w-full rounded-xl border border-border bg-white/70 px-3 py-2.5 text-sm outline-none ring-primary/20 focus:ring-4"
+          />
+        </div>
+      ))}
+      <button
+        onClick={save}
+        disabled={busy}
+        className="inline-flex items-center gap-2 rounded-full bg-festive px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-[1.03] disabled:opacity-50"
+      >
+        {busy && <Loader2 className="h-4 w-4 animate-spin" />} {t("adm.footerSave")}
+      </button>
     </div>
   );
 }

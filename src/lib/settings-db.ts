@@ -36,6 +36,48 @@ export async function setHeroImage(url: string): Promise<void> {
   );
 }
 
+/* ---- Footer contact details (editable from Settings) ---- */
+export type FooterContact = { phone: string; email: string; instagram: string };
+export const DEFAULT_FOOTER: FooterContact = {
+  phone: "+91 98800 12345",
+  email: "hello@amchobazar.in",
+  instagram: "@amcho.bazar",
+};
+
+function readFooter(data: Record<string, unknown> | undefined): FooterContact {
+  return {
+    phone: (data?.footerPhone as string)?.trim() || DEFAULT_FOOTER.phone,
+    email: (data?.footerEmail as string)?.trim() || DEFAULT_FOOTER.email,
+    instagram: (data?.footerInstagram as string)?.trim() || DEFAULT_FOOTER.instagram,
+  };
+}
+
+export async function getFooterContact(): Promise<FooterContact> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS, SITE));
+    return readFooter(snap.exists() ? snap.data() : undefined);
+  } catch {
+    return DEFAULT_FOOTER;
+  }
+}
+
+export async function setFooterContact(f: FooterContact): Promise<void> {
+  await setDoc(
+    doc(db, SETTINGS, SITE),
+    { footerPhone: f.phone.trim(), footerEmail: f.email.trim(), footerInstagram: f.instagram.trim(), updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+}
+
+// Live so the footer updates for everyone the moment an admin saves.
+export function watchFooterContact(cb: (f: FooterContact) => void) {
+  return onSnapshot(
+    doc(db, SETTINGS, SITE),
+    (snap) => cb(readFooter(snap.exists() ? snap.data() : undefined)),
+    () => cb(DEFAULT_FOOTER)
+  );
+}
+
 /* ---- Live Draw: show/hide the one-click "Non-Stop" button ---- */
 export async function getDrawNonStop(): Promise<boolean> {
   try {

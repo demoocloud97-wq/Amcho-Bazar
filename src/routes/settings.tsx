@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { HelpCircle, Eye, EyeOff, Gauge, Image as ImageIcon, KeyRound, ListChecks, Loader2, Lock, LogOut, Mail, Shield, ShieldCheck, User, UserCircle, Zap } from "lucide-react";
+import { HelpCircle, Eye, EyeOff, Gauge, Image as ImageIcon, KeyRound, ListChecks, Loader2, Lock, LogOut, Mail, Phone, Shield, ShieldCheck, User, UserCircle, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
 import { RequireAuth } from "@/components/site/require-auth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { HeroImageEditor, DrawNonStopToggle, LiveDrawPace, FillSubcatsToggle, FaqEditor } from "@/components/site/admin-settings";
+import { HeroImageEditor, DrawNonStopToggle, LiveDrawPace, FillSubcatsToggle, FaqEditor, FooterContactEditor } from "@/components/site/admin-settings";
 import { useAuth } from "@/lib/auth-context";
 import { changePassword, hasPasswordProvider, logout } from "@/lib/auth";
 import { friendlyAuthError } from "@/lib/firebase-errors";
@@ -55,6 +55,9 @@ function SettingsPage() {
               </SettingSection>
               <SettingSection value="faq" icon={<HelpCircle className="h-5 w-5" />} title={t("adm.faqTitle")} desc={t("adm.faqDesc")}>
                 <FaqEditor />
+              </SettingSection>
+              <SettingSection value="footer" icon={<Phone className="h-5 w-5" />} title={t("adm.footerTitle")} desc={t("adm.footerDesc")}>
+                <FooterContactEditor />
               </SettingSection>
             </>
           )}

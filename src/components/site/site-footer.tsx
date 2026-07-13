@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { Instagram, Mail, MapPin, Phone } from "lucide-react";
 import { Logo } from "./logo";
-import { normalizeImageUrl } from "@/lib/settings-db";
+import { normalizeImageUrl, watchFooterContact, DEFAULT_FOOTER, type FooterContact } from "@/lib/settings-db";
 import { EVENT } from "@/lib/dummy-data";
 import { useAuth } from "@/lib/auth-context";
 import { useSeason } from "@/lib/season-context";
@@ -11,6 +12,8 @@ export function SiteFooter() {
   const { user, isAdmin } = useAuth();
   const { activeSeason } = useSeason();
   const { t } = useI18n();
+  const [contact, setContact] = useState<FooterContact>(DEFAULT_FOOTER);
+  useEffect(() => watchFooterContact(setContact), []);
   const venue = activeSeason?.venue?.trim()
     ? `${activeSeason.venue}${activeSeason.city ? `, ${activeSeason.city}` : ""}`
     : t("footer.venueSoon");
@@ -58,9 +61,9 @@ export function SiteFooter() {
           <h4 className="mb-4 text-sm font-semibold uppercase tracking-wider text-accent/90">{t("footer.reach")}</h4>
           <ul className="space-y-3 text-sm text-white/75">
             <li className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-accent" /> {venue}</li>
-            <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-accent" /> +91 98800 12345</li>
-            <li className="flex items-center gap-2"><Mail className="h-4 w-4 text-accent" /> hello@amchobazar.in</li>
-            <li className="flex items-center gap-2"><Instagram className="h-4 w-4 text-accent" /> @amcho.bazar</li>
+            <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-accent" /> {contact.phone}</li>
+            <li className="flex items-center gap-2"><Mail className="h-4 w-4 text-accent" /> {contact.email}</li>
+            <li className="flex items-center gap-2"><Instagram className="h-4 w-4 text-accent" /> {contact.instagram}</li>
           </ul>
         </div>
       </div>
