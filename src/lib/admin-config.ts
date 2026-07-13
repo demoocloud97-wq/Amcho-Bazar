@@ -7,6 +7,7 @@
 export const ADMIN_EMAILS: string[] = [
   "alfajaryouthwing@gmail.com",
   "demoocloud97@gmail.com",
+  "admin@amchobazar.com",
 ];
 
 export function isAdminEmail(email: string | null | undefined): boolean {

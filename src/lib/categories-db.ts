@@ -149,15 +149,16 @@ export const DEFAULT_SUBCATEGORIES: Record<string, string[]> = {
   Others: ["Miscellaneous"],
 };
 
-// Fill every category with its default sub-categories (idempotent). Returns count created.
+// Fill every category with its default sub-categories PLUS a catch-all "Other"
+// (idempotent). Categories with no defaults still get "Other". Returns count created.
 export async function fillDefaultSubcategories(): Promise<number> {
   const [cats, subsAll] = await Promise.all([getCategories(), getSubCategories()]);
   let created = 0;
   for (const cat of cats) {
-    const wanted = DEFAULT_SUBCATEGORIES[cat.name] ?? [];
+    const wanted = [...(DEFAULT_SUBCATEGORIES[cat.name] ?? []), "Other"];
     const existing = new Set(subsAll.filter((s) => s.categoryId === cat.id).map((s) => s.name.toLowerCase()));
     for (const name of wanted) {
-      if (!existing.has(name.toLowerCase())) { await createSubCategory({ categoryId: cat.id!, name }); created++; }
+      if (!existing.has(name.toLowerCase())) { await createSubCategory({ categoryId: cat.id!, name }); existing.add(name.toLowerCase()); created++; }
     }
   }
   return created;
