@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { AMCHO_BAZAR_EVENT_ID } from "./events-db";
-import { getSeasons, type Season } from "./seasons-db";
+import { getSeasons, watchSeasons, type Season } from "./seasons-db";
 
 type SeasonContextValue = {
   eventId: string;
@@ -36,7 +36,16 @@ export function SeasonProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  // Live subscription — any admin edit (fee, dates, active season) reflects instantly
+  // across registration/home/admin without a reload. `refresh` stays for manual callers.
+  useEffect(() => {
+    const unsub = watchSeasons(AMCHO_BAZAR_EVENT_ID, (list) => {
+      setSeasons(list);
+      setSeasonId((cur) => (cur && list.some((s) => s.id === cur)) ? cur : (list.find((s) => s.isActive)?.id ?? list[0]?.id ?? null));
+      setLoading(false);
+    });
+    return unsub;
+  }, []);
 
   const value = useMemo<SeasonContextValue>(() => ({
     eventId: AMCHO_BAZAR_EVENT_ID,

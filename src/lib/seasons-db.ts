@@ -1,6 +1,6 @@
 import {
   collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc, setDoc,
-  query, where, limit, writeBatch, serverTimestamp, type DocumentData,
+  query, where, limit, writeBatch, serverTimestamp, onSnapshot, type DocumentData,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { AMCHO_BAZAR_EVENT_ID } from "./events-db";
@@ -92,6 +92,14 @@ export async function getSeasons(eventId: string = AMCHO_BAZAR_EVENT_ID): Promis
   // Single equality filter + client-side sort — avoids a composite index.
   const snap = await getDocs(query(collection(db, SEASONS), where("eventId", "==", eventId)));
   return snap.docs.map((d) => normalize(d.id, d.data())).sort((a, b) => b.seasonNumber - a.seasonNumber);
+}
+
+// Live seasons list — keeps fee / dates / active-season changes in sync everywhere
+// (registration, home, admin) the moment an admin saves, without a page reload.
+export function watchSeasons(eventId: string = AMCHO_BAZAR_EVENT_ID, cb: (list: Season[]) => void) {
+  return onSnapshot(query(collection(db, SEASONS), where("eventId", "==", eventId)), (snap) => {
+    cb(snap.docs.map((d) => normalize(d.id, d.data())).sort((a, b) => b.seasonNumber - a.seasonNumber));
+  });
 }
 
 export async function getSeason(id: string): Promise<Season | null> {

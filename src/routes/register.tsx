@@ -536,8 +536,6 @@ function StepCategory({ data, update, toggleCategory, toggleSubcategory, counts,
 
 function StepReview({ data }: any) {
   const { t } = useI18n();
-  const { activeSeason } = useSeason();
-  const fee = activeSeason?.registrationFee ?? EVENT.registrationFee;
   const rows = [
     [t("reg.row.name"), data.fullName], [t("reg.row.phone"), data.phone], [t("reg.row.email"), data.email], [t("reg.row.city"), data.city],
     [t("reg.row.business"), data.business], [t("reg.row.tagline"), data.tagline], [t("reg.row.years"), data.yearsRunning], [t("reg.row.instagram"), data.instagram],
@@ -554,9 +552,6 @@ function StepReview({ data }: any) {
             <div className="flex-1 text-right font-medium text-foreground">{v || <span className="italic text-muted-foreground">{t("reg.review.notProvided")}</span>}</div>
           </div>
         ))}
-      </div>
-      <div className="mt-4 rounded-2xl bg-accent/20 p-4 text-sm text-primary">
-        {t("reg.review.fee").replace("{fee}", fee.toLocaleString("en-IN"))}
       </div>
     </div>
   );
