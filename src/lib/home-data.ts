@@ -87,7 +87,8 @@ export function useHomeData(): HomeData {
           const selected = regs.filter((r) => r.status === "approved" || r.status === "paid").length;
           return {
             season: s,
-            registered: registered || s.maximumStalls,
+            // Prefer the admin's display override, then real docs, then season config.
+            registered: (s.recordedRegistrations && s.recordedRegistrations > 0 ? s.recordedRegistrations : registered) || s.maximumStalls,
             selected: selected || s.maximumSelectedStalls,
             stalls: s.maximumStalls,
           };
