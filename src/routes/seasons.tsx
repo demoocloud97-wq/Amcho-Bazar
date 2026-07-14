@@ -67,7 +67,10 @@ function SeasonsPage() {
   useEffect(() => { getAllStalls().then(setStalls).catch(() => {}); }, []);
   // Total registrations for a season — every applicant (approved, waitlist, all),
   // matched by seasonId OR legacy numeric season so none are missed.
-  const regsFor = (s: Season) => regs.filter((r) => r.seasonId === s.id || Number(r.season) === Number(s.seasonNumber)).length;
+  const regsFor = (s: Season) =>
+    s.recordedRegistrations != null && s.recordedRegistrations > 0
+      ? s.recordedRegistrations // admin-entered display value (archived seasons with no reg docs)
+      : regs.filter((r) => r.seasonId === s.id || Number(r.season) === Number(s.seasonNumber)).length;
   // Match the stall directory: by seasonId OR legacy numeric season, so old Season
   // 1/2 stalls (numeric-only, or a stale seasonId) still count.
   const sellersFor = (s: Season) => stalls.filter((st) => st.seasonId === s.id || Number(st.season) === Number(s.seasonNumber)).length;
@@ -249,6 +252,8 @@ function SeasonFormDialog({
       // No separate stall cap anymore — every winner gets a stall, so stalls = winners.
       // Kept in sync so admin/present/login (which read maximumStalls) stay valid.
       const data = { ...form, maximumStalls: form.maximumSelectedStalls, guidelines: (form.guidelines ?? []).map((g) => g.trim()).filter(Boolean) };
+      // Display-only override: keep a positive number, else drop it (Firestore rejects undefined).
+      if (!(typeof data.recordedRegistrations === "number" && data.recordedRegistrations > 0)) delete data.recordedRegistrations;
       if (editing?.id) await updateSeason(editing.id, data);
       else await createSeason(data);
       await onSaved();
@@ -300,6 +305,9 @@ function SeasonFormDialog({
             <Field label={t("sea.f.maxWinners")}><input type="number" min={1} value={form.maximumSelectedStalls} onChange={(e) => set("maximumSelectedStalls", Math.max(1, Number(e.target.value) || 0))} className={inputCls} /></Field>
             <Field label={t("sea.f.fee")}><input type="number" min={0} value={form.registrationFee} onChange={(e) => set("registrationFee", Math.max(0, Number(e.target.value) || 0))} className={inputCls} /></Field>
           </div>
+          <Field label={t("sea.f.recordedRegs")}>
+            <input type="number" min={0} value={form.recordedRegistrations ?? ""} onChange={(e) => set("recordedRegistrations", e.target.value === "" ? undefined : Math.max(0, Number(e.target.value) || 0))} className={inputCls} placeholder={t("sea.f.recordedRegsHint")} />
+          </Field>
           <Field label={t("sea.f.status")}>
             <select value={form.status} onChange={(e) => set("status", e.target.value as SeasonStatus)} className={inputCls}>
               {SEASON_STATUSES.map((s) => <option key={s} value={s}>{t(`sea.st.${s}`)}</option>)}

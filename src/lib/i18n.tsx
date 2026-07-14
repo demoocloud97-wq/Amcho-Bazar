@@ -552,6 +552,8 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
   "sea.f.maxStalls": { en: "Max stalls", ur: "زیادہ سے زیادہ اسٹال", "ur-roman": "Max stalls", hi: "अधिकतम स्टॉल", ar: "أقصى أكشاك" },
   "sea.f.maxWinners":{ en: "Max winners", ur: "زیادہ سے زیادہ فاتحین", "ur-roman": "Max winners", hi: "अधिकतम विजेता", ar: "أقصى فائزات" },
   "sea.f.fee":    { en: "Fee (Rs)", ur: "فیس (Rs)", "ur-roman": "Fee (Rs)", hi: "शुल्क (Rs)", ar: "الرسوم (Rs)" },
+  "sea.f.recordedRegs":     { en: "Registrations shown (display only)", ur: "دکھائی جانے والی رجسٹریشنز (صرف نمائش)", "ur-roman": "Dikhai jane wali registrations (sirf display)", hi: "दिखाई गई पंजीकरण (केवल प्रदर्शन)", ar: "التسجيلات المعروضة (للعرض فقط)" },
+  "sea.f.recordedRegsHint": { en: "Leave blank = auto count", ur: "خالی = خودکار گنتی", "ur-roman": "Khali = auto count", hi: "खाली = स्वतः गणना", ar: "فارغ = عدّ تلقائي" },
   "sea.f.status": { en: "Status", ur: "حالت", "ur-roman": "Status", hi: "स्थिति", ar: "الحالة" },
   "sea.f.banner": { en: "Banner image URL", ur: "بینر امیج یو آر ایل", "ur-roman": "Banner image URL", hi: "बैनर छवि URL", ar: "رابط صورة البانر" },
   "sea.f.desc":   { en: "Description", ur: "تفصیل", "ur-roman": "Tafseel", hi: "विवरण", ar: "الوصف" },

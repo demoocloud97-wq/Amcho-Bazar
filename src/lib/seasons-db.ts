@@ -44,6 +44,7 @@ export type Season = {
   maximumStalls: number;
   maximumSelectedStalls: number;
   registrationFee: number;
+  recordedRegistrations?: number; // display-only count for archived seasons (no reg docs)
   guidelines?: string[];   // season-wise visitor guidelines (admin-editable)
   status: SeasonStatus;
   isActive: boolean;
@@ -80,6 +81,7 @@ function normalize(id: string, data: DocumentData): Season {
     maximumStalls: data.maximumStalls ?? 0,
     maximumSelectedStalls: data.maximumSelectedStalls ?? 0,
     registrationFee: data.registrationFee ?? 0,
+    recordedRegistrations: typeof data.recordedRegistrations === "number" ? data.recordedRegistrations : undefined,
     guidelines: Array.isArray(data.guidelines) ? data.guidelines : undefined,
     status: (data.status as SeasonStatus) ?? "Upcoming",
     isActive: Boolean(data.isActive),
