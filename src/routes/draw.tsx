@@ -106,6 +106,14 @@ function DrawPage() {
   useEffect(() => { selectedRef.current = selected; }, [selected]);
   useEffect(() => { candidatesRef.current = candidates; }, [candidates]);
   useEffect(() => { runningRef.current = running; }, [running]);
+  // The picker highlight only means anything while spinning — clear it otherwise so a
+  // cell doesn't stay blinking at idle/READY if a spin was interrupted (e.g. navigation).
+  useEffect(() => {
+    if (phase !== "spinning") { setSpinRegId(null); spinRegIdRef.current = null; }
+    // A winner cell only stays glowing between picks (selected > 0). At a fresh/ready
+    // board (idle, nothing picked) any lingering glow is stale — drop it.
+    if (phase === "idle" && selected.length === 0) setCurrent(null);
+  }, [phase, selected.length]);
 
   // One-time per season: load already-saved draw picks and reset the machine.
   useEffect(() => {
@@ -596,6 +604,9 @@ export function StallArena({
   controls?: boolean;
 }) {
   const { t } = useI18n();
+  // Board at rest (ready, nothing picked) → no cell should be lit; guards against any
+  // leftover current/spin highlight blinking after an interrupted or reset draw.
+  const atRest = phase === "idle" && selected.length === 0;
   const byStall = new Map(selected.map((s) => [s.stallNo, s]));
   const winnersById = new Map(selected.map((s) => [s.id, s])); // winning applicant cells (live map)
   // The arena shows the SELECTED stall numbers (sorted) laid out in the pattern:
@@ -666,7 +677,7 @@ export function StallArena({
       </div>
 
       {!done && (
-        <SimpleStallGrid regs={regs} winnersById={winnersById} selectedIds={selectedIds} current={current} throwing={reveal} spinRegId={spinRegId} />
+        <SimpleStallGrid regs={regs} winnersById={winnersById} selectedIds={selectedIds} current={atRest ? null : current} throwing={reveal && !atRest} spinRegId={atRest ? null : spinRegId} />
       )}
 
       {/* Arena — appears after all 45 stalls are assigned */}
@@ -793,15 +804,12 @@ function SimpleStallGrid({
         const palette = info ? CATEGORY_COLORS[info.category] ?? CATEGORY_COLORS.Others : null;
         return (
           <div key={r.id} className="group relative">
-            <motion.div
-              layout
-              initial={false}
-              animate={isCurrent ? { scale: 1.12 } : isSpin ? { scale: 1.06 } : { scale: 1 }}
-              transition={{ type: "spring", stiffness: 280, damping: 18 }}
-              className={`flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 text-center transition-all ${
+            <div
+              className={`flex min-h-[3.25rem] flex-col items-center justify-center gap-0.5 rounded-lg px-1.5 py-1 text-center transition-transform duration-200 ${
                 isCurrent ? "animate-pulse-glow" : ""
               }`}
               style={{
+                transform: isCurrent ? "scale(1.12)" : isSpin ? "scale(1.06)" : "scale(1)",
                 background: palette
                   ? `linear-gradient(180deg, ${palette.bg} 0%, ${palette.canopy} 100%)`
                   : isSpin
@@ -820,7 +828,7 @@ function SimpleStallGrid({
               <span className="line-clamp-2 text-[10px] font-bold leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)]">{r.business}</span>
               {r.seller && <span className="line-clamp-1 text-[9px] font-medium leading-tight opacity-75">{r.seller}</span>}
               {won && <span className="text-[8px] font-semibold tabular-nums opacity-80">#{info!.stallNo.toString().padStart(2, "0")}</span>}
-            </motion.div>
+            </div>
             {/* Thrown dart — strikes the winning applicant's cell */}
             <AnimatePresence>
               {isCurrent && throwing && (

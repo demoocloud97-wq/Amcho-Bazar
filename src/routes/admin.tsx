@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { Activity, BarChart3, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Download, Hourglass, LayoutGrid, Loader2, MonitorPlay, MoreVertical, Plus, Receipt, Sparkles, Store, Trash2, TrendingUp, Users, Wrench } from "lucide-react";
+import { Activity, BarChart3, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Download, Hourglass, Image as ImageIcon, LayoutGrid, Loader2, MonitorPlay, MoreVertical, Pencil, Plus, Receipt, Sparkles, Store, Trash2, TrendingUp, Users, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { EVENT } from "@/lib/dummy-data";
 import { AnimatedCounter } from "@/components/site/animated-counter";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getRegistrationsForAdmin, watchRegistrationsForAdmin, getRegistrationsBySeasonId, createRegistration, updateRegistration, deleteRegistration, type Registration } from "@/lib/db";
 import { getCategories, fillDefaultSubcategories, type Category } from "@/lib/categories-db";
@@ -98,6 +100,7 @@ function AdminPage() {
   useEffect(() => { getFillSubcatsEnabled().then(setFillEnabled).catch(() => {}); }, []);
 
   const [delTarget, setDelTarget] = useState<Registration | null>(null);
+  const [editTarget, setEditTarget] = useState<Registration | null>(null);
   async function removeRegistration() {
     if (!delTarget) return;
     try {
@@ -226,13 +229,13 @@ function AdminPage() {
   // Export every seller's full details for this season as a CSV (opens in Excel).
   function exportCsv() {
     if (registrations.length === 0) { toast.message(t("adm.noRegs")); return; }
-    const cols = ["Owner", "Business", "Tagline", "Years", "Instagram", "City", "Category", "Sub-category", "Phone", "Email", "Products", "Status", "Season"];
+    const cols = ["Owner", "Surname", "Business", "Tagline", "Years", "Instagram", "City", "Category", "Sub-category", "Phone", "Email", "Products", "Status", "Season"];
     const esc = (v: unknown) => {
       const s = v == null ? "" : String(v);
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const rows = registrations.map((r) => [
-      r.seller, r.business, r.tagline ?? "", r.yearsRunning ?? "", r.instagram ?? "", r.city ?? "",
+      r.seller, r.surname ?? "", r.business, r.tagline ?? "", r.yearsRunning ?? "", r.instagram ?? "", r.city ?? "",
       r.categories?.length ? r.categories.join(" | ") : r.category, r.subcategories?.length ? r.subcategories.join(" | ") : (r.subcategory ?? ""),
       r.phone, r.email ?? "", (r.products ?? []).join(" | "), r.status, r.season ?? "",
     ].map(esc).join(","));
@@ -471,6 +474,7 @@ function AdminPage() {
                     <input type="checkbox" checked={allSel} onChange={toggleAll} aria-label={t("adm.bulkSelectAll")} className="h-4 w-4 cursor-pointer rounded border-border accent-[color:var(--color-primary)]" />
                   </th>
                   <th className="px-3">{t("adm.thSeller")}</th>
+                  <th className="px-3">{t("adm.thSurname")}</th>
                   <th className="px-3">{t("adm.thBusiness")}</th>
                   <th className="px-3">{t("adm.thCategory")}</th>
                   <th className="px-3">{t("adm.thPhone")}</th>
@@ -502,6 +506,7 @@ function AdminPage() {
                         </div>
                       </div>
                     </td>
+                    <td className="px-3 py-3.5 align-middle text-foreground">{r.surname ?? ""}</td>
                     <td className="px-3 py-3.5 align-middle">
                       <div className="font-medium text-foreground">{r.business}</div>
                       {r.tagline && <div className="max-w-[220px] truncate text-xs text-muted-foreground">{r.tagline}</div>}
@@ -534,6 +539,9 @@ function AdminPage() {
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="rounded-xl">
+                            <DropdownMenuItem onSelect={() => setEditTarget(r)} className="gap-2">
+                              <Pencil className="h-4 w-4 text-primary" /> {t("adm.edit")}
+                            </DropdownMenuItem>
                             {r.status !== "waitlist" && (
                               <DropdownMenuItem onSelect={() => setStatus(r, "waitlist")} className="gap-2">
                                 <Hourglass className="h-4 w-4 text-secondary" /> {t("adm.waitlist")}
@@ -584,6 +592,8 @@ function AdminPage() {
         onConfirm={removeRegistration}
       />
 
+      <EditRegistrationDialog reg={editTarget} onClose={() => setEditTarget(null)} onSaved={reload} />
+
       <ConfirmDialog
         open={confirmBulk}
         onOpenChange={(o) => !o && !bulkBusy && setConfirmBulk(false)}
@@ -602,6 +612,102 @@ function AdminPage() {
         onConfirm={clearDummy}
       />
     </div>
+  );
+}
+
+// Edit every detail of one registration. Status stays managed by the approve/waitlist
+// flow (it materialises stalls) — this dialog only corrects the applicant's details.
+function EditRegistrationDialog({ reg, onClose, onSaved }: { reg: Registration | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useI18n();
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  useEffect(() => {
+    if (!reg) return;
+    setForm({
+      seller: reg.seller ?? "", surname: reg.surname ?? "", phone: reg.phone ?? "", email: reg.email ?? "",
+      city: reg.city ?? "", business: reg.business ?? "", tagline: reg.tagline ?? "",
+      yearsRunning: reg.yearsRunning ?? "", instagram: reg.instagram ?? "", logoUrl: reg.logoUrl ?? "",
+      productsText: (reg.products ?? []).join(", "),
+    });
+  }, [reg]);
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  async function onLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try { const url = await uploadToCloudinary(file); setForm((f) => ({ ...f, logoUrl: url })); }
+    catch (err) { toast.error(friendlyAuthError(err)); }
+    finally { setUploading(false); }
+  }
+  async function save() {
+    if (!reg) return;
+    setBusy(true);
+    try {
+      const { productsText, ...rest } = form;
+      await updateRegistration(reg.id!, {
+        ...rest,
+        products: (productsText ?? "").split(",").map((p) => p.trim()).filter(Boolean),
+      } as Partial<Registration>);
+      toast.success(t("adm.editSaved"));
+      onSaved();
+      onClose();
+    } catch (e) { toast.error(friendlyAuthError(e)); } finally { setBusy(false); }
+  }
+  const fields: { k: string; label: string }[] = [
+    { k: "seller", label: t("adm.thSeller") },
+    { k: "surname", label: t("adm.thSurname") },
+    { k: "phone", label: t("reg.f.phone") },
+    { k: "email", label: t("reg.f.email") },
+    { k: "city", label: t("reg.f.city") },
+    { k: "business", label: t("reg.f.business") },
+    { k: "tagline", label: t("reg.f.tagline") },
+    { k: "yearsRunning", label: t("reg.f.years") },
+    { k: "instagram", label: t("reg.f.instagram") },
+  ];
+  const inputCls = "w-full rounded-xl border border-border bg-white/70 px-3 py-2 text-sm outline-none ring-primary/20 focus:ring-4";
+  return (
+    <Dialog open={!!reg} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader><DialogTitle>{t("adm.editTitle")}</DialogTitle></DialogHeader>
+        <div className="mb-1">
+          <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("reg.f.logo")}</span>
+          <div className="flex items-center gap-3">
+            {form.logoUrl ? (
+              <div className="relative">
+                <img src={form.logoUrl} alt="" className="h-16 w-16 rounded-2xl border border-border object-cover" />
+                <button type="button" onClick={() => setForm((f) => ({ ...f, logoUrl: "" }))} aria-label="Remove logo" className="absolute -right-2 -top-2 grid h-5 w-5 place-items-center rounded-full bg-destructive text-xs font-bold text-white shadow">✕</button>
+              </div>
+            ) : (
+              <div className="grid h-16 w-16 place-items-center rounded-2xl border border-dashed border-border text-muted-foreground"><ImageIcon className="h-5 w-5" /></div>
+            )}
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-white/70 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-muted">
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} {uploading ? t("reg.f.logoUploading") : t("reg.f.logo")}
+              <input type="file" accept="image/*" onChange={onLogo} className="hidden" />
+            </label>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {fields.map(({ k, label }) => (
+            <label key={k} className="space-y-1">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+              <input value={form[k] ?? ""} onChange={set(k)} className={inputCls} />
+            </label>
+          ))}
+          <label className="space-y-1 sm:col-span-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("adm.editProducts")}</span>
+            <textarea value={form.productsText ?? ""} onChange={set("productsText")} className={`${inputCls} min-h-[70px]`} />
+          </label>
+        </div>
+        <DialogFooter>
+          <button onClick={onClose} className="rounded-full border border-border bg-card px-5 py-2 text-sm font-semibold text-primary transition-colors hover:bg-muted">{t("common.cancel")}</button>
+          <button onClick={save} disabled={busy} className="inline-flex items-center gap-2 rounded-full bg-festive px-5 py-2 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-[1.03] disabled:opacity-50">
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} {t("adm.save")}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -24,6 +24,7 @@ export type Registration = {
   seasonId?: string; // season this record belongs to (source of truth)
   season: number;    // legacy numeric season (kept during migration)
   seller: string;
+  surname?: string;        // family name (first name is the start of `seller`)
   business: string;
   tagline?: string;        // one-line business tagline
   yearsRunning?: string;   // how long the business has run
@@ -75,6 +76,7 @@ export async function createRegistration(
   if (data.subcategory) payload.subcategory = data.subcategory;
   if (data.subcategoryIds?.length) payload.subcategoryIds = data.subcategoryIds;
   if (data.subcategories?.length) payload.subcategories = data.subcategories;
+  if (data.surname) payload.surname = data.surname;
   if (data.tagline) payload.tagline = data.tagline;
   if (data.yearsRunning) payload.yearsRunning = data.yearsRunning;
   if (data.instagram) payload.instagram = data.instagram;

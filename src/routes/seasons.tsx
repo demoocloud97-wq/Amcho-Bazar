@@ -67,10 +67,10 @@ function SeasonsPage() {
   useEffect(() => { getAllStalls().then(setStalls).catch(() => {}); }, []);
   // Total registrations for a season — every applicant (approved, waitlist, all),
   // matched by seasonId OR legacy numeric season so none are missed.
-  const regsFor = (s: Season) => regs.filter((r) => r.seasonId === s.id || r.season === s.seasonNumber).length;
+  const regsFor = (s: Season) => regs.filter((r) => r.seasonId === s.id || Number(r.season) === Number(s.seasonNumber)).length;
   // Match the stall directory: by seasonId OR legacy numeric season, so old Season
   // 1/2 stalls (numeric-only, or a stale seasonId) still count.
-  const sellersFor = (s: Season) => stalls.filter((st) => st.seasonId === s.id || st.season === s.seasonNumber).length;
+  const sellersFor = (s: Season) => stalls.filter((st) => st.seasonId === s.id || Number(st.season) === Number(s.seasonNumber)).length;
 
   async function migrate() {
     setMigrating(true);
