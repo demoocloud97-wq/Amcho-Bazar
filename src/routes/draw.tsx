@@ -564,7 +564,7 @@ function RevealOverlay({ s, target, fields }: { s: Selected; target: number; fie
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 22 }}
-        className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto overflow-x-hidden rounded-[36px] bg-hero p-8 text-center text-white shadow-glow md:p-12"
+        className="relative w-full max-w-2xl overflow-hidden rounded-[36px] bg-hero p-8 text-center text-white shadow-glow md:p-10"
       >
         <div className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
         <div className="pointer-events-none absolute -inset-1 rounded-[38px] bg-festive opacity-30 blur-2xl" />
@@ -573,12 +573,12 @@ function RevealOverlay({ s, target, fields }: { s: Selected; target: number; fie
           <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-accent/20 px-4 py-1.5 text-sm font-semibold uppercase tracking-widest text-accent">
             <PartyPopper className="h-5 w-5" /> {t("draw.congrats")}
           </div>
-          <div className="mt-5 text-xs font-semibold uppercase tracking-[0.4em] text-white/70">{t("draw.stallAssigned")}</div>
-          <div className="font-display text-8xl font-black text-warm drop-shadow-[0_0_40px_rgba(255,201,74,0.7)] md:text-9xl">
+          <div className="mt-4 text-xs font-semibold uppercase tracking-[0.4em] text-white/70">{t("draw.stallAssigned")}</div>
+          <div className="font-display text-7xl font-black text-warm drop-shadow-[0_0_40px_rgba(255,201,74,0.7)] md:text-8xl">
             #{s.stallNo.toString().padStart(2, "0")}
           </div>
-          <div className="mt-3 font-script text-4xl text-accent">{t("draw.assignedTo")}</div>
-          <div className="mt-6 flex items-center justify-center gap-5">
+          <div className="mt-2 font-script text-4xl text-accent">{t("draw.assignedTo")}</div>
+          <div className="mt-5 flex items-center justify-center gap-5">
             <img src={s.avatar} className="h-20 w-20 rounded-full object-cover ring-4 ring-accent/60" alt={s.seller} />
             <div className="min-w-0 text-left">
               <div className="font-display text-3xl font-black leading-tight md:text-4xl">{s.business}</div>
