@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
-import { Activity, BarChart3, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Download, Hourglass, Image as ImageIcon, LayoutGrid, Loader2, MonitorPlay, MoreVertical, Pencil, Plus, Receipt, Sparkles, Store, Trash2, TrendingUp, Users, Wrench } from "lucide-react";
+import { Activity, BarChart3, CheckCircle2, ChevronLeft, ChevronRight, ClipboardList, Download, Hourglass, Image as ImageIcon, LayoutGrid, Loader2, MonitorPlay, MoreVertical, Pencil, Plus, Receipt, Search, Sparkles, Store, Trash2, TrendingUp, Users, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { EVENT } from "@/lib/dummy-data";
 import { AnimatedCounter } from "@/components/site/animated-counter";
@@ -362,14 +362,28 @@ function AdminPage() {
       .slice(0, 6);
   }, [registrations]);
 
+  // Review-table filters: free-text search + status.
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | Registration["status"]>("all");
+  const filtered = useMemo(() => {
+    const n = q.trim().toLowerCase();
+    return registrations.filter((r) => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (!n) return true;
+      const cats = r.categories?.length ? r.categories.join(" ") : (r.category ?? "");
+      return `${r.seller} ${r.business} ${r.phone ?? ""} ${cats}`.toLowerCase().includes(n);
+    });
+  }, [registrations, q, statusFilter]);
+  useEffect(() => { setPage(0); }, [q, statusFilter]);
+
   const PAGE_SIZE = 12;
-  const pageCount = Math.max(1, Math.ceil(registrations.length / PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const curPage = Math.min(page, pageCount - 1); // clamp when the list shrinks (e.g. after a bulk delete)
   useEffect(() => { if (page > pageCount - 1) setPage(pageCount - 1); }, [page, pageCount]);
-  const shown = registrations.slice(curPage * PAGE_SIZE, curPage * PAGE_SIZE + PAGE_SIZE);
-  // "Select all" grabs every seller in the season, not just the visible rows.
-  const allSel = registrations.length > 0 && registrations.every((r) => sel.has(r.id!));
-  function toggleAll() { setSel(allSel ? new Set() : new Set(registrations.map((r) => r.id!))); }
+  const shown = filtered.slice(curPage * PAGE_SIZE, curPage * PAGE_SIZE + PAGE_SIZE);
+  // "Select all" grabs every seller matching the current filter, not just the visible rows.
+  const allSel = filtered.length > 0 && filtered.every((r) => sel.has(r.id!));
+  function toggleAll() { setSel(allSel ? new Set() : new Set(filtered.map((r) => r.id!))); }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 md:px-8">
@@ -506,7 +520,7 @@ function AdminPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-muted/60 px-3 py-1 text-xs font-medium tabular-nums text-muted-foreground">
-              {loading ? t("common.loading") : `${t("adm.showing")} ${registrations.length === 0 ? 0 : curPage * PAGE_SIZE + 1}–${Math.min((curPage + 1) * PAGE_SIZE, registrations.length)} ${t("adm.of")} ${registrations.length}`}
+              {loading ? t("common.loading") : `${t("adm.showing")} ${filtered.length === 0 ? 0 : curPage * PAGE_SIZE + 1}–${Math.min((curPage + 1) * PAGE_SIZE, filtered.length)} ${t("adm.of")} ${filtered.length}`}
             </span>
             <button
               onClick={exportCsv}
@@ -523,6 +537,33 @@ function AdminPage() {
                 <Wrench className="h-3.5 w-3.5" /> Sync to list ({syncPlan.deletes.length}✕ {syncPlan.renames.length}✎)
               </button>
             )}
+          </div>
+        </div>
+        {/* Search + status filter */}
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder={t("adm.searchRegs")}
+              aria-label={t("adm.searchRegs")}
+              className="w-full rounded-full border border-border bg-muted/40 py-2 ps-9 pe-9 text-sm outline-none ring-primary/20 focus:ring-4"
+            />
+            {q && (
+              <button type="button" onClick={() => setQ("")} aria-label="Clear" className="absolute end-2.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground">✕</button>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+            {([["all", t("stalls.allCategories")], ["waitlist", t("myreg.status.waitlist")], ["approved", t("myreg.status.approved")], ["paid", t("myreg.status.paid")], ["pending", t("myreg.status.pending")]] as const).map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => setStatusFilter(val)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${statusFilter === val ? "bg-festive text-white shadow-soft" : "bg-muted/60 text-foreground/70 hover:bg-muted"}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
         {/* Bulk action bar */}

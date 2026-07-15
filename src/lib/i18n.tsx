@@ -745,6 +745,7 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
   "adm.settingsDesc": { en: "Season-wide controls for the draw, homepage and categories.", ur: "ڈرا، ہوم پیج اور زمروں کے لیے سیزن بھر کے کنٹرول۔", "ur-roman": "Draw, homepage aur zumron ke liye season bhar ke control.", hi: "ड्रॉ, होमपेज और श्रेणियों के लिए सीज़न-भर के नियंत्रण।", ar: "عناصر تحكم للموسم بأكمله للسحب والصفحة الرئيسية والفئات." },
   "adm.showing":      { en: "Showing", ur: "دکھایا جا رہا ہے", "ur-roman": "Dikhaya ja raha hai", hi: "दिखा रहे हैं", ar: "عرض" },
   "adm.export":       { en: "Export CSV", ur: "CSV ایکسپورٹ", "ur-roman": "CSV export", hi: "CSV निर्यात", ar: "تصدير CSV" },
+  "adm.searchRegs":   { en: "Search name, business, phone, category…", ur: "نام، کاروبار، فون، زمرہ تلاش کریں…", "ur-roman": "Naam, business, phone, category talash karein…", hi: "नाम, व्यवसाय, फ़ोन, श्रेणी खोजें…", ar: "ابحث بالاسم أو النشاط أو الهاتف أو الفئة…" },
   "adm.of":           { en: "of", ur: "میں سے", "ur-roman": "of", hi: "में से", ar: "من" },
   "adm.prev":         { en: "Prev", ur: "پچھلا", "ur-roman": "Pichla", hi: "पिछला", ar: "السابق" },
   "adm.next":         { en: "Next", ur: "اگلا", "ur-roman": "Agla", hi: "अगला", ar: "التالي" },

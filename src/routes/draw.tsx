@@ -1123,7 +1123,7 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
       </div>
 
       <Dialog open={showAll} onOpenChange={setShowAll}>
-        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-3xl lg:max-w-4xl">
           {/* Header band */}
           <div className="relative overflow-hidden bg-hero px-6 py-5 text-white">
             <div className="pointer-events-none absolute inset-0 pattern-dots opacity-15" />
@@ -1190,7 +1190,7 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
           </div>
 
           {/* List */}
-          <div className="max-h-[48vh] overflow-y-auto px-3 py-3">
+          <div className="max-h-[65vh] overflow-y-auto px-3 py-3">
             {rows.length === 0 ? (
               <div className="py-10 text-center text-sm text-muted-foreground">{t("draw.noMatch")}</div>
             ) : (
