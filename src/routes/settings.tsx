@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { HelpCircle, Eye, EyeOff, Gauge, Image as ImageIcon, KeyRound, ListChecks, Loader2, Lock, LogOut, Mail, Phone, Shield, ShieldCheck, User, UserCircle, Zap } from "lucide-react";
+import { HelpCircle, Eye, EyeOff, Gauge, Image as ImageIcon, KeyRound, ListChecks, Loader2, Lock, LogOut, Mail, Phone, Shield, ShieldCheck, Sparkles, User, UserCircle, Video, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
 import { RequireAuth } from "@/components/site/require-auth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { HeroImageEditor, DrawNonStopToggle, LiveDrawPace, FillSubcatsToggle, FaqEditor, FooterContactEditor } from "@/components/site/admin-settings";
+import { HeroImageEditor, DrawNonStopToggle, LiveDrawPace, RevealFieldsEditor, FillSubcatsToggle, FaqEditor, FooterContactEditor, FbLiveEditor } from "@/components/site/admin-settings";
 import { useAuth } from "@/lib/auth-context";
 import { changePassword, hasPasswordProvider, logout } from "@/lib/auth";
 import { friendlyAuthError } from "@/lib/firebase-errors";
@@ -49,6 +49,12 @@ function SettingsPage() {
               </SettingSection>
               <SettingSection value="drawpace" icon={<Gauge className="h-5 w-5" />} title={t("adm.drawPaceTitle")} desc={t("adm.drawPaceDesc")}>
                 <LiveDrawPace />
+              </SettingSection>
+              <SettingSection value="reveal" icon={<Sparkles className="h-5 w-5" />} title={t("adm.revealTitle")} desc={t("adm.revealDesc")}>
+                <RevealFieldsEditor />
+              </SettingSection>
+              <SettingSection value="fblive" icon={<Video className="h-5 w-5" />} title={t("adm.fbLiveTitle")} desc={t("adm.fbLiveDesc")}>
+                <FbLiveEditor />
               </SettingSection>
               <SettingSection value="fillsub" icon={<ListChecks className="h-5 w-5" />} title={t("adm.fillTitle")} desc={t("adm.fillDesc")}>
                 <FillSubcatsToggle />

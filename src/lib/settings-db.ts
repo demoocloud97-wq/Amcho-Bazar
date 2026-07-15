@@ -123,6 +123,29 @@ export function watchDrawLive(cb: (on: boolean) => void) {
   );
 }
 
+/* ---- Live Draw: optional Facebook Live video URL, embedded on the public /present ---- */
+export async function getDrawFbUrl(): Promise<string> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS, SITE));
+    return snap.exists() ? ((snap.data().drawFbUrl as string | undefined)?.trim() ?? "") : "";
+  } catch {
+    return "";
+  }
+}
+
+export async function setDrawFbUrl(url: string): Promise<void> {
+  await setDoc(doc(db, SETTINGS, SITE), { drawFbUrl: url.trim(), updatedAt: serverTimestamp() }, { merge: true });
+}
+
+// Live so the audience player appears/updates the moment the admin pastes the link.
+export function watchDrawFbUrl(cb: (url: string) => void) {
+  return onSnapshot(
+    doc(db, SETTINGS, SITE),
+    (snap) => cb(snap.exists() ? ((snap.data().drawFbUrl as string | undefined)?.trim() ?? "") : ""),
+    () => cb("")
+  );
+}
+
 /* ---- Live Draw countdown/reveal pace the admin picks (drives the audience view) ---- */
 export type DrawSpeed = "slow" | "medium" | "fast";
 const isSpeed = (v: unknown): v is DrawSpeed => v === "slow" || v === "medium" || v === "fast";
@@ -172,6 +195,71 @@ export function watchDrawCountdown(cb: (seconds: number) => void) {
     doc(db, SETTINGS, SITE),
     (snap) => cb(asCountdown(snap.exists() ? snap.data().drawCountdown : undefined)),
     () => cb(DEFAULT_COUNTDOWN)
+  );
+}
+
+/* ---- Live Draw spin speed: per-cell hop time (ms) so each cell stays visible ---- */
+const HOP_MS: Record<DrawSpeed, number> = { slow: 220, medium: 150, fast: 90 };
+export const spinMsFor = (s: DrawSpeed) => HOP_MS[s];
+
+export async function getDrawSpinSpeed(): Promise<DrawSpeed> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS, SITE));
+    const v = snap.exists() ? snap.data().drawSpinSpeed : undefined;
+    return isSpeed(v) ? v : "medium";
+  } catch { return "medium"; }
+}
+export async function setDrawSpinSpeed(speed: DrawSpeed): Promise<void> {
+  await setDoc(doc(db, SETTINGS, SITE), { drawSpinSpeed: speed, updatedAt: serverTimestamp() }, { merge: true });
+}
+export function watchDrawSpinSpeed(cb: (s: DrawSpeed) => void) {
+  return onSnapshot(
+    doc(db, SETTINGS, SITE),
+    (snap) => { const v = snap.exists() ? snap.data().drawSpinSpeed : undefined; cb(isSpeed(v) ? v : "medium"); },
+    () => cb("medium")
+  );
+}
+
+/* ---- Live Draw reveal: which applicant details to show when a winner is announced ---- */
+export type RevealFields = { tagline: boolean; products: boolean; category: boolean };
+export const DEFAULT_REVEAL: RevealFields = { tagline: true, products: true, category: false };
+function readReveal(d: Record<string, unknown> | undefined): RevealFields {
+  return {
+    tagline: d?.revealTagline !== false,     // default on
+    products: d?.revealProducts !== false,   // default on
+    category: d?.revealCategory === true,    // default off
+  };
+}
+export async function getRevealFields(): Promise<RevealFields> {
+  try { const snap = await getDoc(doc(db, SETTINGS, SITE)); return readReveal(snap.exists() ? snap.data() : undefined); }
+  catch { return DEFAULT_REVEAL; }
+}
+export async function setRevealFields(f: RevealFields): Promise<void> {
+  await setDoc(doc(db, SETTINGS, SITE), { revealTagline: f.tagline, revealProducts: f.products, revealCategory: f.category, updatedAt: serverTimestamp() }, { merge: true });
+}
+export function watchRevealFields(cb: (f: RevealFields) => void) {
+  return onSnapshot(
+    doc(db, SETTINGS, SITE),
+    (snap) => cb(readReveal(snap.exists() ? snap.data() : undefined)),
+    () => cb(DEFAULT_REVEAL)
+  );
+}
+
+/* ---- Live Draw: how long the winner's detail card stays on screen (seconds) ---- */
+const DEFAULT_HOLD = 3;
+const asHold = (v: unknown): number => (typeof v === "number" && v >= 1 && v <= 15 ? Math.round(v) : DEFAULT_HOLD);
+export async function getRevealHold(): Promise<number> {
+  try { const snap = await getDoc(doc(db, SETTINGS, SITE)); return asHold(snap.exists() ? snap.data().revealHold : undefined); }
+  catch { return DEFAULT_HOLD; }
+}
+export async function setRevealHold(seconds: number): Promise<void> {
+  await setDoc(doc(db, SETTINGS, SITE), { revealHold: asHold(seconds), updatedAt: serverTimestamp() }, { merge: true });
+}
+export function watchRevealHold(cb: (seconds: number) => void) {
+  return onSnapshot(
+    doc(db, SETTINGS, SITE),
+    (snap) => cb(asHold(snap.exists() ? snap.data().revealHold : undefined)),
+    () => cb(DEFAULT_HOLD)
   );
 }
 

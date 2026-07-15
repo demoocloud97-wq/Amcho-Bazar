@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Loader2, Plus, Trash2, TimerReset, Gauge, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 import { useI18n } from "@/lib/i18n";
@@ -8,6 +8,10 @@ import {
   getDrawNonStop, setDrawNonStop, getFillSubcatsEnabled, setFillSubcatsEnabled,
   getDrawSpeed, setDrawSpeed, type DrawSpeed,
   getDrawCountdown, setDrawCountdown,
+  getDrawSpinSpeed, setDrawSpinSpeed,
+  getRevealFields, setRevealFields, DEFAULT_REVEAL, type RevealFields,
+  getRevealHold, setRevealHold,
+  getDrawFbUrl, setDrawFbUrl,
   getFaqs, saveFaqs, type Faq,
   getFooterContact, setFooterContact, DEFAULT_FOOTER, type FooterContact,
 } from "@/lib/settings-db";
@@ -134,6 +138,46 @@ export function FooterContactEditor() {
   );
 }
 
+// Paste the Facebook Live video link here → the public /present page embeds that
+// player (with the presenter's voice) while Go Live is on. Blank = no FB player.
+export function FbLiveEditor() {
+  const { t } = useI18n();
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { getDrawFbUrl().then(setUrl).catch(() => {}); }, []);
+  async function save() {
+    setBusy(true);
+    try {
+      await setDrawFbUrl(url);
+      toast.success(url.trim() ? t("adm.fbLiveSaved") : t("adm.fbLiveCleared"));
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="space-y-2">
+      <label htmlFor="fb-live-url" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("adm.fbLiveLabel")}</label>
+      <input
+        id="fb-live-url"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="https://www.facebook.com/…/videos/…"
+        className="w-full rounded-xl border border-border bg-white/70 px-3 py-2.5 text-sm outline-none ring-primary/20 focus:ring-4"
+      />
+      <p className="text-xs leading-snug text-muted-foreground">{t("adm.fbLiveHint")}</p>
+      <button
+        onClick={save}
+        disabled={busy}
+        className="inline-flex items-center gap-2 rounded-full bg-festive px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-[1.03] disabled:opacity-50"
+      >
+        {busy && <Loader2 className="h-4 w-4 animate-spin" />} {t("adm.fbLiveSave")}
+      </button>
+    </div>
+  );
+}
+
 export function DrawNonStopToggle() {
   const { t } = useI18n();
   const [on, setOn] = useState(false);
@@ -155,22 +199,38 @@ export function DrawNonStopToggle() {
   return <Switch on={on} busy={busy} onToggle={toggle} label="Toggle Non-Stop button on the Live Draw screen" />;
 }
 
-// Segmented pill picker used inside the Live Draw settings.
-function PillRow({ label, value, options, onPick, busy }: {
-  label: string; value: string; options: { v: string; label: string }[]; onPick: (v: string) => void; busy: boolean;
+// One live-draw control: icon + label/hint, with a segmented pill picker. Laid out as
+// a soft card so the settings panel reads as a tidy stack of distinct controls.
+function PillRow({ icon, label, hint, value, options, onPick, busy }: {
+  icon?: ReactNode; label: string; hint?: string; value: string; options: { v: string; label: string }[]; onPick: (v: string) => void; busy: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <span className="text-sm font-medium text-foreground/80">{label}</span>
-      <div className="inline-flex rounded-full border border-border bg-muted/40 p-1">
+    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/60 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="flex min-w-0 items-start gap-3">
+        {icon && (
+          <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">{icon}</span>
+        )}
+        <div className="min-w-0">
+          <span className="block text-sm font-semibold text-foreground">{label}</span>
+          {hint && <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{hint}</span>}
+        </div>
+      </div>
+      <div
+        role="radiogroup"
+        aria-label={label}
+        className="inline-flex shrink-0 self-start rounded-full border border-border bg-muted/50 p-1 sm:self-auto"
+      >
         {options.map((o) => (
           <button
             key={o.v}
             onClick={() => onPick(o.v)}
             disabled={busy}
-            aria-pressed={value === o.v}
-            className={`min-w-[52px] rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${
-              value === o.v ? "bg-festive text-white shadow-soft" : "text-foreground/70 hover:text-foreground"
+            role="radio"
+            aria-checked={value === o.v}
+            className={`min-w-[54px] rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${
+              value === o.v
+                ? "bg-festive text-white shadow-soft"
+                : "text-muted-foreground hover:bg-white/60 hover:text-foreground"
             }`}
           >
             {o.label}
@@ -184,10 +244,12 @@ function PillRow({ label, value, options, onPick, busy }: {
 export function LiveDrawPace() {
   const { t } = useI18n();
   const [speed, setSpeed] = useState<DrawSpeed>("medium");
+  const [spin, setSpin] = useState<DrawSpeed>("medium");
   const [secs, setSecs] = useState(3);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     getDrawSpeed().then(setSpeed).catch(() => {});
+    getDrawSpinSpeed().then(setSpin).catch(() => {});
     getDrawCountdown().then(setSecs).catch(() => {});
   }, []);
   async function save(fn: () => Promise<void>, apply: () => void) {
@@ -195,23 +257,90 @@ export function LiveDrawPace() {
     try { await fn(); apply(); toast.success(t("adm.drawSpeedSaved")); }
     catch (e) { toast.error(friendlyAuthError(e)); } finally { setBusy(false); }
   }
+  const speedOpts = (["slow", "medium", "fast"] as DrawSpeed[]).map((o) => ({ v: o, label: t(`adm.drawSpeed.${o}`) }));
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <PillRow
+        icon={<TimerReset className="h-4 w-4" />}
         label={t("adm.drawCountdownLabel")}
+        hint={t("adm.drawCountdownHint")}
         value={String(secs)}
         options={[{ v: "3", label: "3s" }, { v: "5", label: "5s" }, { v: "10", label: "10s" }]}
         onPick={(v) => save(() => setDrawCountdown(Number(v)), () => setSecs(Number(v)))}
         busy={busy}
       />
-      <div className="h-px bg-border" />
       <PillRow
+        icon={<Gauge className="h-4 w-4" />}
+        label={t("adm.drawSpinLabel")}
+        hint={t("adm.drawSpinHint")}
+        value={spin}
+        options={speedOpts}
+        onPick={(v) => save(() => setDrawSpinSpeed(v as DrawSpeed), () => setSpin(v as DrawSpeed))}
+        busy={busy}
+      />
+      <PillRow
+        icon={<Sparkles className="h-4 w-4" />}
         label={t("adm.drawSpeedLabel")}
+        hint={t("adm.drawSpeedHint")}
         value={speed}
-        options={(["slow", "medium", "fast"] as DrawSpeed[]).map((o) => ({ v: o, label: t(`adm.drawSpeed.${o}`) }))}
+        options={speedOpts}
         onPick={(v) => save(() => setDrawSpeed(v as DrawSpeed), () => setSpeed(v as DrawSpeed))}
         busy={busy}
       />
+    </div>
+  );
+}
+
+// Which applicant details show when a winner is announced in the live draw, and for
+// how long the winner card stays up.
+export function RevealFieldsEditor() {
+  const { t } = useI18n();
+  const [f, setF] = useState<RevealFields>(DEFAULT_REVEAL);
+  const [hold, setHold] = useState(3);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    getRevealFields().then(setF).catch(() => {});
+    getRevealHold().then(setHold).catch(() => {});
+  }, []);
+  async function toggle(k: keyof RevealFields) {
+    const next = { ...f, [k]: !f[k] };
+    setBusy(true);
+    try { await setRevealFields(next); setF(next); toast.success(t("adm.revealSaved")); }
+    catch (e) { toast.error(friendlyAuthError(e)); } finally { setBusy(false); }
+  }
+  async function pickHold(v: number) {
+    setBusy(true);
+    try { await setRevealHold(v); setHold(v); toast.success(t("adm.revealSaved")); }
+    catch (e) { toast.error(friendlyAuthError(e)); } finally { setBusy(false); }
+  }
+  const rows: { k: keyof RevealFields; label: string; hint: string }[] = [
+    { k: "tagline", label: t("adm.revealTagline"), hint: t("adm.revealTaglineHint") },
+    { k: "products", label: t("adm.revealProducts"), hint: t("adm.revealProductsHint") },
+    { k: "category", label: t("adm.revealCategory"), hint: t("adm.revealCategoryHint") },
+  ];
+  return (
+    <div className="space-y-3">
+      <PillRow
+        icon={<TimerReset className="h-4 w-4" />}
+        label={t("adm.revealHoldLabel")}
+        hint={t("adm.revealHoldHint")}
+        value={String(hold)}
+        options={[{ v: "3", label: "3s" }, { v: "5", label: "5s" }, { v: "8", label: "8s" }]}
+        onPick={(v) => pickHold(Number(v))}
+        busy={busy}
+      />
+      {rows.map(({ k, label, hint }) => (
+        <div key={k} className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card/60 p-3.5">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><Sparkles className="h-4 w-4" /></span>
+            <div className="min-w-0">
+              <span className="block text-sm font-semibold text-foreground">{label}</span>
+              <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{hint}</span>
+            </div>
+          </div>
+          <Switch on={f[k]} busy={busy} onToggle={() => toggle(k)} label={label} />
+        </div>
+      ))}
     </div>
   );
 }

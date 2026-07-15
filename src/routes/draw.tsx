@@ -7,7 +7,7 @@ import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { EVENT } from "@/lib/dummy-data";
-import { getDrawNonStop, getDrawLive, setDrawLive, watchDrawCountdown } from "@/lib/settings-db";
+import { getDrawNonStop, getDrawLive, setDrawLive, watchDrawCountdown, watchDrawSpinSpeed, spinMsFor, watchRevealFields, watchRevealHold, DEFAULT_REVEAL, type DrawSpeed, type RevealFields } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
 import { watchRegistrationsForAdmin, updateRegistration, type Registration } from "@/lib/db";
 import { materializeRegistrationStalls, deleteStallForRegistration } from "@/lib/stalls-db";
@@ -46,6 +46,8 @@ export type Selected = {
   avatar: string;
   id: string;
   at: string;
+  tagline?: string;
+  products?: string[];
 };
 
 // Fallback if no season is loaded yet.
@@ -89,6 +91,13 @@ function DrawPage() {
   useEffect(() => watchDrawCountdown(setCountdownSecs), []);
   const countdownRef = useRef(3);
   useEffect(() => { countdownRef.current = countdownSecs; }, [countdownSecs]);
+  // Admin-set sweep speed + which winner details to reveal (Settings → Live Draw).
+  const spinSpeedRef = useRef<DrawSpeed>("medium");
+  useEffect(() => watchDrawSpinSpeed((s) => { spinSpeedRef.current = s; }), []);
+  const [revealFields, setRevealFields] = useState<RevealFields>(DEFAULT_REVEAL);
+  useEffect(() => watchRevealFields(setRevealFields), []);
+  const revealHoldRef = useRef(3); // seconds the winner card stays up (Settings → Live Draw)
+  useEffect(() => watchRevealHold((s) => { revealHoldRef.current = s; }), []);
 
   async function toggleLive() {
     const next = !live;
@@ -198,6 +207,8 @@ function DrawPage() {
     saveDrawResult({
       seasonId, order: s.order, stallNo: s.stallNo, candidateId: s.id,
       seller: s.seller, business: s.business, category: s.category, at: s.at,
+      ...(s.tagline ? { tagline: s.tagline } : {}),
+      ...(s.products?.length ? { products: s.products } : {}),
     }).catch(() => {});
     updateRegistration(s.id, { status: "approved", seasonId, season: season?.seasonNumber }).catch(() => {});
     const reg = regByIdRef.current.get(s.id);
@@ -216,28 +227,34 @@ function DrawPage() {
       return;
     }
     const prevWinnerId = cur[0]?.id ?? null; // the last winner — the next spin starts from its cell
-    // Spin for exactly the admin-set countdown (Settings → Live Draw) so the public
-    // countdown reaches 1 as the winner reveals.
-    const spinMs = Math.max(1, countdownRef.current) * 1000;
     // Pick the winner up front, then sweep the picker SEQUENTIALLY (cell by cell, in
     // order) starting from the previous winner's cell and coming to rest on the new
     // one — like a wheel that keeps turning from wherever it last stopped.
     const order = candidatesRef.current; // cells in the same order the grid renders
     const n = order.length;
     const winner = avail[Math.floor(Math.random() * avail.length)];
-    const startIdx = prevWinnerId ? Math.max(0, order.findIndex((c) => c.id === prevWinnerId)) : Math.floor(Math.random() * n);
+    const prevIdx = prevWinnerId ? Math.max(0, order.findIndex((c) => c.id === prevWinnerId)) : Math.floor(Math.random() * n);
     const winnerIdx = order.findIndex((c) => c.id === winner.id);
-    const forward = (((winnerIdx - startIdx) % n) + n) % n; // steps forward to reach the winner
-    const totalSteps = forward + n; // one full lap of drama, landing on the winner
-    const tickMs = Math.max(45, Math.round(spinMs / totalSteps));
+    const forward = (((winnerIdx - prevIdx) % n) + n) % n; // steps from the previous winner to this one
+    // Bound the sweep so a slow hop speed can't make a far winner take forever: sweep
+    // the last ~16 cells leading into the winner (a few more when it's very close).
+    const CAP = 16;
+    let steps = forward;
+    let sweepStart = prevIdx; // ideally the previous winner's cell
+    if (steps > CAP) { steps = CAP; sweepStart = (((winnerIdx - CAP) % n) + n) % n; }
+    else if (steps < 6) { const add = 6 - steps; steps += add; sweepStart = (((sweepStart - add) % n) + n) % n; }
+    const totalSteps = steps;
+    // Per-cell hop time from the admin-set spin speed (Settings → Live Draw).
+    const tickMs = spinMsFor(spinSpeedRef.current);
+    const spinMs = totalSteps * tickMs; // the reveal fires when the sweep actually lands
     setPhase("spinning");
     setCurrent(null); // drop the lingering winner glow…
-    // …and start the picker ON the previous winner's cell so the sweep visibly leaves it.
-    spinRegIdRef.current = order[startIdx]?.id ?? prevWinnerId;
+    // …and start the picker where the sweep begins so it visibly travels into the winner.
+    spinRegIdRef.current = order[sweepStart]?.id ?? prevWinnerId;
     setSpinRegId(spinRegIdRef.current);
     if (seasonId) setPoolSpinning(seasonId, true).catch(() => {}); // public map starts moving now
     let step = 0;
-    let idx = startIdx;
+    let idx = sweepStart;
     const spinId = window.setInterval(() => {
       step++;
       idx = (idx + 1) % n; // advance one cell, in order
@@ -254,6 +271,7 @@ function DrawPage() {
     addTimer(() => {
       // The sweep comes to rest on the pre-chosen winner.
       const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const reg = regByIdRef.current.get(winner.id); // full registration → tagline / products for the reveal
       const s: Selected = {
         order: cur.length + 1,
         stallNo: cur.length + 1, // sequential stall number, kept for the directory
@@ -263,6 +281,8 @@ function DrawPage() {
         avatar: winner.avatar,
         id: winner.id,
         at: nowStr,
+        tagline: reg?.tagline,
+        products: reg?.products,
       };
       const next = [s, ...cur];
       selectedRef.current = next; // update the ref now so the NEXT runOne excludes this winner
@@ -275,6 +295,7 @@ function DrawPage() {
 
       // Hold on the landed dart so everyone sees where it struck, THEN name.
       const HOLD = 1400;
+      const showMs = Math.max(1, revealHoldRef.current) * 1000; // admin-set winner display time
       addTimer(() => { fireConfetti(); setShowWinner(true); }, HOLD);
       addTimer(() => {
         setSelected(next);
@@ -283,7 +304,7 @@ function DrawPage() {
         // Keep `current` = winner so its cell stays glowing until the admin clicks
         // Continue (which clears it and starts the next pick). Non-Stop still auto-chains.
         if (runningRef.current) { setCurrent(null); addTimer(runOne, 800); }
-      }, HOLD + 3400);
+      }, HOLD + showMs);
     }, spinMs); // spin lasts the admin-set countdown so the public count reaches 1 at reveal
   }
 
@@ -499,7 +520,7 @@ function DrawPage() {
       {/* Full-screen reveal overlay — only after the dart has landed */}
       <AnimatePresence>
         {showWinner && current && (
-          <RevealOverlay s={current} target={TARGET} />
+          <RevealOverlay s={current} target={TARGET} fields={revealFields} />
         )}
       </AnimatePresence>
 
@@ -528,7 +549,7 @@ function StatChip({ label, value, accent = false }: { label: string; value: numb
 }
 
 /* ==== FULL SCREEN REVEAL ==== */
-function RevealOverlay({ s, target }: { s: Selected; target: number }) {
+function RevealOverlay({ s, target, fields }: { s: Selected; target: number; fields: RevealFields }) {
   const { t } = useI18n();
   return (
     <motion.div
@@ -561,9 +582,20 @@ function RevealOverlay({ s, target }: { s: Selected; target: number }) {
             <div className="text-left">
               <div className="font-display text-2xl font-bold">{s.business}</div>
               <div className="text-sm text-white/70">{t("home.by")} {s.seller}</div>
-              <div className="mt-1 inline-block rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-medium">{s.category}</div>
+              {fields.category && s.category && <div className="mt-1 inline-block rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-medium">{s.category}</div>}
             </div>
           </div>
+          {fields.tagline && s.tagline && <div className="mt-4 font-script text-lg text-accent">“{s.tagline}”</div>}
+          {fields.products && s.products && s.products.length > 0 && (
+            <div className="mt-3">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60">{t("draw.sells")}</div>
+              <div className="mt-1.5 flex flex-wrap justify-center gap-1.5">
+                {s.products.slice(0, 8).map((p, i) => (
+                  <span key={i} className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-medium text-white/90">{p}</span>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-teal/20 px-4 py-1.5 text-xs font-semibold text-white">
             <Award className="h-4 w-4 text-accent" /> {t("draw.selection")} {s.order} / {target}
           </div>

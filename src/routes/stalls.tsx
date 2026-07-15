@@ -40,6 +40,26 @@ const NAME_CATEGORY: Record<string, string> = {
   "bake shop": "Food",
 };
 
+// ponytail: one-time Season-3 cleanup. `normName` strips case/punctuation so
+// "Food n mood" == "Food N Mood". Delete this block + its menu item once run.
+function normName(s: string) {
+  return (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+const SEASON3_KEEP = new Set([
+  "khatti Meethi Khushyan", "Abaan Nawati Tradition", "Adan Jewels", "Amche Nashte",
+  "Amcho kitchen", "Areej kurti Collection", "Asmat's food Corner", "Biryani Spot (By Umm-e-Usman)",
+  "Bismillah foods", "Chatpata Chaat Inn", "Chatpata pocket", "Chatpatta Point", "Choco magic",
+  "Chocolate World", "Cozy loops", "Diya's cuisine", "Food n mood", "Food Station", "Foodies",
+  "Fun Space", "Gehna Fashion and Foods", "Gems and glow", "Gurlzzz. Stop", "Hafiza's Mart",
+  "Hooriya mini Mart", "I S jewelery &hair accessories", "Irfana jewelry", "Jewelleryrstore.pk",
+  "Khana peena", "Khana pinaa", "Khatta Meetha corner", "Khausay station season 3",
+  "Khawsuey by walk n roll", "Little stars", "M/S Store", "Mantasha's food stall", "Mix item",
+  "Mrs Zubair's Kitchen", "Nawait Snacks", "oven charm", "P for Pizza,P for Papri Chaat", "Paper Joy",
+  "Pickle", "S and H crochet", "S.M foodz", "Saba's kitchen", "SHIROR stall", "Shumaila s kitchen",
+  "Sip and Crunch", "Spice n slice", "The Foodie Stop", "The little shine collection",
+  "Traditional bites", "Twinkle charms", "Umar garments", "Wrapped With Love", "Zeenat",
+].map(normName));
+
 function StallsPage() {
   const { seasons } = useSeason();
   const { isAdmin } = useAuth();
@@ -56,6 +76,7 @@ function StallsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmClearSel, setConfirmClearSel] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [pruneOpen, setPruneOpen] = useState(false);
   function toggleSelected(id: string) {
     setSelectedIds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
@@ -164,6 +185,25 @@ function StallsPage() {
     [stalls, catName, catByName]
   );
 
+  // One-time Season-3 prune: current-season stalls whose business isn't in the registered list.
+  const toPrune = useMemo(
+    () => (tab?.season === EVENT.seasonNumber ? stalls.filter((s) => !SEASON3_KEEP.has(normName(s.name))) : []),
+    [stalls, tab]
+  );
+  async function deletePruned() {
+    setClearing(true);
+    try {
+      await Promise.all(toPrune.map((s) => deleteStall(s.id!)));
+      setPruneOpen(false);
+      toast.success(`${toPrune.length} ${t("stalls.cleared")}`);
+      setRefresh((x) => x + 1);
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setClearing(false);
+    }
+  }
+
   const filtered = stalls.filter((s) => {
     const cname = resolveCat(s.categoryId, s.name);
     if (cat !== "All" && cname !== cat) return false;
@@ -267,6 +307,11 @@ function StallsPage() {
                     <DropdownMenuItem onSelect={() => setBulkOpen(true)}>
                       <Upload className="h-4 w-4" /> {t("stalls.bulkImport")}
                     </DropdownMenuItem>
+                    {toPrune.length > 0 && (
+                      <DropdownMenuItem onSelect={() => setPruneOpen(true)} className="text-destructive focus:text-destructive">
+                        <Trash2 className="h-4 w-4" /> Keep only registered ({toPrune.length})
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onSelect={() => setConfirmClear(true)}
@@ -346,6 +391,22 @@ function StallsPage() {
         confirmLabel={t("stalls.clearSelected")}
         onConfirm={clearSelectedStalls}
       />
+
+      <Dialog open={pruneOpen} onOpenChange={(o) => !o && !clearing && setPruneOpen(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Remove {toPrune.length} unregistered stall{toPrune.length === 1 ? "" : "s"}?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">These {tab?.label} stalls are not in the registered list and will be permanently deleted:</p>
+          <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto rounded-xl border border-border bg-muted/40 p-3 text-sm">
+            {toPrune.map((s) => <li key={s.id} className="truncate">{s.name}{s.owner ? <span className="text-muted-foreground"> — {s.owner}</span> : null}</li>)}
+          </ul>
+          <div className="mt-3 flex justify-end gap-2">
+            <button type="button" onClick={() => setPruneOpen(false)} disabled={clearing} className="rounded-full border border-border px-4 py-2 text-sm font-medium disabled:opacity-50">Cancel</button>
+            <button type="button" onClick={deletePruned} disabled={clearing} className="inline-flex items-center gap-2 rounded-full bg-destructive px-5 py-2 text-sm font-semibold text-white shadow-soft disabled:opacity-50">
+              {clearing && <Loader2 className="h-4 w-4 animate-spin" />} Delete {toPrune.length}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {tab && <BulkImportStalls tab={tab} open={bulkOpen} onOpenChange={setBulkOpen} onDone={() => setRefresh((x) => x + 1)} />}
     </div>

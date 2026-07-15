@@ -7,7 +7,7 @@ import { EVENT } from "@/lib/dummy-data";
 import { useSeason } from "@/lib/season-context";
 import { watchDrawResultsBySeasonId, type DrawResult } from "@/lib/draw-results-db";
 import { watchDrawPool, type PoolApplicant } from "@/lib/draw-pool-db";
-import { watchDrawSpeed, watchDrawCountdown, watchDrawLive } from "@/lib/settings-db";
+import { watchDrawSpeed, watchDrawCountdown, watchDrawLive, watchDrawFbUrl, watchRevealFields, DEFAULT_REVEAL, type RevealFields } from "@/lib/settings-db";
 import { colorFor } from "@/lib/category-colors";
 import { Dartboard, RedDart } from "@/components/site/dartboard";
 import { StallArena, type Selected } from "./draw";
@@ -41,6 +41,9 @@ function PresentationPage() {
   // Admin-selected pace from Settings (live); a ?speed= URL param still overrides it.
   const [settingSpeed, setSettingSpeed] = useState<Speed>("medium");
   useEffect(() => watchDrawSpeed(setSettingSpeed), []);
+  // Same winner-detail toggles the admin set — so the public reveal matches.
+  const [revealFields, setRevealFields] = useState<RevealFields>(DEFAULT_REVEAL);
+  useEffect(() => watchRevealFields(setRevealFields), []);
   // Admin-selected pre-pick countdown length (seconds), live from Settings.
   const [countdownSecs, setCountdownSecs] = useState(3);
   useEffect(() => watchDrawCountdown(setCountdownSecs), []);
@@ -48,6 +51,9 @@ function PresentationPage() {
   // (null = still checking, so we don't flash content before the flag loads).
   const [live, setLive] = useState<boolean | null>(null);
   useEffect(() => watchDrawLive(setLive), []);
+  // Optional Facebook Live link the admin pastes → embedded player (presenter's voice).
+  const [fbUrl, setFbUrl] = useState("");
+  useEffect(() => watchDrawFbUrl(setFbUrl), []);
   const speed = useMemo<Speed>(() => {
     const s = params.get("speed");
     return s === "slow" || s === "medium" || s === "fast" ? s : settingSpeed;
@@ -234,13 +240,57 @@ function PresentationPage() {
 
       {/* MAIN — stage + venue/history */}
       <main className="relative z-10 grid flex-1 gap-5 p-6 md:gap-6 md:p-10 lg:grid-cols-[1.55fr_1fr]">
-        <Stage phase={phase} count={count} current={current} complete={complete} target={target} spinning={spinning} preCount={preCount} arenaSelected={arenaSelected} totalStalls={totalStalls} />
+        <Stage phase={phase} count={count} current={current} complete={complete} target={target} spinning={spinning} preCount={preCount} arenaSelected={arenaSelected} totalStalls={totalStalls} fields={revealFields} />
 
         <aside className="flex min-h-0 flex-col gap-5">
           <VenueMap pool={pool} wonById={wonById} currentId={currentId} hopId={hopId} fallbackTotal={totalStalls} />
           <HistoryPanel history={history} />
         </aside>
       </main>
+
+      {/* Presenter's Facebook Live — audio + video, if the admin pasted a link */}
+      {fbUrl && <FbLivePlayer url={fbUrl} />}
+    </div>
+  );
+}
+
+/* ============ FACEBOOK LIVE PLAYER (floating) ============ */
+// Embeds the admin's FB live video so the audience hears the presenter. FB autoplays
+// muted (browser policy) — the viewer taps the player's own unmute control for sound.
+function FbLivePlayer({ url }: { url: string }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(true);
+  const src = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&autoplay=true&width=340`;
+  return (
+    <div className="fixed bottom-4 left-4 z-30 w-[min(340px,86vw)] overflow-hidden rounded-2xl border border-white/20 bg-black/70 shadow-2xl backdrop-blur">
+      <div className="flex items-center justify-between gap-2 px-3 py-2">
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-white">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-80" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
+          </span>
+          {t("present.fbAudio")}
+        </span>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="rounded-full px-2 py-0.5 text-xs font-semibold text-white/80 transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          aria-expanded={open}
+        >
+          {open ? t("present.fbHide") : t("present.fbShow")}
+        </button>
+      </div>
+      {open && (
+        <div className="aspect-video w-full bg-black">
+          <iframe
+            title="Facebook Live"
+            src={src}
+            className="h-full w-full"
+            style={{ border: "none" }}
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -264,7 +314,7 @@ function NotLive({ checking }: { checking: boolean }) {
 }
 
 /* ============ STAGE ============ */
-function Stage({ phase, count, current, complete, target, spinning, preCount, arenaSelected, totalStalls }: { phase: Phase; count: number; current: DrawResult | null; complete: boolean; target: number; spinning: boolean; preCount: number; arenaSelected: Selected[]; totalStalls: number }) {
+function Stage({ phase, count, current, complete, target, spinning, preCount, arenaSelected, totalStalls, fields }: { phase: Phase; count: number; current: DrawResult | null; complete: boolean; target: number; spinning: boolean; preCount: number; arenaSelected: Selected[]; totalStalls: number; fields: RevealFields }) {
   const { t } = useI18n();
   const palette = current ? colorFor(current.category) : null;
   const centered = !complete; // arena fills the card; other states stay centred
@@ -356,16 +406,27 @@ function Stage({ phase, count, current, complete, target, spinning, preCount, ar
               </div>
             )}
 
-            {/* Business + category */}
+            {/* Business + details (mirrors the admin's reveal settings) */}
             <div className="font-display text-4xl font-black leading-tight md:text-6xl">{current?.business}</div>
             {current?.seller && <div className="mt-2 text-lg text-white/70 md:text-2xl">{t("home.by")} {current.seller}</div>}
-            {palette && (
+            {fields.category && palette && (
               <span
                 className="mt-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold text-white md:text-base"
                 style={{ background: `linear-gradient(180deg, ${palette.bg}, ${palette.canopy})` }}
               >
                 {current?.category}
               </span>
+            )}
+            {fields.tagline && current?.tagline && <div className="mt-3 font-script text-2xl text-accent md:text-3xl">“{current.tagline}”</div>}
+            {fields.products && current?.products && current.products.length > 0 && (
+              <div className="mt-4">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.4em] text-white/60 md:text-xs">{t("draw.sells")}</div>
+                <div className="mt-2 flex flex-wrap justify-center gap-2">
+                  {current.products.slice(0, 8).map((p, i) => (
+                    <span key={i} className="rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white/90">{p}</span>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Stall number */}

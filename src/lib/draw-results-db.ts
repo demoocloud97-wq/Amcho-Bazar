@@ -25,6 +25,8 @@ export type DrawResult = {
   seller: string;
   business: string;
   category: string;
+  tagline?: string;
+  products?: string[];
   at: string;
   createdAt?: unknown;
 };
