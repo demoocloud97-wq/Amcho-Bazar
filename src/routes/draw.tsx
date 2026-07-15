@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, Flower2, Zap, ListChecks, Target, Search, Trophy, Radio } from "lucide-react";
+import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, Flower2, Zap, ListChecks, Target, Search, Trophy, Radio, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { EVENT } from "@/lib/dummy-data";
@@ -1081,6 +1081,19 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
     .filter((s) => (!cat || s.category === cat))
     .filter((s) => { const n = q.trim().toLowerCase(); return !n || `${s.business} ${s.seller} ${s.category} ${s.stallNo} ${(s.products ?? []).join(" ")}`.toLowerCase().includes(n); });
   const pct = target > 0 ? Math.min(100, Math.round((selected.length / target) * 100)) : 0;
+  // Download the currently-listed picks (respects search + category filter) as CSV.
+  function downloadCsv() {
+    const cols = ["Order", "Stall", "Business", "Owner", "Category", "Will sell"];
+    const esc = (v: unknown) => { const s = v == null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const body = rows.map((s) => [s.order, s.stallNo, s.business, s.seller, s.category, (s.products ?? []).join(" | ")].map(esc).join(","));
+    const csv = "﻿" + [cols.join(","), ...body].join("\n"); // BOM so Excel reads UTF-8
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "selected-sellers.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   // Live feed shows draw order (first winner first); the latest pick is highlighted.
   const feed = [...selected].sort((a, b) => a.order - b.order);
   const latestOrder = selected.length ? Math.max(...selected.map((s) => s.order)) : 0;
@@ -1123,6 +1136,14 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
                 </DialogHeader>
                 <div className="mt-0.5 text-xs text-white/70">{t("draw.selectedSub")}</div>
               </div>
+              <button
+                onClick={downloadCsv}
+                aria-label={t("adm.export")}
+                title={t("adm.export")}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              >
+                <Download className="h-3.5 w-3.5" /> {t("adm.export")}
+              </button>
               <div className="shrink-0 text-right">
                 <div className="font-display text-2xl font-black tabular-nums leading-none">{selected.length}<span className="text-base font-bold text-white/60">/{target}</span></div>
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-white/60">{pct}%</div>
