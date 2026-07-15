@@ -1123,7 +1123,7 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
       </div>
 
       <Dialog open={showAll} onOpenChange={setShowAll}>
-        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-3xl lg:max-w-4xl">
+        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-4xl lg:max-w-5xl xl:max-w-6xl">
           {/* Header band */}
           <div className="relative overflow-hidden bg-hero px-6 py-5 text-white">
             <div className="pointer-events-none absolute inset-0 pattern-dots opacity-15" />
@@ -1190,34 +1190,34 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
           </div>
 
           {/* List */}
-          <div className="max-h-[65vh] overflow-y-auto px-3 py-3">
+          <div className="max-h-[72vh] overflow-y-auto px-3 py-3">
             {rows.length === 0 ? (
-              <div className="py-10 text-center text-sm text-muted-foreground">{t("draw.noMatch")}</div>
+              <div className="py-10 text-center text-base text-muted-foreground">{t("draw.noMatch")}</div>
             ) : (
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {rows.map((s) => {
                   const palette = CATEGORY_COLORS[s.category] ?? CATEGORY_COLORS.Others;
                   return (
-                    <li key={s.id} className="flex items-center gap-3 rounded-2xl px-3 py-2 transition-colors hover:bg-muted/50">
-                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl font-display text-sm font-black tabular-nums text-white shadow-soft" style={{ background: `linear-gradient(180deg, ${palette.bg} 0%, ${palette.canopy} 100%)` }}>
+                    <li key={s.id} className="flex items-center gap-4 rounded-2xl px-4 py-3 transition-colors hover:bg-muted/50">
+                      <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl font-display text-lg font-black tabular-nums text-white shadow-soft" style={{ background: `linear-gradient(180deg, ${palette.bg} 0%, ${palette.canopy} 100%)` }}>
                         #{s.stallNo.toString().padStart(2, "0")}
                       </div>
-                      <img src={s.avatar} loading="lazy" alt={s.seller} className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-border" />
+                      <img src={s.avatar} loading="lazy" alt={s.seller} className="h-12 w-12 shrink-0 rounded-full object-cover ring-2 ring-border" />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-semibold text-foreground">{s.business}</div>
-                        <div className="truncate text-xs text-muted-foreground">{s.seller}</div>
-                        <div className="mt-0.5 inline-flex sm:hidden rounded-full px-2 py-0.5 text-[10px] font-medium text-primary" style={{ backgroundColor: `${palette.bg}22` }}>{s.category}</div>
+                        <div className="truncate text-lg font-bold text-foreground">{s.business}</div>
+                        <div className="truncate text-sm text-muted-foreground">{s.seller}</div>
+                        <div className="mt-1 inline-flex sm:hidden rounded-full px-2.5 py-0.5 text-xs font-semibold text-primary" style={{ backgroundColor: `${palette.bg}22` }}>{s.category}</div>
                         {s.products && s.products.length > 0 && (
-                          <div className="truncate text-[11px] text-muted-foreground/80" title={s.products.join(", ")}>
-                            <span className="font-medium text-foreground/60">{t("draw.sells")}:</span> {s.products.join(", ")}
+                          <div className="mt-0.5 line-clamp-2 text-sm text-muted-foreground" title={s.products.join(", ")}>
+                            <span className="font-semibold text-foreground/70">{t("draw.sells")}:</span> {s.products.join(", ")}
                           </div>
                         )}
                       </div>
-                      <span className="hidden shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium text-primary sm:inline-flex" style={{ backgroundColor: `${palette.bg}22` }}>
-                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: palette.bg }} /> {s.category}
+                      <span className="hidden shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-primary sm:inline-flex" style={{ backgroundColor: `${palette.bg}22` }}>
+                        <span className="h-2 w-2 rounded-full" style={{ background: palette.bg }} /> {s.category}
                       </span>
-                      <div className="shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
-                        <div className="font-semibold text-foreground/70">#{s.order}</div>
+                      <div className="shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                        <div className="text-sm font-bold text-foreground/70">#{s.order}</div>
                         <div>{s.at}</div>
                       </div>
                     </li>
