@@ -564,41 +564,41 @@ function RevealOverlay({ s, target, fields }: { s: Selected; target: number; fie
         animate={{ scale: 1, y: 0, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 22 }}
-        className="relative w-full max-w-lg overflow-hidden rounded-[36px] bg-hero p-8 text-center text-white shadow-glow"
+        className="relative max-h-[92vh] w-full max-w-2xl overflow-y-auto overflow-x-hidden rounded-[36px] bg-hero p-8 text-center text-white shadow-glow md:p-12"
       >
         <div className="pointer-events-none absolute inset-0 pattern-dots opacity-25" />
         <div className="pointer-events-none absolute -inset-1 rounded-[38px] bg-festive opacity-30 blur-2xl" />
 
         <div className="relative">
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-accent">
-            <PartyPopper className="h-4 w-4" /> {t("draw.congrats")}
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-accent/20 px-4 py-1.5 text-sm font-semibold uppercase tracking-widest text-accent">
+            <PartyPopper className="h-5 w-5" /> {t("draw.congrats")}
           </div>
-          <div className="mt-4 text-[10px] font-semibold uppercase tracking-[0.4em] text-white/70">{t("draw.stallAssigned")}</div>
-          <div className="font-display text-7xl font-black text-warm drop-shadow-[0_0_40px_rgba(255,201,74,0.7)]">
+          <div className="mt-5 text-xs font-semibold uppercase tracking-[0.4em] text-white/70">{t("draw.stallAssigned")}</div>
+          <div className="font-display text-8xl font-black text-warm drop-shadow-[0_0_40px_rgba(255,201,74,0.7)] md:text-9xl">
             #{s.stallNo.toString().padStart(2, "0")}
           </div>
-          <div className="mt-2 font-script text-3xl text-accent">{t("draw.assignedTo")}</div>
-          <div className="mt-4 flex items-center justify-center gap-4">
-            <img src={s.avatar} className="h-16 w-16 rounded-full object-cover ring-4 ring-accent/60" alt={s.seller} />
-            <div className="text-left">
-              <div className="font-display text-2xl font-bold">{s.business}</div>
-              <div className="text-sm text-white/70">{t("home.by")} {s.seller}</div>
-              {fields.category && s.category && <div className="mt-1 inline-block rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-medium">{s.category}</div>}
+          <div className="mt-3 font-script text-4xl text-accent">{t("draw.assignedTo")}</div>
+          <div className="mt-6 flex items-center justify-center gap-5">
+            <img src={s.avatar} className="h-20 w-20 rounded-full object-cover ring-4 ring-accent/60" alt={s.seller} />
+            <div className="min-w-0 text-left">
+              <div className="font-display text-3xl font-black leading-tight md:text-4xl">{s.business}</div>
+              <div className="text-lg text-white/80">{t("home.by")} {s.seller}</div>
+              {fields.category && s.category && <div className="mt-1.5 inline-block rounded-full bg-white/10 px-3 py-1 text-sm font-semibold">{s.category}</div>}
             </div>
           </div>
-          {fields.tagline && s.tagline && <div className="mt-4 font-script text-lg text-accent">“{s.tagline}”</div>}
+          {fields.tagline && s.tagline && <div className="mt-5 font-script text-2xl text-accent">“{s.tagline}”</div>}
           {fields.products && s.products && s.products.length > 0 && (
-            <div className="mt-3">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.3em] text-white/60">{t("draw.sells")}</div>
-              <div className="mt-1.5 flex flex-wrap justify-center gap-1.5">
+            <div className="mt-5">
+              <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">{t("draw.sells")}</div>
+              <div className="mt-2.5 flex flex-wrap justify-center gap-2">
                 {s.products.slice(0, 8).map((p, i) => (
-                  <span key={i} className="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-medium text-white/90">{p}</span>
+                  <span key={i} className="rounded-full bg-white/10 px-3.5 py-1 text-sm font-medium text-white/90">{p}</span>
                 ))}
               </div>
             </div>
           )}
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-teal/20 px-4 py-1.5 text-xs font-semibold text-white">
-            <Award className="h-4 w-4 text-accent" /> {t("draw.selection")} {s.order} / {target}
+          <div className="mt-7 inline-flex items-center gap-2 rounded-full bg-teal/20 px-5 py-2 text-sm font-semibold text-white">
+            <Award className="h-5 w-5 text-accent" /> {t("draw.selection")} {s.order} / {target}
           </div>
         </div>
       </motion.div>
