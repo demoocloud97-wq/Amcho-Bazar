@@ -1235,7 +1235,7 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
         </div>
       ) : (
         <div className="relative">
-          <div className="max-h-[520px] space-y-2.5 overflow-y-auto pr-1">
+          <div className="max-h-[520px] space-y-2.5 overflow-y-auto pr-1.5 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.25)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/20 hover:[&::-webkit-scrollbar-thumb]:bg-white/30">
             <AnimatePresence initial={false}>
               {feed.map((s) => {
                 const palette = CATEGORY_COLORS[s.category] ?? CATEGORY_COLORS.Others;
