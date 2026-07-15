@@ -138,6 +138,7 @@ function DrawPage() {
         const picks: Selected[] = results.map((r) => ({
           order: r.order, stallNo: r.stallNo, seller: r.seller, business: r.business,
           category: r.category, avatar: avatarFor(r.candidateId), id: r.candidateId, at: r.at,
+          products: r.products,
         })).sort((a, b) => b.order - a.order);
         setSelected(picks);
         selectedRef.current = picks;
@@ -1078,7 +1079,7 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
   const rows = [...selected]
     .sort((a, b) => a.order - b.order)
     .filter((s) => (!cat || s.category === cat))
-    .filter((s) => { const n = q.trim().toLowerCase(); return !n || `${s.business} ${s.seller} ${s.category} ${s.stallNo}`.toLowerCase().includes(n); });
+    .filter((s) => { const n = q.trim().toLowerCase(); return !n || `${s.business} ${s.seller} ${s.category} ${s.stallNo} ${(s.products ?? []).join(" ")}`.toLowerCase().includes(n); });
   const pct = target > 0 ? Math.min(100, Math.round((selected.length / target) * 100)) : 0;
   // Live feed shows draw order (first winner first); the latest pick is highlighted.
   const feed = [...selected].sort((a, b) => a.order - b.order);
@@ -1184,6 +1185,12 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-semibold text-foreground">{s.business}</div>
                         <div className="truncate text-xs text-muted-foreground">{s.seller}</div>
+                        <div className="mt-0.5 inline-flex sm:hidden rounded-full px-2 py-0.5 text-[10px] font-medium text-primary" style={{ backgroundColor: `${palette.bg}22` }}>{s.category}</div>
+                        {s.products && s.products.length > 0 && (
+                          <div className="truncate text-[11px] text-muted-foreground/80" title={s.products.join(", ")}>
+                            <span className="font-medium text-foreground/60">{t("draw.sells")}:</span> {s.products.join(", ")}
+                          </div>
+                        )}
                       </div>
                       <span className="hidden shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium text-primary sm:inline-flex" style={{ backgroundColor: `${palette.bg}22` }}>
                         <span className="h-1.5 w-1.5 rounded-full" style={{ background: palette.bg }} /> {s.category}
