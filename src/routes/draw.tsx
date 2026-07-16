@@ -887,11 +887,13 @@ export function StallArena({
   // Board at rest (ready, nothing picked) → no cell should be lit; guards against any
   // leftover current/spin highlight blinking after an interrupted or reset draw.
   const atRest = phase === "idle" && selected.length === 0;
-  const byStall = new Map(selected.map((s) => [s.stallNo, s]));
-  const winnersById = new Map(selected.map((s) => [s.id, s])); // winning applicant cells (live map)
+  // Memoised so a benign parent re-render doesn't rebuild these (and re-thrash the
+  // booth grid) — a common source of flicker.
+  const byStall = useMemo(() => new Map(selected.map((s) => [s.stallNo, s])), [selected]);
+  const winnersById = useMemo(() => new Map(selected.map((s) => [s.id, s])), [selected]); // winning applicant cells
   // The arena shows the SELECTED stall numbers (sorted) laid out in the pattern:
   // left wing (first 22) · right wing (next 22) · last one centred below.
-  const picks = selected.map((s) => s.stallNo).sort((a, b) => a - b);
+  const picks = useMemo(() => selected.map((s) => s.stallNo).sort((a, b) => a - b), [selected]);
   const leftStalls = picks.slice(0, 22);
   const rightStalls = picks.slice(22, 44);
   const centerStall = picks[44]; // 45th pick, centred
@@ -1015,7 +1017,6 @@ export function StallArena({
             byStall={byStall}
             usedStalls={usedStalls}
             current={current}
-            side="right"
           />
         </div>
 
@@ -1156,22 +1157,19 @@ function StallColumn({
   byStall,
   usedStalls,
   current,
-  side = "left",
 }: {
   stalls: number[];
   byStall: Map<number, Selected>;
   usedStalls: Set<number>;
   current: Selected | null;
-  side?: "left" | "right";
 }) {
-  // 2 booths per row, kept together and hugging the central aisle (so a wide
-  // arena adds margin on the outer edge instead of a big empty channel).
+  // 2 per row
   const rows: number[][] = [];
   for (let i = 0; i < stalls.length; i += 2) rows.push(stalls.slice(i, i + 2));
   return (
     <div className="flex flex-col gap-1 md:gap-1.5">
       {rows.map((row, idx) => (
-        <div key={idx} className={`flex items-center gap-1.5 md:gap-2 ${side === "left" ? "justify-end" : "justify-start"}`}>
+        <div key={idx} className="flex items-center justify-between gap-2">
           {row.map((n, cIdx) => (
             <div key={n} className="w-12 sm:w-14">
               <StallBooth
@@ -1183,6 +1181,7 @@ function StallColumn({
               />
             </div>
           ))}
+          {row.length === 1 && <div className="w-12 sm:w-14" />}
         </div>
       ))}
     </div>
@@ -1207,7 +1206,6 @@ function StallBooth({
   return (
     <div className="group relative">
       <motion.div
-        layout
         initial={{ opacity: 0, scale: 0.5, y: 12 }}
         animate={isCurrent ? { opacity: 1, scale: 1.18, y: -4 } : { opacity: 1, scale: 1, y: 0 }}
         transition={{ delay: Math.min(index * 0.015, 0.7), type: "spring", stiffness: 260, damping: 20 }}
