@@ -14,6 +14,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SeasonsRouteImport } from './routes/seasons'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as RegistrationInfoRouteImport } from './routes/registration-info'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PresentRouteImport } from './routes/present'
@@ -21,6 +22,7 @@ import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as PaymentRouteImport } from './routes/payment'
 import { Route as MyRegistrationRouteImport } from './routes/my-registration'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as GuideRouteImport } from './routes/guide'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as DrawRouteImport } from './routes/draw'
 import { Route as CategoriesRouteImport } from './routes/categories'
@@ -53,6 +55,11 @@ const SeasonsRoute = SeasonsRouteImport.update({
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistrationInfoRoute = RegistrationInfoRouteImport.update({
+  id: '/registration-info',
+  path: '/registration-info',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RegisterRoute = RegisterRouteImport.update({
@@ -88,6 +95,11 @@ const MyRegistrationRoute = MyRegistrationRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GalleryRoute = GalleryRouteImport.update({
@@ -138,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/categories': typeof CategoriesRouteWithChildren
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
+  '/guide': typeof GuideRoute
   '/login': typeof LoginRoute
   '/my-registration': typeof MyRegistrationRoute
   '/payment': typeof PaymentRoute
@@ -145,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/present': typeof PresentRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
+  '/registration-info': typeof RegistrationInfoRoute
   '/reports': typeof ReportsRoute
   '/seasons': typeof SeasonsRoute
   '/settings': typeof SettingsRoute
@@ -159,6 +173,7 @@ export interface FileRoutesByTo {
   '/announcements': typeof AnnouncementsRoute
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
+  '/guide': typeof GuideRoute
   '/login': typeof LoginRoute
   '/my-registration': typeof MyRegistrationRoute
   '/payment': typeof PaymentRoute
@@ -166,6 +181,7 @@ export interface FileRoutesByTo {
   '/present': typeof PresentRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
+  '/registration-info': typeof RegistrationInfoRoute
   '/reports': typeof ReportsRoute
   '/seasons': typeof SeasonsRoute
   '/settings': typeof SettingsRoute
@@ -182,6 +198,7 @@ export interface FileRoutesById {
   '/categories': typeof CategoriesRouteWithChildren
   '/draw': typeof DrawRoute
   '/gallery': typeof GalleryRoute
+  '/guide': typeof GuideRoute
   '/login': typeof LoginRoute
   '/my-registration': typeof MyRegistrationRoute
   '/payment': typeof PaymentRoute
@@ -189,6 +206,7 @@ export interface FileRoutesById {
   '/present': typeof PresentRoute
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
+  '/registration-info': typeof RegistrationInfoRoute
   '/reports': typeof ReportsRoute
   '/seasons': typeof SeasonsRoute
   '/settings': typeof SettingsRoute
@@ -206,6 +224,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/draw'
     | '/gallery'
+    | '/guide'
     | '/login'
     | '/my-registration'
     | '/payment'
@@ -213,6 +232,7 @@ export interface FileRouteTypes {
     | '/present'
     | '/profile'
     | '/register'
+    | '/registration-info'
     | '/reports'
     | '/seasons'
     | '/settings'
@@ -227,6 +247,7 @@ export interface FileRouteTypes {
     | '/announcements'
     | '/draw'
     | '/gallery'
+    | '/guide'
     | '/login'
     | '/my-registration'
     | '/payment'
@@ -234,6 +255,7 @@ export interface FileRouteTypes {
     | '/present'
     | '/profile'
     | '/register'
+    | '/registration-info'
     | '/reports'
     | '/seasons'
     | '/settings'
@@ -249,6 +271,7 @@ export interface FileRouteTypes {
     | '/categories'
     | '/draw'
     | '/gallery'
+    | '/guide'
     | '/login'
     | '/my-registration'
     | '/payment'
@@ -256,6 +279,7 @@ export interface FileRouteTypes {
     | '/present'
     | '/profile'
     | '/register'
+    | '/registration-info'
     | '/reports'
     | '/seasons'
     | '/settings'
@@ -272,6 +296,7 @@ export interface RootRouteChildren {
   CategoriesRoute: typeof CategoriesRouteWithChildren
   DrawRoute: typeof DrawRoute
   GalleryRoute: typeof GalleryRoute
+  GuideRoute: typeof GuideRoute
   LoginRoute: typeof LoginRoute
   MyRegistrationRoute: typeof MyRegistrationRoute
   PaymentRoute: typeof PaymentRoute
@@ -279,6 +304,7 @@ export interface RootRouteChildren {
   PresentRoute: typeof PresentRoute
   ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
+  RegistrationInfoRoute: typeof RegistrationInfoRoute
   ReportsRoute: typeof ReportsRoute
   SeasonsRoute: typeof SeasonsRoute
   SettingsRoute: typeof SettingsRoute
@@ -321,6 +347,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registration-info': {
+      id: '/registration-info'
+      path: '/registration-info'
+      fullPath: '/registration-info'
+      preLoaderRoute: typeof RegistrationInfoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -370,6 +403,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gallery': {
@@ -452,6 +492,7 @@ const rootRouteChildren: RootRouteChildren = {
   CategoriesRoute: CategoriesRouteWithChildren,
   DrawRoute: DrawRoute,
   GalleryRoute: GalleryRoute,
+  GuideRoute: GuideRoute,
   LoginRoute: LoginRoute,
   MyRegistrationRoute: MyRegistrationRoute,
   PaymentRoute: PaymentRoute,
@@ -459,6 +500,7 @@ const rootRouteChildren: RootRouteChildren = {
   PresentRoute: PresentRoute,
   ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
+  RegistrationInfoRoute: RegistrationInfoRoute,
   ReportsRoute: ReportsRoute,
   SeasonsRoute: SeasonsRoute,
   SettingsRoute: SettingsRoute,

@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
+import { RouteHelp } from "@/components/site/help-button";
 import { GoogleOneTap } from "@/components/site/google-one-tap";
 import { LiveDrawBanner } from "@/components/site/live-draw-banner";
 import { AuthProvider } from "@/lib/auth-context";
@@ -146,6 +147,7 @@ function RootComponent() {
               </main>
               <SiteFooter />
             </div>
+            <RouteHelp />
             <Toaster position="bottom-right" richColors />
           </SeasonProvider>
         </AuthProvider>

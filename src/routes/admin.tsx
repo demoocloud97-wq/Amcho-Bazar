@@ -13,7 +13,7 @@ import { getRegistrationsForAdmin, watchRegistrationsForAdmin, getRegistrationsB
 import { getCategories, fillDefaultSubcategories, type Category } from "@/lib/categories-db";
 import { deleteStallForRegistration, materializeRegistrationStalls } from "@/lib/stalls-db";
 import { seedApprovedRegistrations, clearSeededRegistrations } from "@/lib/seed-registrations";
-import { getFillSubcatsEnabled } from "@/lib/settings-db";
+import { getFillSubcatsEnabled, getCustomRegFields, type CustomRegField } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 import { RequireAdmin } from "@/components/site/require-admin";
@@ -100,8 +100,10 @@ function AdminPage() {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [cats, setCats] = useState<Category[]>([]);
+  const [customFields, setCustomFields] = useState<CustomRegField[]>([]);
   const [prevCount, setPrevCount] = useState<number | null>(null);
   useEffect(() => { getCategories().then(setCats).catch(() => {}); }, []);
+  useEffect(() => { getCustomRegFields().then(setCustomFields).catch(() => {}); }, []);
   // Previous season's registration count — used for a real trend %, hidden if none.
   useEffect(() => {
     const prev = seasons.filter((s) => season && s.seasonNumber < season.seasonNumber).sort((a, b) => b.seasonNumber - a.seasonNumber)[0];
@@ -307,7 +309,7 @@ function AdminPage() {
   // Export every seller's full details for this season as a CSV (opens in Excel).
   function exportCsv() {
     if (registrations.length === 0) { toast.message(t("adm.noRegs")); return; }
-    const cols = ["Owner", "Surname", "Business", "Tagline", "Years", "Instagram", "City", "Category", "Sub-category", "Phone", "Email", "Products", "Status", "Season"];
+    const cols = ["Owner", "Surname", "Business", "Tagline", "Years", "Instagram", "City", "Category", "Sub-category", "Phone", "Email", "Products", ...customFields.map((f) => f.label), "Status", "Season"];
     const esc = (v: unknown) => {
       const s = v == null ? "" : String(v);
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
@@ -315,7 +317,7 @@ function AdminPage() {
     const rows = registrations.map((r) => [
       r.seller, r.surname ?? "", r.business, r.tagline ?? "", r.yearsRunning ?? "", r.instagram ?? "", r.city ?? "",
       r.categories?.length ? r.categories.join(" | ") : r.category, r.subcategories?.length ? r.subcategories.join(" | ") : (r.subcategory ?? ""),
-      r.phone, r.email ?? "", (r.products ?? []).join(" | "), r.status, r.season ?? "",
+      r.phone, r.email ?? "", (r.products ?? []).join(" | "), ...customFields.map((f) => r.customFields?.[f.id] ?? ""), r.status, r.season ?? "",
     ].map(esc).join(","));
     const csv = "﻿" + [cols.join(","), ...rows].join("\n"); // BOM so Excel reads UTF-8
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));

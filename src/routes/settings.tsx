@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { HelpCircle, Eye, EyeOff, Gauge, Image as ImageIcon, KeyRound, ListChecks, Loader2, Lock, LogOut, Mail, Phone, Shield, ShieldCheck, Sparkles, User, UserCircle, Video, Zap } from "lucide-react";
+import { HelpCircle, Eye, EyeOff, Gauge, Image as ImageIcon, KeyRound, ListChecks, Loader2, Lock, LogOut, Mail, MapPin, Phone, Shield, ShieldCheck, Sparkles, User, UserCircle, UserPlus, Video, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
 import { RequireAuth } from "@/components/site/require-auth";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { HeroImageEditor, DrawNonStopToggle, LiveDrawPace, RevealFieldsEditor, FillSubcatsToggle, FaqEditor, FooterContactEditor, FbLiveEditor } from "@/components/site/admin-settings";
+import { HeroImageEditor, DrawNonStopToggle, LiveDrawPace, RevealFieldsEditor, FillSubcatsToggle, FaqEditor, FooterContactEditor, FbLiveEditor, EventLocationEditor, SignupToggle } from "@/components/site/admin-settings";
+import { SidebarSections, type NavGroup } from "@/components/site/sidebar-sections";
 import { useAuth } from "@/lib/auth-context";
 import { changePassword, hasPasswordProvider, logout } from "@/lib/auth";
 import { friendlyAuthError } from "@/lib/firebase-errors";
@@ -25,74 +25,32 @@ function SettingsPage() {
   const { t } = useI18n();
   const canChangePw = user ? hasPasswordProvider(user) : false;
 
+  const groups: NavGroup[] = [
+    { label: t("settings.grpAccount"), items: [
+      { id: "account", icon: <UserCircle className="h-4 w-4" />, title: t("settings.accountTitle"), desc: t("settings.accountDesc"), node: <AccountPanel /> },
+      { id: "password", icon: <KeyRound className="h-4 w-4" />, title: t("settings.changePwTitle"), desc: t("settings.changePwDesc"), node: canChangePw ? <ChangePasswordForm /> : <GoogleNotice email={user?.email ?? ""} /> },
+    ] },
+  ];
+  if (isAdmin) groups.push({ label: t("settings.grpAdmin"), items: [
+    { id: "signup", icon: <UserPlus className="h-4 w-4" />, title: t("adm.signupTitle"), desc: t("adm.signupDesc"), node: <SignupToggle /> },
+    { id: "location", icon: <MapPin className="h-4 w-4" />, title: t("adm.locTitle"), desc: t("adm.locDesc"), node: <EventLocationEditor /> },
+    { id: "hero", icon: <ImageIcon className="h-4 w-4" />, title: t("adm.heroTitle"), desc: t("adm.heroDesc"), node: <HeroImageEditor /> },
+    { id: "nonstop", icon: <Zap className="h-4 w-4" />, title: t("adm.nonstopTitle"), desc: t("adm.nonstopDesc"), node: <DrawNonStopToggle /> },
+    { id: "drawpace", icon: <Gauge className="h-4 w-4" />, title: t("adm.drawPaceTitle"), desc: t("adm.drawPaceDesc"), node: <LiveDrawPace /> },
+    { id: "reveal", icon: <Sparkles className="h-4 w-4" />, title: t("adm.revealTitle"), desc: t("adm.revealDesc"), node: <RevealFieldsEditor /> },
+    { id: "fblive", icon: <Video className="h-4 w-4" />, title: t("adm.fbLiveTitle"), desc: t("adm.fbLiveDesc"), node: <FbLiveEditor /> },
+    { id: "fillsub", icon: <ListChecks className="h-4 w-4" />, title: t("adm.fillTitle"), desc: t("adm.fillDesc"), node: <FillSubcatsToggle /> },
+    { id: "faq", icon: <HelpCircle className="h-4 w-4" />, title: t("adm.faqTitle"), desc: t("adm.faqDesc"), node: <FaqEditor /> },
+    { id: "footer", icon: <Phone className="h-4 w-4" />, title: t("adm.footerTitle"), desc: t("adm.footerDesc"), node: <FooterContactEditor /> },
+  ] });
+
   return (
     <div>
       <PageHeader eyebrow={t("settings.eyebrow")} title={t("settings.title")} subtitle={t("settings.subtitle")} />
-      <section className="mx-auto max-w-2xl px-4 pb-24 md:px-8">
-        {/* Every feature is its own expand/collapse panel — add more items over time. */}
-        <Accordion type="multiple" className="space-y-4">
-          <SettingSection value="account" icon={<UserCircle className="h-5 w-5" />} title={t("settings.accountTitle")} desc={t("settings.accountDesc")}>
-            <AccountPanel />
-          </SettingSection>
-
-          <SettingSection value="password" icon={<KeyRound className="h-5 w-5" />} title={t("settings.changePwTitle")} desc={t("settings.changePwDesc")}>
-            {canChangePw ? <ChangePasswordForm /> : <GoogleNotice email={user?.email ?? ""} />}
-          </SettingSection>
-
-          {isAdmin && (
-            <>
-              <SettingSection value="hero" icon={<ImageIcon className="h-5 w-5" />} title={t("adm.heroTitle")} desc={t("adm.heroDesc")}>
-                <HeroImageEditor />
-              </SettingSection>
-              <SettingSection value="nonstop" icon={<Zap className="h-5 w-5" />} title={t("adm.nonstopTitle")} desc={t("adm.nonstopDesc")}>
-                <DrawNonStopToggle />
-              </SettingSection>
-              <SettingSection value="drawpace" icon={<Gauge className="h-5 w-5" />} title={t("adm.drawPaceTitle")} desc={t("adm.drawPaceDesc")}>
-                <LiveDrawPace />
-              </SettingSection>
-              <SettingSection value="reveal" icon={<Sparkles className="h-5 w-5" />} title={t("adm.revealTitle")} desc={t("adm.revealDesc")}>
-                <RevealFieldsEditor />
-              </SettingSection>
-              <SettingSection value="fblive" icon={<Video className="h-5 w-5" />} title={t("adm.fbLiveTitle")} desc={t("adm.fbLiveDesc")}>
-                <FbLiveEditor />
-              </SettingSection>
-              <SettingSection value="fillsub" icon={<ListChecks className="h-5 w-5" />} title={t("adm.fillTitle")} desc={t("adm.fillDesc")}>
-                <FillSubcatsToggle />
-              </SettingSection>
-              <SettingSection value="faq" icon={<HelpCircle className="h-5 w-5" />} title={t("adm.faqTitle")} desc={t("adm.faqDesc")}>
-                <FaqEditor />
-              </SettingSection>
-              <SettingSection value="footer" icon={<Phone className="h-5 w-5" />} title={t("adm.footerTitle")} desc={t("adm.footerDesc")}>
-                <FooterContactEditor />
-              </SettingSection>
-            </>
-          )}
-        </Accordion>
+      <section className="mx-auto max-w-5xl px-4 pb-24 pt-8 md:px-8 md:pt-12">
+        <SidebarSections groups={groups} />
       </section>
     </div>
-  );
-}
-
-// A collapsible card. New settings features just drop in as another <SettingSection>.
-function SettingSection({ value, icon, title, desc, children }: { value: string; icon: React.ReactNode; title: string; desc: string; children: React.ReactNode }) {
-  return (
-    <AccordionItem
-      value={value}
-      className="group overflow-hidden rounded-3xl border border-border bg-card px-5 shadow-card transition-all hover:border-primary/20 data-[state=open]:border-primary/25 data-[state=open]:shadow-glow md:px-6"
-    >
-      <AccordionTrigger className="py-5 hover:no-underline">
-        <div className="flex items-center gap-3 text-left">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-festive text-white shadow-soft ring-1 ring-inset ring-white/20 transition-transform group-hover:scale-105">{icon}</span>
-          <div>
-            <div className="font-display text-base font-bold leading-tight">{title}</div>
-            <div className="mt-0.5 text-xs text-muted-foreground">{desc}</div>
-          </div>
-        </div>
-      </AccordionTrigger>
-      <AccordionContent className="pb-6">
-        <div className="border-t border-border/70 pt-5">{children}</div>
-      </AccordionContent>
-    </AccordionItem>
   );
 }
 
@@ -152,7 +110,6 @@ function ChangePasswordForm() {
   const [cur, setCur] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -175,14 +132,9 @@ function ChangePasswordForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <Field label={t("settings.current")} value={cur} onChange={setCur} show={show} autoComplete="current-password" />
-      <Field label={t("settings.new")} value={next} onChange={setNext} show={show} autoComplete="new-password" />
-      <Field label={t("settings.confirm")} value={confirm} onChange={setConfirm} show={show} autoComplete="new-password" />
-
-      <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-        <input type="checkbox" checked={show} onChange={(e) => setShow(e.target.checked)} className="h-4 w-4 rounded border-border accent-[color:var(--color-primary)]" />
-        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />} {t("settings.showPw")}
-      </label>
+      <Field label={t("settings.current")} value={cur} onChange={setCur} autoComplete="current-password" />
+      <Field label={t("settings.new")} value={next} onChange={setNext} autoComplete="new-password" />
+      <Field label={t("settings.confirm")} value={confirm} onChange={setConfirm} autoComplete="new-password" />
 
       {err && <p role="alert" className="text-sm font-medium text-destructive">{err}</p>}
 
@@ -197,7 +149,10 @@ function ChangePasswordForm() {
   );
 }
 
-function Field({ label, value, onChange, show, autoComplete }: { label: string; value: string; onChange: (v: string) => void; show: boolean; autoComplete: string }) {
+// Password input with its own show/hide eye button (same pattern as Log in / Sign up).
+function Field({ label, value, onChange, autoComplete }: { label: string; value: string; onChange: (v: string) => void; autoComplete: string }) {
+  const { t } = useI18n();
+  const [show, setShow] = useState(false);
   return (
     <div>
       <label className="mb-1.5 block text-sm font-medium text-foreground">{label}</label>
@@ -209,8 +164,17 @@ function Field({ label, value, onChange, show, autoComplete }: { label: string; 
           onChange={(e) => onChange(e.target.value)}
           autoComplete={autoComplete}
           required
-          className="min-h-11 w-full rounded-xl border border-border bg-muted/40 py-2.5 ps-9 pe-4 text-sm outline-none ring-primary/20 transition focus:ring-4"
+          className="min-h-11 w-full rounded-xl border border-border bg-muted/40 py-2.5 ps-9 pe-11 text-sm outline-none ring-primary/20 transition focus:ring-4"
         />
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          aria-label={t("settings.showPw")}
+          aria-pressed={show}
+          className="absolute end-1.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        >
+          {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
       </div>
     </div>
   );

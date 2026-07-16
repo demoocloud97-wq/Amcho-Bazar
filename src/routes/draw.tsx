@@ -7,7 +7,7 @@ import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { EVENT } from "@/lib/dummy-data";
-import { getDrawNonStop, getDrawLive, setDrawLive, watchDrawCountdown, watchDrawSpinSpeed, spinMsFor, watchRevealFields, watchRevealHold, DEFAULT_REVEAL, type DrawSpeed, type RevealFields } from "@/lib/settings-db";
+import { getDrawNonStop, getDrawLive, setDrawLive, watchDrawCountdown, watchDrawSpinMs, watchRevealFields, watchRevealHold, DEFAULT_REVEAL, type RevealFields } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
 import { watchRegistrationsForAdmin, updateRegistration, type Registration } from "@/lib/db";
 import { materializeRegistrationStalls, deleteStallForRegistration } from "@/lib/stalls-db";
@@ -98,8 +98,8 @@ function DrawPage() {
   const countdownRef = useRef(3);
   useEffect(() => { countdownRef.current = countdownSecs; }, [countdownSecs]);
   // Admin-set sweep speed + which winner details to reveal (Settings → Live Draw).
-  const spinSpeedRef = useRef<DrawSpeed>("medium");
-  useEffect(() => watchDrawSpinSpeed((s) => { spinSpeedRef.current = s; }), []);
+  const spinMsRef = useRef(150); // admin-set hop time (ms) — free value, not a preset
+  useEffect(() => watchDrawSpinMs((ms) => { spinMsRef.current = ms; }), []);
   const [revealFields, setRevealFields] = useState<RevealFields>(DEFAULT_REVEAL);
   useEffect(() => watchRevealFields(setRevealFields), []);
   const revealHoldRef = useRef(3); // seconds the winner card stays up (Settings → Live Draw)
@@ -252,7 +252,7 @@ function DrawPage() {
     else if (steps < 6) { const add = 6 - steps; steps += add; sweepStart = (((sweepStart - add) % n) + n) % n; }
     const totalSteps = steps;
     // Per-cell hop time from the admin-set spin speed (Settings → Live Draw).
-    const tickMs = spinMsFor(spinSpeedRef.current);
+    const tickMs = spinMsRef.current;
     const spinMs = totalSteps * tickMs; // the reveal fires when the sweep actually lands
     setPhase("spinning");
     setCurrent(null); // drop the lingering winner glow…

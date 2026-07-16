@@ -37,11 +37,12 @@ export async function setHeroImage(url: string): Promise<void> {
 }
 
 /* ---- Footer contact details (editable from Settings) ---- */
-export type FooterContact = { phone: string; email: string; instagram: string };
+export type FooterContact = { phone: string; email: string; instagram: string; facebook: string };
 export const DEFAULT_FOOTER: FooterContact = {
   phone: "+91 98800 12345",
   email: "hello@amchobazar.in",
   instagram: "@amcho.bazar",
+  facebook: "",
 };
 
 function readFooter(data: Record<string, unknown> | undefined): FooterContact {
@@ -49,6 +50,7 @@ function readFooter(data: Record<string, unknown> | undefined): FooterContact {
     phone: (data?.footerPhone as string)?.trim() || DEFAULT_FOOTER.phone,
     email: (data?.footerEmail as string)?.trim() || DEFAULT_FOOTER.email,
     instagram: (data?.footerInstagram as string)?.trim() || DEFAULT_FOOTER.instagram,
+    facebook: (data?.footerFacebook as string)?.trim() || DEFAULT_FOOTER.facebook,
   };
 }
 
@@ -64,7 +66,7 @@ export async function getFooterContact(): Promise<FooterContact> {
 export async function setFooterContact(f: FooterContact): Promise<void> {
   await setDoc(
     doc(db, SETTINGS, SITE),
-    { footerPhone: f.phone.trim(), footerEmail: f.email.trim(), footerInstagram: f.instagram.trim(), updatedAt: serverTimestamp() },
+    { footerPhone: f.phone.trim(), footerEmail: f.email.trim(), footerInstagram: f.instagram.trim(), footerFacebook: f.facebook.trim(), updatedAt: serverTimestamp() },
     { merge: true }
   );
 }
@@ -175,7 +177,11 @@ export function watchDrawSpeed(cb: (speed: DrawSpeed) => void) {
 
 /* ---- Live Draw countdown: seconds counted down before each pick reveals ---- */
 const DEFAULT_COUNTDOWN = 3;
-const asCountdown = (v: unknown): number => (typeof v === "number" && v >= 0 && v <= 10 ? Math.round(v) : DEFAULT_COUNTDOWN);
+// Admin sets this freely — wide range, no fixed presets.
+export const COUNTDOWN_MIN = 0;
+export const COUNTDOWN_MAX = 60;
+const asCountdown = (v: unknown): number =>
+  typeof v === "number" && v >= COUNTDOWN_MIN && v <= COUNTDOWN_MAX ? Math.round(v) : DEFAULT_COUNTDOWN;
 
 export async function getDrawCountdown(): Promise<number> {
   try {
@@ -217,6 +223,36 @@ export function watchDrawSpinSpeed(cb: (s: DrawSpeed) => void) {
     doc(db, SETTINGS, SITE),
     (snap) => { const v = snap.exists() ? snap.data().drawSpinSpeed : undefined; cb(isSpeed(v) ? v : "medium"); },
     () => cb("medium")
+  );
+}
+
+/* ---- Free-form spin speed: admin picks any hop time (ms), no fixed presets.
+       Falls back to the legacy slow/medium/fast value when not set yet. ---- */
+export const SPIN_MS_MIN = 30;
+export const SPIN_MS_MAX = 600;
+const DEFAULT_SPIN_MS = HOP_MS.medium;
+const asSpinMs = (v: unknown, legacy?: unknown): number => {
+  if (typeof v === "number" && Number.isFinite(v)) return Math.min(SPIN_MS_MAX, Math.max(SPIN_MS_MIN, Math.round(v)));
+  if (isSpeed(legacy)) return HOP_MS[legacy];
+  return DEFAULT_SPIN_MS;
+};
+export async function getDrawSpinMs(): Promise<number> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS, SITE));
+    const d = snap.exists() ? snap.data() : {};
+    return asSpinMs(d?.drawSpinMs, d?.drawSpinSpeed);
+  } catch {
+    return DEFAULT_SPIN_MS;
+  }
+}
+export async function setDrawSpinMs(ms: number): Promise<void> {
+  await setDoc(doc(db, SETTINGS, SITE), { drawSpinMs: asSpinMs(ms), updatedAt: serverTimestamp() }, { merge: true });
+}
+export function watchDrawSpinMs(cb: (ms: number) => void) {
+  return onSnapshot(
+    doc(db, SETTINGS, SITE),
+    (snap) => { const d = snap.exists() ? snap.data() : {}; cb(asSpinMs(d?.drawSpinMs, d?.drawSpinSpeed)); },
+    () => cb(DEFAULT_SPIN_MS)
   );
 }
 
@@ -281,6 +317,93 @@ export async function saveFaqs(faqs: Faq[]): Promise<void> {
     doc(db, SETTINGS, SITE),
     { faqs: faqs.filter((f) => f.q.trim()), updatedAt: serverTimestamp() },
     { merge: true }
+  );
+}
+
+// Admin-defined extra fields for the registration form (beyond the built-in ones).
+export type RegFieldType = "text" | "number" | "textarea" | "select";
+export type CustomRegField = { id: string; label: string; type: RegFieldType; options?: string[]; required?: boolean };
+
+export async function getCustomRegFields(): Promise<CustomRegField[]> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS, SITE));
+    const list = snap.exists() ? (snap.data().customRegFields as CustomRegField[] | undefined) : undefined;
+    return Array.isArray(list) ? list.filter((f) => f?.id && f?.label?.trim()) : [];
+  } catch {
+    return [];
+  }
+}
+export async function saveCustomRegFields(fields: CustomRegField[]): Promise<void> {
+  await setDoc(
+    doc(db, SETTINGS, SITE),
+    { customRegFields: fields.filter((f) => f.label.trim()).map((f) => ({ ...f, label: f.label.trim() })), updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+}
+
+// Built-in registration fields (fixed) — admin may rename their labels (stored as
+// overrides keyed by `key`; empty override falls back to the translated default).
+export const BUILTIN_REG_FIELDS: { key: string; labelKey: string; section: "personal" | "business" }[] = [
+  { key: "fullName", labelKey: "reg.f.fullName", section: "personal" },
+  { key: "surname", labelKey: "reg.f.surname", section: "personal" },
+  { key: "phone", labelKey: "reg.f.phone", section: "personal" },
+  { key: "email", labelKey: "reg.f.email", section: "personal" },
+  { key: "city", labelKey: "reg.f.city", section: "personal" },
+  { key: "business", labelKey: "reg.f.business", section: "business" },
+  { key: "tagline", labelKey: "reg.f.tagline", section: "business" },
+  { key: "years", labelKey: "reg.f.years", section: "business" },
+  { key: "instagram", labelKey: "reg.f.instagram", section: "business" },
+  { key: "logo", labelKey: "reg.f.logo", section: "business" },
+  { key: "products", labelKey: "reg.f.sell", section: "business" },
+];
+
+export async function getRegFieldLabels(): Promise<Record<string, string>> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS, SITE));
+    const m = snap.exists() ? (snap.data().regFieldLabels as Record<string, string> | undefined) : undefined;
+    return m && typeof m === "object" ? m : {};
+  } catch {
+    return {};
+  }
+}
+export async function setRegFieldLabels(map: Record<string, string>): Promise<void> {
+  const clean = Object.fromEntries(Object.entries(map).map(([k, v]) => [k, (v || "").trim()]).filter(([, v]) => v));
+  await setDoc(doc(db, SETTINGS, SITE), { regFieldLabels: clean, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+// Terms & Conditions text shown on the registration Review step (admin-editable).
+export async function getTerms(): Promise<string> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS, SITE));
+    return snap.exists() ? ((snap.data().terms as string) ?? "") : "";
+  } catch {
+    return "";
+  }
+}
+export async function setTerms(text: string): Promise<void> {
+  await setDoc(doc(db, SETTINGS, SITE), { terms: text, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+/* ---- Sign up on/off. Registration works without an account, so the admin can
+       switch account sign-up off entirely and keep it direct. Default: on. ---- */
+const asBool = (v: unknown, fallback: boolean) => (typeof v === "boolean" ? v : fallback);
+
+export async function getSignupEnabled(): Promise<boolean> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS, SITE));
+    return asBool(snap.exists() ? snap.data().signupEnabled : undefined, true);
+  } catch {
+    return true;
+  }
+}
+export async function setSignupEnabled(enabled: boolean): Promise<void> {
+  await setDoc(doc(db, SETTINGS, SITE), { signupEnabled: enabled, updatedAt: serverTimestamp() }, { merge: true });
+}
+export function watchSignupEnabled(cb: (on: boolean) => void) {
+  return onSnapshot(
+    doc(db, SETTINGS, SITE),
+    (snap) => cb(asBool(snap.exists() ? snap.data().signupEnabled : undefined, true)),
+    () => cb(true)
   );
 }
 

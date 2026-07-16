@@ -7,6 +7,8 @@ import { ArrowLeft, ArrowRight, Check, ImagePlus, Loader2, PartyPopper, Sparkles
 import { uploadToCloudinary, cloudinaryReady } from "@/lib/cloudinary";
 import { CATEGORIES, EVENT, type CategoryKey } from "@/lib/dummy-data";
 import { createRegistration, getRegistrationsBySeasonId } from "@/lib/db";
+import { getCustomRegFields, getRegFieldLabels, getTerms, watchSignupEnabled, type CustomRegField } from "@/lib/settings-db";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getCategories, getSubCategories, type Category, type SubCategory } from "@/lib/categories-db";
 import { getUserProfile } from "@/lib/profile-db";
 import { useSeason } from "@/lib/season-context";
@@ -41,7 +43,11 @@ function loadDraft(): { data?: Record<string, unknown>; step?: number } | null {
 }
 
 function RegisterPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  // When sign-up is ON, an account is required to register. When OFF, registration
+  // is fully direct. `null` = still loading, so we don't flash the wrong screen.
+  const [signupOn, setSignupOn] = useState<boolean | null>(null);
+  useEffect(() => watchSignupEnabled(setSignupOn), []);
   const { activeSeason } = useSeason();
   const { t } = useI18n();
   const [step, setStep] = useState(() => {
@@ -52,6 +58,14 @@ function RegisterPage() {
   const [catCounts, setCatCounts] = useState<Record<string, number>>({});
   const [fsCats, setFsCats] = useState<Category[]>([]);
   const [subs, setSubs] = useState<SubCategory[]>([]);
+  const [customFields, setCustomFields] = useState<CustomRegField[]>([]);
+  useEffect(() => { getCustomRegFields().then(setCustomFields).catch(() => {}); }, []);
+  const [regLabels, setRegLabels] = useState<Record<string, string>>({});
+  useEffect(() => { getRegFieldLabels().then(setRegLabels).catch(() => {}); }, []);
+  const [terms, setTerms] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  useEffect(() => { getTerms().then(setTerms).catch(() => {}); }, []);
 
   // Firestore categories + sub-categories (to offer a sub-category choice).
   useEffect(() => {
@@ -95,6 +109,7 @@ function RegisterPage() {
       subcategoryId: "",
       subcategories: [] as string[],
       subcategoryIds: [] as string[],
+      custom: {} as Record<string, string>, // admin-defined extra field values (id → value)
     };
     const saved = loadDraft()?.data; // restore a refreshed draft, keeping the shape above
     return saved ? { ...base, ...saved } : base;
@@ -194,6 +209,12 @@ function RegisterPage() {
             .split(",")
             .map((p) => p.trim())
             .filter(Boolean),
+          customFields: (() => {
+            const entries = customFields
+              .map((f) => [f.id, (data.custom[f.id] ?? "").trim()] as const)
+              .filter(([, v]) => v);
+            return entries.length ? Object.fromEntries(entries) : undefined;
+          })(),
         });
         try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ } // draft submitted — clear it
         confetti({ particleCount: 160, spread: 90, origin: { y: 0.4 }, colors: ["#7A1E3D", "#F26B2A", "#FFC94A", "#1FA7A6"] });
@@ -216,15 +237,39 @@ function RegisterPage() {
   const selCatSubs = data.categoryIds.length ? subs.filter((s) => data.categoryIds.includes(s.categoryId)) : [];
   const canContinue =
     (step === 0 && data.fullName.trim() && data.surname.trim() && isValidPhone(data.phone)) ||
-    (step === 1 && data.business.trim() && data.yearsRunning.trim() && data.products.trim()) ||
+    (step === 1 && data.business.trim() && data.yearsRunning.trim() && data.products.trim() && customFields.filter((f) => f.required).every((f) => (data.custom[f.id] ?? "").trim())) ||
     (step === 2 && data.categories.length > 0 && (selCatSubs.length === 0 || data.subcategoryIds.length > 0)) ||
-    step === 3;
+    (step === 3 && agreed);
 
   // Registration follows the active season's status: open only when RegistrationOpen.
   // No active season ⇒ don't gate (legacy/dummy fallback).
   const gate = activeSeason && activeSeason.status !== "RegistrationOpen"
     ? (activeSeason.status === "Upcoming" ? "soon" : "closed")
     : null;
+  // Sign-up is ON → an account is required before registering.
+  if (signupOn === true && !authLoading && !user) {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+        <div className="pointer-events-none absolute -top-32 left-1/2 h-96 w-[720px] -translate-x-1/2 rounded-full bg-warm opacity-30 blur-3xl" />
+        <div className="relative w-full max-w-md rounded-3xl border border-primary/15 bg-card p-8 text-center shadow-soft">
+          <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <h1 className="font-display text-2xl font-bold text-primary">{t("reg.gate.authTitle")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t("reg.gate.authBody")}</p>
+          <div className="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
+            <Link to="/signup" className="inline-flex items-center justify-center gap-2 rounded-full bg-festive px-6 py-2.5 text-sm font-semibold text-white shadow-glow transition-transform hover:scale-[1.03]">
+              {t("reg.gate.authSignup")} <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link to="/login" className="inline-flex items-center justify-center gap-2 rounded-full border border-border px-6 py-2.5 text-sm font-semibold text-foreground/80 transition-colors hover:bg-muted">
+              {t("reg.gate.authLogin")}
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (gate) {
     return (
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
@@ -301,15 +346,15 @@ function RegisterPage() {
               transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
             >
               {step === 0 && (
-                <StepPersonal data={data} update={update} />
+                <StepPersonal data={data} update={update} labels={regLabels} />
               )}
               {step === 1 && (
-                <StepBusiness data={data} update={update} />
+                <StepBusiness data={data} update={update} customFields={customFields} labels={regLabels} />
               )}
               {step === 2 && (
                 <StepCategory data={data} update={update} toggleCategory={toggleCategory} toggleSubcategory={toggleSubcategory} counts={catCounts} seasonName={activeSeason?.seasonName} fsCats={fsCats} subs={subs} />
               )}
-              {step === 3 && <StepReview data={data} />}
+              {step === 3 && <StepReview data={data} agreed={agreed} setAgreed={setAgreed} onOpenTerms={() => setTermsOpen(true)} />}
               {step === 4 && <StepSubmitted />}
             </motion.div>
           </AnimatePresence>
@@ -343,6 +388,18 @@ function RegisterPage() {
 
         <PresentedBy className="mt-2" />
       </section>
+
+      <Dialog open={termsOpen} onOpenChange={setTermsOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>{t("reg.terms.link")}</DialogTitle></DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-foreground/80">{terms.trim() || t("reg.terms.none")}</div>
+          <div className="mt-3 flex justify-end">
+            <button type="button" onClick={() => { setAgreed(true); setTermsOpen(false); }} className="inline-flex items-center gap-2 rounded-full bg-festive px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-[1.03]">
+              {t("reg.terms.accept")}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -359,8 +416,9 @@ function Field({ label, children, hint, required = false }: { label: string; chi
 
 const inputCls = "w-full rounded-2xl border border-border bg-white/70 px-4 py-3 text-sm outline-none ring-primary/20 transition-all focus:ring-4";
 
-function StepPersonal({ data, update }: any) {
+function StepPersonal({ data, update, labels = {} }: any) {
   const { t } = useI18n();
+  const L = (k: string, fk: string) => labels[k] || t(fk);
   const [phoneTouched, setPhoneTouched] = useState(false);
   return (
     <div className="space-y-6">
@@ -369,32 +427,34 @@ function StepPersonal({ data, update }: any) {
         <p className="mt-1 text-sm text-muted-foreground">{t("reg.personal.sub")}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label={t("reg.f.fullName")} required>
+        <Field label={L("fullName", "reg.f.fullName")} required>
           <input value={data.fullName} onChange={(e) => update("fullName", e.target.value)} autoComplete="given-name" className={inputCls} placeholder="Enter your first name" />
         </Field>
-        <Field label={t("reg.f.surname")} required>
+        <Field label={L("surname", "reg.f.surname")} required>
           <input value={data.surname} onChange={(e) => update("surname", e.target.value)} autoComplete="family-name" className={inputCls} placeholder="Enter your surname" />
         </Field>
-        <Field label={t("reg.f.phone")} required>
+        <Field label={L("phone", "reg.f.phone")} required>
           <input value={data.phone} onChange={(e) => update("phone", e.target.value)} onBlur={() => setPhoneTouched(true)} type="tel" inputMode="tel" autoComplete="tel" className={inputCls} placeholder="Enter your phone number" />
           {phoneTouched && data.phone.trim() && !isValidPhone(data.phone) && (
             <span className="mt-1 block text-xs font-medium text-destructive">{t("reg.f.phoneError")}</span>
           )}
         </Field>
-        <Field label={t("reg.f.email")}>
+        <Field label={L("email", "reg.f.email")}>
           <input value={data.email} onChange={(e) => update("email", e.target.value)} type="email" inputMode="email" autoComplete="email" className={inputCls} placeholder="Enter your email" />
         </Field>
-        <Field label={t("reg.f.city")}>
-          <input value={data.city} onChange={(e) => update("city", e.target.value)} autoComplete="address-level2" className={inputCls} placeholder="Enter your city" />
+        <Field label={L("city", "reg.f.city")}>
+          <input value={data.city} onChange={(e) => update("city", e.target.value)} autoComplete="address-level2" className={inputCls} placeholder="Karachi" />
         </Field>
       </div>
     </div>
   );
 }
 
-function StepBusiness({ data, update }: any) {
+function StepBusiness({ data, update, customFields = [], labels = {} }: any) {
   const { t } = useI18n();
+  const L = (k: string, fk: string) => labels[k] || t(fk);
   const [uploading, setUploading] = useState(false);
+  const setCustom = (id: string, v: string) => update("custom", { ...data.custom, [id]: v });
 
   async function onLogo(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -417,23 +477,23 @@ function StepBusiness({ data, update }: any) {
         <p className="mt-1 text-sm text-muted-foreground">{t("reg.business.sub")}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label={t("reg.f.business")} required>
+        <Field label={L("business", "reg.f.business")} required>
           <input value={data.business} onChange={(e) => update("business", e.target.value)} className={inputCls} placeholder="Enter your business name" />
         </Field>
-        <Field label={t("reg.f.tagline")} hint={t("reg.f.taglineHint")}>
+        <Field label={L("tagline", "reg.f.tagline")} hint={t("reg.f.taglineHint")}>
           <input value={data.tagline} onChange={(e) => update("tagline", e.target.value)} className={inputCls} placeholder="Enter a short tagline" />
         </Field>
-        <Field label={t("reg.f.years")} required>
+        <Field label={L("years", "reg.f.years")} required>
           <input value={data.yearsRunning} onChange={(e) => update("yearsRunning", e.target.value)} className={inputCls} placeholder="Enter years running" />
         </Field>
-        <Field label={t("reg.f.instagram")}>
+        <Field label={L("instagram", "reg.f.instagram")}>
           <input value={data.instagram} onChange={(e) => update("instagram", e.target.value)} className={inputCls} placeholder="Enter your Instagram handle" />
         </Field>
         {cloudinaryReady && (
           <div className="md:col-span-2">
             {/* Not a <label> (Field): a label forwards clicks to its nested button, so
                 clicking the preview would remove the logo. Only the ✕ should remove it. */}
-            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("reg.f.logo")}</span>
+            <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{L("logo", "reg.f.logo")}</span>
             <div>
               <div className="flex items-center gap-4">
                 {data.logoUrl ? (
@@ -461,10 +521,27 @@ function StepBusiness({ data, update }: any) {
           </div>
         )}
         <div className="md:col-span-2">
-          <Field label={t("reg.f.sell")} hint={t("reg.f.sellHint")} required>
+          <Field label={L("products", "reg.f.sell")} hint={t("reg.f.sellHint")} required>
             <textarea value={data.products} onChange={(e) => update("products", e.target.value)} className={`${inputCls} min-h-[100px]`} placeholder="List what you sell, separated by commas" />
           </Field>
         </div>
+        {/* Admin-defined custom fields */}
+        {(customFields as CustomRegField[]).map((f) => (
+          <div key={f.id} className={f.type === "textarea" ? "md:col-span-2" : ""}>
+            <Field label={f.label} required={f.required}>
+              {f.type === "textarea" ? (
+                <textarea value={data.custom[f.id] ?? ""} onChange={(e) => setCustom(f.id, e.target.value)} className={`${inputCls} min-h-[90px]`} placeholder={f.label} />
+              ) : f.type === "select" ? (
+                <select value={data.custom[f.id] ?? ""} onChange={(e) => setCustom(f.id, e.target.value)} className={inputCls}>
+                  <option value="">—</option>
+                  {(f.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              ) : (
+                <input value={data.custom[f.id] ?? ""} onChange={(e) => setCustom(f.id, e.target.value)} type={f.type === "number" ? "number" : "text"} inputMode={f.type === "number" ? "numeric" : "text"} className={inputCls} placeholder={f.label} />
+              )}
+            </Field>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -539,7 +616,7 @@ function StepCategory({ data, update, toggleCategory, toggleSubcategory, counts,
   );
 }
 
-function StepReview({ data }: any) {
+function StepReview({ data, agreed = false, setAgreed, onOpenTerms }: any) {
   const { t } = useI18n();
   const rows = [
     [t("reg.row.name"), `${data.fullName} ${data.surname}`.trim()], [t("reg.row.phone"), data.phone], [t("reg.row.email"), data.email], [t("reg.row.city"), data.city],
@@ -558,6 +635,14 @@ function StepReview({ data }: any) {
           </div>
         ))}
       </div>
+      <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-muted/30 p-4 text-sm">
+        <input type="checkbox" checked={agreed} onChange={(e) => setAgreed?.(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 rounded border-border accent-[color:var(--color-primary)]" />
+        <span className="text-foreground/80">
+          {t("reg.terms.pre")}{" "}
+          <button type="button" onClick={onOpenTerms} className="font-semibold text-primary underline underline-offset-2 hover:text-primary/80">{t("reg.terms.link")}</button>
+          <span className="text-destructive"> *</span>
+        </span>
+      </label>
     </div>
   );
 }

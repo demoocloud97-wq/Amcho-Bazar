@@ -1,13 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { Check, Eye, EyeOff, Heart, Lock, Mail, MapPin, Phone, Sparkles, User } from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, Heart, Lock, Mail, MapPin, Phone, Sparkles, User } from "lucide-react";
 import { signUpWithEmail } from "@/lib/auth";
 import { saveUserProfile } from "@/lib/profile-db";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 import { useI18n } from "@/lib/i18n";
+import { watchSignupEnabled } from "@/lib/settings-db";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -24,6 +25,8 @@ export const Route = createFileRoute("/signup")({
 function SignupPage() {
   const navigate = useNavigate();
   const { t } = useI18n();
+  const [signupOn, setSignupOn] = useState<boolean | null>(null); // null = still loading
+  useEffect(() => watchSignupEnabled(setSignupOn), []);
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -56,6 +59,31 @@ function SignupPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // Admin turned sign-up off — registration is direct, so point people there.
+  if (signupOn === false) {
+    return (
+      <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden px-4">
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+          <div className="absolute -left-20 bottom-10 h-80 w-80 rounded-full bg-accent/20 blur-3xl" />
+        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 18, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 220, damping: 22 }}
+          className="w-full max-w-md rounded-3xl border border-border bg-card p-8 text-center shadow-card md:p-10"
+        >
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-festive text-white shadow-glow"><Sparkles className="h-6 w-6" /></span>
+          <h1 className="mt-5 font-display text-2xl font-bold">{t("signup.offTitle")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t("signup.offBody")}</p>
+          <Link to="/register" className="mt-6 inline-flex items-center gap-2 rounded-full bg-festive px-6 py-3 text-sm font-semibold text-white shadow-glow transition-transform hover:scale-105">
+            {t("signup.offCta")} <ArrowRight className="h-4 w-4" />
+          </Link>
+        </motion.div>
+      </div>
+    );
   }
 
   return (
@@ -92,7 +120,7 @@ function SignupPage() {
               <input required type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98xxxxxxxx" className="input-festive" />
             </Field>
             <Field icon={<MapPin className="h-4 w-4" />} label={t("signup.city")}>
-              <input required type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Bhatkal" className="input-festive" />
+              <input required type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Karachi" className="input-festive" />
             </Field>
             <Field icon={<Lock className="h-4 w-4" />} label={t("auth.password")}>
               <div className="relative">

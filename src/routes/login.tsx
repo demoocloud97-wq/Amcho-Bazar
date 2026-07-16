@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Eye, EyeOff, Loader2, Lock, Mail, Sparkles } from "lucide-react";
 import { signInWithEmail, signInWithGoogle, resetPassword } from "@/lib/auth";
@@ -9,6 +9,7 @@ import { LoginFlow, FlowModal } from "@/components/site/auth-flow";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 import { useI18n } from "@/lib/i18n";
 import { useSeason } from "@/lib/season-context";
+import { watchSignupEnabled } from "@/lib/settings-db";
 import { EVENT } from "@/lib/dummy-data";
 
 export const Route = createFileRoute("/login")({
@@ -27,6 +28,8 @@ function LoginPage() {
   const navigate = useNavigate();
   const { t } = useI18n();
   const { activeSeason } = useSeason();
+  const [signupOn, setSignupOn] = useState(true); // hide "create account" when sign-up is off
+  useEffect(() => watchSignupEnabled(setSignupOn), []);
   // Show the operationally-active season's details (falls back to static event data).
   const seasonLabel = activeSeason?.seasonName || EVENT.season;
   const seasonStalls = activeSeason?.maximumStalls || EVENT.totalStalls;
@@ -205,12 +208,14 @@ function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            {t("login.new")}{" "}
-            <Link to="/signup" className="font-semibold text-primary hover:underline">
-              {t("login.create")}
-            </Link>
-          </p>
+          {signupOn && (
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              {t("login.new")}{" "}
+              <Link to="/signup" className="font-semibold text-primary hover:underline">
+                {t("login.create")}
+              </Link>
+            </p>
+          )}
 
           <FlowModal
             label="View sign-in flow"

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  ArrowLeftRight, BarChart3, CreditCard, Image as ImageIcon,
+  ArrowLeftRight, BarChart3, ClipboardList, CreditCard, Image as ImageIcon,
   LayoutDashboard, ListTree, LogIn, LogOut, Megaphone, MoreVertical, Plus, Radio, Settings,
   Store, Ticket, UserCircle,
 } from "lucide-react";
@@ -185,6 +185,7 @@ export function MainMenu() {
               <NavItem to="/announcements" icon={<Megaphone className="h-4 w-4" />} label={t("menu.announcements")} />
               <NavItem to="/stalls" icon={<Store className="h-4 w-4" />} label={t("nav.stalls")} />
               <NavItem to="/gallery" icon={<ImageIcon className="h-4 w-4" />} label={t("nav.gallery")} />
+              <NavItem to="/registration-info" icon={<ClipboardList className="h-4 w-4" />} label={t("menu.regInfo")} />
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <NavItem to="/settings" icon={<Settings className="h-4 w-4" />} label={t("menu.settings")} />
@@ -196,6 +197,7 @@ export function MainMenu() {
           <>
             <DropdownMenuGroup>
               <NavItem to="/my-registration" icon={<Ticket className="h-4 w-4" />} label={t("menu.myRegistration")} />
+              <NavItem to="/registration-info" icon={<ClipboardList className="h-4 w-4" />} label={t("menu.regInfo")} />
               <NavItem to="/stalls" icon={<Store className="h-4 w-4" />} label={t("nav.stalls")} />
               <NavItem to="/gallery" icon={<ImageIcon className="h-4 w-4" />} label={t("nav.gallery")} />
               <NavItem to="/announcements" icon={<Megaphone className="h-4 w-4" />} label={t("menu.announcements")} />

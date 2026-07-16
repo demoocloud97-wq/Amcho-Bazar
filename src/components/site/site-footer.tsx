@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Instagram, Mail, MapPin, Phone } from "lucide-react";
+import { Facebook, Instagram, Mail, MapPin, Phone } from "lucide-react";
 import { Logo } from "./logo";
 import { normalizeImageUrl, watchFooterContact, DEFAULT_FOOTER, type FooterContact } from "@/lib/settings-db";
 import { EVENT } from "@/lib/dummy-data";
@@ -23,12 +23,11 @@ export function SiteFooter() {
     { to: "/gallery", tKey: "nav.gallery" },
     ...(user ? [{ to: "/my-registration", tKey: "menu.myRegistration" }] : []),
     ...(isAdmin ? [] : [{ to: "/register", tKey: "menu.becomeSeller" }]),
+    // Live Draw and Admin stay out of the footer — they live in the menu.
     ...(isAdmin
       ? [
           { to: "/categories", tKey: "nav.categories" },
           { to: "/stalls", tKey: "nav.stalls" },
-          { to: "/draw", tKey: "nav.liveDraw" },
-          { to: "/admin", tKey: "nav.admin" },
         ]
       : []),
   ];
@@ -64,6 +63,16 @@ export function SiteFooter() {
             <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-accent" /> {contact.phone}</li>
             <li className="flex items-center gap-2"><Mail className="h-4 w-4 text-accent" /> {contact.email}</li>
             <li className="flex items-center gap-2"><Instagram className="h-4 w-4 text-accent" /> {contact.instagram}</li>
+            {contact.facebook && (
+              <li className="flex items-center gap-2">
+                <Facebook className="h-4 w-4 shrink-0 text-accent" />
+                {/^https?:\/\//i.test(contact.facebook) ? (
+                  <a href={contact.facebook} target="_blank" rel="noopener noreferrer" className="truncate underline-offset-2 hover:underline">{contact.facebook.replace(/^https?:\/\/(www\.)?/i, "")}</a>
+                ) : (
+                  <span className="truncate">{contact.facebook}</span>
+                )}
+              </li>
+            )}
           </ul>
         </div>
       </div>

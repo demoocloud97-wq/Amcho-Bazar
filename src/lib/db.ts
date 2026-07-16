@@ -42,6 +42,7 @@ export type Registration = {
   email?: string;
   logoUrl?: string; // Cloudinary URL of the business logo, if uploaded
   products: string[];
+  customFields?: Record<string, string>; // admin-defined extra fields (id → value)
   status: "pending" | "approved" | "waitlist" | "paid";
   stall?: number | null;
   createdAt?: unknown;
@@ -82,6 +83,7 @@ export async function createRegistration(
   if (data.instagram) payload.instagram = data.instagram;
   if (data.city) payload.city = data.city;
   if (data.logoUrl) payload.logoUrl = data.logoUrl;
+  if (data.customFields && Object.keys(data.customFields).length) payload.customFields = data.customFields;
   const ref = await addDoc(collection(db, REGISTRATIONS), payload);
   return ref.id;
 }

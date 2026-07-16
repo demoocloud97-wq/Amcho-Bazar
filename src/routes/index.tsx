@@ -106,13 +106,16 @@ function Hero({ season }: { season: import("@/lib/seasons-db").Season | null }) 
           <p className="mt-6 max-w-xl text-lg text-white/80">{t("home.hero.blurb")}</p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              to="/register"
-              className="group inline-flex items-center gap-2 rounded-full bg-festive px-6 py-3 text-sm font-semibold text-white shadow-glow transition-transform hover:scale-[1.03]"
-            >
-              {t("menu.becomeSeller")}
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
+            {/* Admins don't register a stall — the seller CTA is for visitors only. */}
+            {!isAdmin && (
+              <Link
+                to="/register"
+                className="group inline-flex items-center gap-2 rounded-full bg-festive px-6 py-3 text-sm font-semibold text-white shadow-glow transition-transform hover:scale-[1.03]"
+              >
+                {t("menu.becomeSeller")}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            )}
             {isAdmin && (
               <Link
                 to="/draw"
@@ -1034,11 +1037,7 @@ function BecomeASellerCta() {
               {t("home.cta.subtitle")}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              {isAdmin ? (
-                <span aria-disabled className="inline-flex cursor-not-allowed items-center gap-2 rounded-full bg-festive px-6 py-3 text-sm font-semibold text-white opacity-60">
-                  {t("home.cta.start")} <ArrowRight className="h-4 w-4" />
-                </span>
-              ) : (
+              {!isAdmin && (
                 <Link
                   to="/register"
                   className="inline-flex items-center gap-2 rounded-full bg-festive px-6 py-3 text-sm font-semibold text-white shadow-glow transition-transform hover:scale-105"
