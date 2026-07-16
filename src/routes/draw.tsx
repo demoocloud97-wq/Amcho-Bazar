@@ -752,13 +752,20 @@ function DrawsViewer({ open, onOpenChange, seasons, currentSeasonId }: { open: b
                 {rows.map((r) => {
                   const palette = CATEGORY_COLORS[r.category] ?? CATEGORY_COLORS.Others;
                   return (
-                    <li key={r.id ?? r.order} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-muted/50">
+                    <li key={r.id ?? r.order} className="flex items-center gap-3 rounded-2xl px-3 py-2 transition-colors hover:bg-muted/50">
                       <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl font-display text-sm font-black tabular-nums text-white shadow-soft" style={{ background: `linear-gradient(180deg, ${palette.bg} 0%, ${palette.canopy} 100%)` }}>
                         #{r.stallNo.toString().padStart(2, "0")}
                       </div>
+                      <img src={avatarFor(r.candidateId)} loading="lazy" alt={r.seller} className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-border" />
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-semibold text-foreground">{r.business}</div>
                         {r.seller && <div className="truncate text-xs text-muted-foreground">{r.seller}</div>}
+                        <div className="mt-0.5 inline-flex sm:hidden rounded-full px-2 py-0.5 text-[10px] font-medium text-primary" style={{ backgroundColor: `${palette.bg}22` }}>{r.category}</div>
+                        {r.products && r.products.length > 0 && (
+                          <div className="truncate text-[11px] text-muted-foreground/80" title={r.products.join(", ")}>
+                            <span className="font-medium text-foreground/60">{t("draw.sells")}:</span> {r.products.join(", ")}
+                          </div>
+                        )}
                       </div>
                       <span className="hidden shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium text-primary sm:inline-flex" style={{ backgroundColor: `${palette.bg}22` }}>
                         <span className="h-1.5 w-1.5 rounded-full" style={{ background: palette.bg }} /> {r.category}
@@ -1008,6 +1015,7 @@ export function StallArena({
             byStall={byStall}
             usedStalls={usedStalls}
             current={current}
+            side="right"
           />
         </div>
 
@@ -1148,19 +1156,22 @@ function StallColumn({
   byStall,
   usedStalls,
   current,
+  side = "left",
 }: {
   stalls: number[];
   byStall: Map<number, Selected>;
   usedStalls: Set<number>;
   current: Selected | null;
+  side?: "left" | "right";
 }) {
-  // 2 per row
+  // 2 booths per row, kept together and hugging the central aisle (so a wide
+  // arena adds margin on the outer edge instead of a big empty channel).
   const rows: number[][] = [];
   for (let i = 0; i < stalls.length; i += 2) rows.push(stalls.slice(i, i + 2));
   return (
     <div className="flex flex-col gap-1 md:gap-1.5">
       {rows.map((row, idx) => (
-        <div key={idx} className="flex items-center justify-between gap-2">
+        <div key={idx} className={`flex items-center gap-1.5 md:gap-2 ${side === "left" ? "justify-end" : "justify-start"}`}>
           {row.map((n, cIdx) => (
             <div key={n} className="w-12 sm:w-14">
               <StallBooth
@@ -1172,7 +1183,6 @@ function StallColumn({
               />
             </div>
           ))}
-          {row.length === 1 && <div className="w-12 sm:w-14" />}
         </div>
       ))}
     </div>
