@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, Flower2, Zap, ListChecks, Target, Search, Trophy, Radio, Download } from "lucide-react";
+import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, Flower2, Zap, ListChecks, Target, Search, Trophy, Radio, Download, CheckCircle2, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { EVENT } from "@/lib/dummy-data";
@@ -11,7 +11,8 @@ import { getDrawNonStop, getDrawLive, setDrawLive, watchDrawCountdown, watchDraw
 import { useSeason } from "@/lib/season-context";
 import { watchRegistrationsForAdmin, updateRegistration, type Registration } from "@/lib/db";
 import { materializeRegistrationStalls, deleteStallForRegistration } from "@/lib/stalls-db";
-import { getDrawResultsBySeasonId, saveDrawResult, clearDrawResultsBySeasonId } from "@/lib/draw-results-db";
+import { getDrawResultsBySeasonId, saveDrawResult, clearDrawResultsBySeasonId, type DrawResult } from "@/lib/draw-results-db";
+import { updateSeason, type Season } from "@/lib/seasons-db";
 import { publishDrawPool, setPoolSpinning } from "@/lib/draw-pool-db";
 import { RequireAdmin } from "@/components/site/require-admin";
 import { RedDart } from "@/components/site/dartboard";
@@ -56,9 +57,11 @@ const DEFAULT_TARGET = EVENT.totalWinners; // 45
 type Candidate = { id: string; seller: string; business: string; category: string; avatar: string };
 
 function DrawPage() {
-  const { season, seasonId } = useSeason();
+  const { season, seasonId, seasons } = useSeason();
   const { t } = useI18n();
   const TARGET = season && season.maximumSelectedStalls > 0 ? season.maximumSelectedStalls : DEFAULT_TARGET;
+  const targetRef = useRef(TARGET); // read inside the run loop so a raised target takes effect immediately
+  useEffect(() => { targetRef.current = TARGET; }, [TARGET]);
 
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [allRegs, setAllRegs] = useState<Candidate[]>([]); // every applicant — the venue map cells (by name)
@@ -71,6 +74,9 @@ function DrawPage() {
   const [showWinner, setShowWinner] = useState(false); // delay the name until the dart has visibly landed
   const [spinRegId, setSpinRegId] = useState<string | null>(null); // applicant cell lit up while the picker runs
   const [confirmReset, setConfirmReset] = useState(false);
+  const [newTarget, setNewTarget] = useState(""); // raise-target input (shown when a draw is complete)
+  const [finishBusy, setFinishBusy] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false); // "View draws" dialog
   const [running, setRunning] = useState(false);
   const [nonStop, setNonStop] = useState(false); // admin toggle: show one-click Non-Stop button
   const [live, setLive] = useState(false); // broadcast the draw live to everyone (view-only)
@@ -222,8 +228,8 @@ function DrawPage() {
     const cur = selectedRef.current;
     const usedIds = new Set(cur.map((s) => s.id));
     const avail = candidatesRef.current.filter((c) => !usedIds.has(c.id));
-    if (cur.length >= TARGET || avail.length === 0) {
-      setPhase(cur.length >= TARGET ? "done" : "idle");
+    if (cur.length >= targetRef.current || avail.length === 0) {
+      setPhase(cur.length >= targetRef.current ? "done" : "idle");
       setRunning(false);
       return;
     }
@@ -309,6 +315,41 @@ function DrawPage() {
     }, spinMs); // spin lasts the admin-set countdown so the public count reaches 1 at reveal
   }
 
+  // Raise the target then reopen the machine so the extra winners can be drawn —
+  // existing winners are kept (no reset). Effective immediately via targetRef.
+  async function raiseTargetAndContinue() {
+    const n = parseInt(newTarget, 10);
+    if (!seasonId || !Number.isFinite(n) || n <= selected.length) { toast.error(t("draw.raiseInvalid").replace("{n}", String(selected.length))); return; }
+    try {
+      await updateSeason(seasonId, { maximumSelectedStalls: n });
+      targetRef.current = n;
+      setNewTarget("");
+      setPhase("idle");
+      toast.success(t("draw.raiseOk").replace("{n}", String(n)));
+    } catch { toast.error(t("draw.saveErr")); }
+  }
+  // Finalise: mark the season Completed (locks the draw, hides the ceremony) and
+  // stop the live broadcast. Winners are already saved as each was drawn.
+  async function finishDraw() {
+    if (!seasonId) return;
+    setFinishBusy(true);
+    try {
+      await updateSeason(seasonId, { status: "Completed" });
+      await setDrawLive(false).catch(() => {});
+      setLive(false);
+      toast.success(t("draw.finishOk"));
+    } catch { toast.error(t("draw.saveErr")); } finally { setFinishBusy(false); }
+  }
+  // Admin: bring a completed draw back to the ceremony screen (e.g. to draw more).
+  async function reopenDraw() {
+    if (!seasonId) return;
+    setFinishBusy(true);
+    try {
+      await updateSeason(seasonId, { status: "DrawRunning" });
+      toast.success(t("draw.reopenOk"));
+    } catch { toast.error(t("draw.saveErr")); } finally { setFinishBusy(false); }
+  }
+
   // Draw runs only while the season is in a draw phase (no season ⇒ legacy fallback, allow).
   const canDraw = !season || season.status === "DrawPending" || season.status === "DrawRunning";
 
@@ -330,13 +371,13 @@ function DrawPage() {
     const cur = selectedRef.current;
     const usedIds = new Set(cur.map((s) => s.id));
     const avail = candidatesRef.current.filter((s) => !usedIds.has(s.id));
-    if (cur.length >= TARGET || avail.length === 0) {
+    if (cur.length >= targetRef.current || avail.length === 0) {
       setReel(null);
       setCurrent(null);
-      setPhase(cur.length >= TARGET ? "done" : "idle");
+      setPhase(cur.length >= targetRef.current ? "done" : "idle");
       setRunning(false);
       if (seasonId) setPoolSpinning(seasonId, false).catch(() => {});
-      if (cur.length >= TARGET) fireConfetti();
+      if (cur.length >= targetRef.current) fireConfetti();
       return;
     }
     const winner = avail[Math.floor(Math.random() * avail.length)];
@@ -397,6 +438,47 @@ function DrawPage() {
   }
 
   const progress = selected.length / TARGET;
+
+  // Draw finalised → hide the live ceremony; show a completed summary. Admin can
+  // still review past/current draws or reopen to draw more.
+  if (season?.status === "Completed") {
+    return (
+      <div className="relative flex min-h-[82vh] flex-col items-center justify-center overflow-hidden bg-hero px-4 py-20 text-center text-white">
+        <div className="pointer-events-none absolute inset-0 pattern-dots opacity-20" />
+        <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-warm opacity-30 blur-3xl" />
+        <div className="pointer-events-none absolute -left-32 bottom-0 h-96 w-96 rounded-full bg-accent/30 blur-3xl" />
+        <motion.div
+          initial={{ opacity: 0, y: 24, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 220, damping: 22 }}
+          className="relative w-full max-w-lg overflow-hidden rounded-[36px] border border-white/15 bg-black/25 p-8 shadow-glow backdrop-blur-xl md:p-12"
+        >
+          <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-accent/20 text-accent ring-1 ring-white/20"><Trophy className="h-8 w-8" /></span>
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-teal/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-white/90">
+            <Sparkles className="h-3.5 w-3.5 text-accent" /> {t("draw.completedTag")}
+          </div>
+          <h1 className="mt-3 font-display text-4xl font-black leading-tight md:text-5xl">{t("draw.completedTitle")}</h1>
+          <p className="mt-2 text-white/70">{season.seasonName} · <span className="font-semibold text-white">{selected.length}</span> {t("draw.winnersWord")}</p>
+          <div className="mt-7 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
+            <button
+              onClick={() => setViewOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-festive px-6 py-3 text-sm font-bold text-white shadow-glow transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-95"
+            >
+              <ListChecks className="h-4 w-4" /> {t("draw.viewDraws")}
+            </button>
+            <button
+              onClick={reopenDraw}
+              disabled={finishBusy}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-white/25 bg-white/5 px-6 py-3 text-sm font-semibold text-white/90 backdrop-blur transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-95 disabled:opacity-50"
+            >
+              <RotateCcw className="h-4 w-4" /> {t("draw.reopen")}
+            </button>
+          </div>
+        </motion.div>
+        <DrawsViewer open={viewOpen} onOpenChange={setViewOpen} seasons={seasons} currentSeasonId={seasonId} />
+      </div>
+    );
+  }
 
   return (
     <div className="relative overflow-hidden bg-hero pb-24 text-white">
@@ -463,8 +545,52 @@ function DrawPage() {
           </button>
         </div>
 
+          {/* Draw complete → raise the count & keep drawing, or finish & save. */}
+          {phase === "done" && (
+            <div className="w-full max-w-md rounded-2xl border border-accent/30 bg-white/[0.04] p-3.5">
+              <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-accent">
+                <Target className="h-3.5 w-3.5" /> {t("draw.targetReached").replace("{n}", String(selected.length))}
+              </div>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <div className="flex flex-1 items-stretch overflow-hidden rounded-full border border-white/20 bg-black/20">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={selected.length + 1}
+                    value={newTarget}
+                    onChange={(e) => setNewTarget(e.target.value)}
+                    placeholder={t("draw.newTotal").replace("{n}", String(selected.length + 5))}
+                    aria-label={t("draw.newTotal").replace("{n}", String(selected.length + 5))}
+                    className="w-full bg-transparent px-4 py-2.5 text-sm text-white placeholder:text-white/40 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <button
+                    onClick={raiseTargetAndContinue}
+                    disabled={!newTarget}
+                    className="inline-flex items-center gap-1.5 whitespace-nowrap bg-warm px-4 text-sm font-bold text-primary transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Play className="h-4 w-4" /> {t("draw.continueDraw")}
+                  </button>
+                </div>
+                <button
+                  onClick={finishDraw}
+                  disabled={finishBusy}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-festive px-5 py-2.5 text-sm font-bold text-white shadow-glow transition-transform hover:scale-105 active:scale-95 disabled:opacity-50"
+                >
+                  {finishBusy ? <Sparkles className="h-4 w-4 animate-pulse" /> : <CheckCircle2 className="h-4 w-4" />} {t("draw.finishSave")}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Broadcast: when ON, every visitor sees a "watch live" banner → /present */}
           <div className="flex flex-wrap items-center justify-center gap-3">
+          <button
+            onClick={() => setViewOpen(true)}
+            title={t("draw.viewDraws")}
+            className="group inline-flex min-h-11 items-center gap-2.5 rounded-full border border-white/25 bg-white/5 px-6 py-3 text-sm font-bold text-white/85 backdrop-blur transition-all hover:border-white/40 hover:bg-white/10 hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-95"
+          >
+            <ListChecks className="h-4 w-4 transition-transform group-hover:scale-110" /> {t("draw.viewDraws")}
+          </button>
           <button
             onClick={toggleLive}
             disabled={liveBusy}
@@ -535,7 +661,121 @@ function DrawPage() {
         confirmLabel={t("draw.reset")}
         onConfirm={reset}
       />
+
+      <DrawsViewer open={viewOpen} onOpenChange={setViewOpen} seasons={seasons} currentSeasonId={seasonId} />
     </div>
+  );
+}
+
+/* ==== View draws: pick a season, see its saved winners, download CSV ==== */
+function DrawsViewer({ open, onOpenChange, seasons, currentSeasonId }: { open: boolean; onOpenChange: (o: boolean) => void; seasons: Season[]; currentSeasonId: string | null }) {
+  const { t } = useI18n();
+  const [sid, setSid] = useState<string>(currentSeasonId ?? "");
+  const [rows, setRows] = useState<DrawResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const ordered = useMemo(() => [...seasons].sort((a, b) => b.seasonNumber - a.seasonNumber), [seasons]);
+  useEffect(() => { if (open && !sid && (currentSeasonId || ordered[0]?.id)) setSid(currentSeasonId ?? ordered[0]!.id!); }, [open, currentSeasonId, ordered, sid]);
+  useEffect(() => {
+    if (!open || !sid) { setRows([]); return; }
+    setLoading(true);
+    getDrawResultsBySeasonId(sid)
+      .then((r) => setRows([...r].sort((a, b) => a.order - b.order)))
+      .catch(() => setRows([]))
+      .finally(() => setLoading(false));
+  }, [open, sid]);
+  const activeName = ordered.find((s) => s.id === sid)?.seasonName ?? "";
+  function download() {
+    const cols = ["Stall", "Order", "Business", "Owner", "Category", "Time"];
+    const esc = (v: unknown) => { const s = v == null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const body = rows.map((r) => [r.stallNo, r.order, r.business, r.seller, r.category, r.at].map(esc).join(","));
+    const csv = "﻿" + [cols.join(","), ...body].join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `draw-${activeName.replace(/\s+/g, "-").toLowerCase() || "results"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-3xl lg:max-w-4xl">
+        {/* Header band */}
+        <div className="relative overflow-hidden bg-hero px-6 py-5 text-white">
+          <div className="pointer-events-none absolute inset-0 pattern-dots opacity-15" />
+          <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-warm opacity-30 blur-2xl" />
+          <div className="relative flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/15 text-accent ring-1 ring-white/20"><ListChecks className="h-5 w-5" /></span>
+            <div className="min-w-0 flex-1">
+              <DialogHeader className="space-y-0 text-left">
+                <DialogTitle className="font-display text-xl font-bold text-white">{t("draw.viewDraws")}</DialogTitle>
+              </DialogHeader>
+              <div className="mt-0.5 text-xs text-white/70">{t("draw.viewDrawsSub")}</div>
+            </div>
+            <button
+              onClick={download}
+              disabled={rows.length === 0}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:opacity-40"
+            >
+              <Download className="h-3.5 w-3.5" /> CSV
+            </button>
+          </div>
+        </div>
+
+        {/* Season chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto border-b border-border px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {ordered.map((s) => {
+            const on = s.id === sid;
+            const isCurrent = s.id === currentSeasonId;
+            return (
+              <button
+                key={s.id}
+                onClick={() => setSid(s.id!)}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${on ? "bg-festive text-white shadow-soft" : "bg-muted/60 text-foreground/70 hover:bg-muted"}`}
+              >
+                {s.seasonName}
+                {isCurrent && <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase ${on ? "bg-white/20 text-white" : "bg-primary/15 text-primary"}`}>{t("draw.currentTag")}</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Winners list */}
+        <div className="max-h-[62vh] overflow-y-auto px-3 py-3">
+          {loading ? (
+            <div className="flex justify-center py-14"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
+          ) : rows.length === 0 ? (
+            <div className="py-14 text-center text-sm text-muted-foreground">{t("draw.noDraws")}</div>
+          ) : (
+            <>
+              <div className="px-3 pb-2 text-xs text-muted-foreground"><span className="font-semibold text-foreground">{rows.length}</span> {t("draw.winnersWord")}</div>
+              <ul className="space-y-1.5">
+                {rows.map((r) => {
+                  const palette = CATEGORY_COLORS[r.category] ?? CATEGORY_COLORS.Others;
+                  return (
+                    <li key={r.id ?? r.order} className="flex items-center gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-muted/50">
+                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl font-display text-sm font-black tabular-nums text-white shadow-soft" style={{ background: `linear-gradient(180deg, ${palette.bg} 0%, ${palette.canopy} 100%)` }}>
+                        #{r.stallNo.toString().padStart(2, "0")}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-semibold text-foreground">{r.business}</div>
+                        {r.seller && <div className="truncate text-xs text-muted-foreground">{r.seller}</div>}
+                      </div>
+                      <span className="hidden shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium text-primary sm:inline-flex" style={{ backgroundColor: `${palette.bg}22` }}>
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: palette.bg }} /> {r.category}
+                      </span>
+                      <div className="shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
+                        <div className="font-semibold text-foreground/70">#{r.order}</div>
+                        <div>{r.at}</div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
