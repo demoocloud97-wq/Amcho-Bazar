@@ -9,7 +9,7 @@ export type GuideSection = { title: L; route?: string; who: Who[]; steps: L[]; t
 // Pick the string for the active language (falls back to English).
 export const gt = (l: L | undefined, lang: Lang): string => (l ? l[lang] ?? l.en : "");
 
-export const GUIDE_ORDER = ["signup", "register", "reginfo", "admin", "seasons", "payments", "announcements", "reports", "settings"] as const;
+export const GUIDE_ORDER = ["home", "signup", "register", "reginfo", "stalls", "gallery", "categories", "draw", "admin", "seasons", "payments", "announcements", "reports", "settings"] as const;
 
 export const WHO_LABEL: Record<Who, L> = {
   all: { en: "Everyone", ur: "سب کے لیے", "ur-roman": "Sab ke liye", hi: "सभी के लिए", ar: "للجميع" },
@@ -18,6 +18,68 @@ export const WHO_LABEL: Record<Who, L> = {
 };
 
 export const GUIDE: Record<string, GuideSection> = {
+  home: {
+    title: { en: "Home", ur: "ہوم", "ur-roman": "Home", hi: "होम", ar: "الرئيسية" },
+    route: "/",
+    who: ["all"],
+    steps: [
+      { en: "The landing page for the active season — its name, date and countdown come straight from the season you set Active.", ur: "فعال سیزن کا صفحہ — نام، تاریخ اور کاؤنٹ ڈاؤن اسی سیزن سے آتے ہیں جو Active ہے۔", "ur-roman": "Active season ka page — naam, date aur countdown usi season se aate hain jo Active hai.", hi: "सक्रिय सीज़न का पेज — नाम, तिथि व काउंटडाउन उसी सीज़न से।", ar: "صفحة الموسم النشط — الاسم والتاريخ والعد التنازلي من الموسم المفعّل." },
+      { en: "Visitors see the seller CTA, the categories, past seasons and the event location with a map and directions.", ur: "وزیٹرز کو رجسٹریشن بٹن، زمرے، پرانے سیزن اور مقام (نقشہ و راستہ) نظر آتے ہیں۔", "ur-roman": "Visitors ko registration button, categories, purane seasons aur location (map & directions) nazar aate hain.", hi: "विज़िटर को पंजीकरण बटन, श्रेणियाँ, पुराने सीज़न और स्थान (मानचित्र व दिशा) दिखते हैं।", ar: "يرى الزوار زر التسجيل والفئات والمواسم السابقة وموقع الحدث بالخريطة والاتجاهات." },
+      { en: "The seller CTA is hidden from admins — admins don't register a stall.", ur: "ایڈمن کو رجسٹریشن بٹن نہیں دکھتا — ایڈمن اسٹال رجسٹر نہیں کرتا۔", "ur-roman": "Admin ko registration button nahi dikhta — admin stall register nahi karta.", hi: "एडमिन को पंजीकरण बटन नहीं दिखता — एडमिन स्टॉल पंजीकृत नहीं करता।", ar: "زر التسجيل مخفي عن المشرفين — المشرف لا يسجّل كشكًا." },
+    ],
+    tip: { en: "Change what shows here from Settings: hero image, FAQ, footer contact, and Event location (venue, address, directions, date & time).", ur: "یہاں کی چیزیں Settings سے بدلیں: hero تصویر، FAQ، فوٹر رابطہ، اور Event location۔", "ur-roman": "Yahan ki cheezein Settings se badlein: hero image, FAQ, footer contact, aur Event location.", hi: "यहाँ की चीज़ें Settings से बदलें: hero छवि, FAQ, फ़ुटर संपर्क, और Event location।", ar: "غيّر ما يظهر هنا من الإعدادات: صورة البطل، الأسئلة، تذييل التواصل، وموقع الحدث." },
+  },
+
+  stalls: {
+    title: { en: "Stall Directory", ur: "اسٹال ڈائریکٹری", "ur-roman": "Stall Directory", hi: "स्टॉल निर्देशिका", ar: "دليل الأكشاك" },
+    route: "/stalls",
+    who: ["all"],
+    steps: [
+      { en: "Every stall of a season, season by season — use the tabs at the top to switch.", ur: "ہر سیزن کے اسٹال — اوپر کے ٹیبز سے سیزن بدلیں۔", "ur-roman": "Har season ke stalls — upar ke tabs se season badlein.", hi: "हर सीज़न के स्टॉल — ऊपर के टैब से सीज़न बदलें।", ar: "أكشاك كل موسم — بدّل الموسم من التبويبات." },
+      { en: "Search by business, owner or category, and filter with the category dropdown.", ur: "کاروبار، مالک یا زمرے سے تلاش کریں، اور زمرہ ڈراپ ڈاؤن سے فلٹر۔", "ur-roman": "Business, owner ya category se search karein, aur category dropdown se filter.", hi: "व्यवसाय, मालिक या श्रेणी से खोजें, और श्रेणी ड्रॉपडाउन से फ़िल्टर करें।", ar: "ابحث بالنشاط أو المالكة أو الفئة، وصفِّ بالقائمة المنسدلة." },
+      { en: "One card per seller — if she registered in several categories, they all show as chips on that one card.", ur: "ہر seller کا ایک کارڈ — کئی زمرے ہوں تو سب اسی کارڈ پر chips میں۔", "ur-roman": "Har seller ka ek card — kai categories hon to sab usi card par chips mein.", hi: "प्रत्येक seller का एक कार्ड — कई श्रेणियाँ हों तो सब उसी कार्ड पर chips में।", ar: "بطاقة واحدة لكل بائعة — وإن سجّلت بعدة فئات تظهر كلها كرقائق على البطاقة نفسها." },
+      { en: "Admin: the ⋮ menu adds bulk import, multi-select delete, or clearing a whole season.", ur: "ایڈمن: ⋮ مینو سے bulk import، multi-select delete، یا پورا سیزن clear۔", "ur-roman": "Admin: ⋮ menu se bulk import, multi-select delete, ya poora season clear.", hi: "एडमिन: ⋮ मेन्यू से bulk import, multi-select delete, या पूरा सीज़न clear।", ar: "المشرف: قائمة ⋮ للاستيراد الجماعي أو الحذف المتعدد أو مسح موسم كامل." },
+    ],
+    tip: { en: "Stalls appear here automatically when a seller wins the Live Draw — you don't add them by hand.", ur: "Live Draw جیتنے پر اسٹال خودبخود یہاں آتا ہے — ہاتھ سے شامل نہیں کرنا پڑتا۔", "ur-roman": "Live Draw jeetne par stall khudbakhud yahan aata hai — haath se add nahi karna parta.", hi: "Live Draw जीतने पर स्टॉल स्वतः यहाँ आता है — हाथ से जोड़ना नहीं पड़ता।", ar: "يظهر الكشك هنا تلقائيًا عند الفوز بالسحب — لا تضيفه يدويًا." },
+  },
+
+  gallery: {
+    title: { en: "Gallery", ur: "گیلری", "ur-roman": "Gallery", hi: "गैलरी", ar: "المعرض" },
+    route: "/gallery",
+    who: ["all"],
+    steps: [
+      { en: "Photos from the bazaar, grouped by season.", ur: "بازار کی تصاویر، سیزن کے حساب سے۔", "ur-roman": "Bazaar ki tasveerein, season ke hisab se.", hi: "बाज़ार की तस्वीरें, सीज़न अनुसार।", ar: "صور من البازار، مرتّبة بحسب الموسم." },
+      { en: "Tap any photo to open it larger.", ur: "کسی بھی تصویر پر ٹیپ کرکے بڑا دیکھیں۔", "ur-roman": "Kisi bhi tasveer par tap karke bara dekhein.", hi: "किसी भी तस्वीर पर टैप कर बड़ा देखें।", ar: "اضغط أي صورة لعرضها أكبر." },
+      { en: "Admin: add photos with an image link and remove any that no longer fit.", ur: "ایڈمن: تصویر کا لنک دے کر شامل کریں، غیر ضروری ہٹا دیں۔", "ur-roman": "Admin: tasveer ka link de kar add karein, ghair-zaroori hata dein.", hi: "एडमिन: छवि लिंक से जोड़ें, अनावश्यक हटाएँ।", ar: "المشرف: أضف صورًا برابط واحذف غير المناسب." },
+    ],
+  },
+
+  categories: {
+    title: { en: "Categories", ur: "زمرے", "ur-roman": "Categories", hi: "श्रेणियाँ", ar: "الفئات" },
+    route: "/categories",
+    who: ["admin"],
+    steps: [
+      { en: "The master list of category types (Food, Jewellery, Clothing…) used across the whole app.", ur: "زمروں کی اصل فہرست (Food، Jewellery، Clothing…) جو پوری ایپ میں چلتی ہے۔", "ur-roman": "Categories ki asal fehrist (Food, Jewellery, Clothing…) jo poori app mein chalti hai.", hi: "श्रेणी प्रकारों की मास्टर सूची (Food, Jewellery, Clothing…) जो पूरी ऐप में चलती है।", ar: "القائمة الرئيسية لأنواع الفئات (طعام، مجوهرات، ملابس…) المستخدمة في التطبيق كله." },
+      { en: "Create one with a name, emoji and description; set it Active to make it selectable.", ur: "نام، ایموجی اور تفصیل کے ساتھ بنائیں؛ Active کریں تو منتخب ہو سکے گا۔", "ur-roman": "Naam, emoji aur description ke saath banayein; Active karein to select ho sakega.", hi: "नाम, इमोजी व विवरण से बनाएँ; Active करें तो चुनी जा सकेगी।", ar: "أنشئها باسم ورمز ووصف؛ فعّلها لتصبح قابلة للاختيار." },
+      { en: "Open a category to manage its sub-categories.", ur: "کسی زمرے کو کھول کر اس کے سب زمرے سنبھالیں۔", "ur-roman": "Kisi category ko khol kar uske sub-categories sambhalein.", hi: "किसी श्रेणी को खोलकर उसकी उप-श्रेणियाँ प्रबंधित करें।", ar: "افتح فئة لإدارة فئاتها الفرعية." },
+      { en: "Whatever you change here shows up right away in registration, the directory and Registration Info.", ur: "یہاں کی تبدیلی فوراً رجسٹریشن، ڈائریکٹری اور Registration Info میں نظر آتی ہے۔", "ur-roman": "Yahan ki tabdeeli foran registration, directory aur Registration Info mein nazar aati hai.", hi: "यहाँ का बदलाव तुरंत पंजीकरण, निर्देशिका व Registration Info में दिखता है।", ar: "أي تغيير هنا يظهر فورًا في التسجيل والدليل ومعلومات التسجيل." },
+    ],
+  },
+
+  draw: {
+    title: { en: "Live Draw", ur: "لائیو ڈرا", "ur-roman": "Live Draw", hi: "लाइव ड्रॉ", ar: "السحب المباشر" },
+    route: "/draw",
+    who: ["admin"],
+    steps: [
+      { en: "The pool is everyone on the waitlist. Winning the draw is what approves a seller and creates her stall.", ur: "پول = ویٹ لسٹ والی سب۔ ڈرا جیتنے پر ہی seller approve ہوتی ہے اور اسٹال بنتا ہے۔", "ur-roman": "Pool = waitlist wali sab. Draw jeetne par hi seller approve hoti hai aur stall banta hai.", hi: "पूल = वेटलिस्ट की सब। ड्रॉ जीतने पर ही seller approve होती है व स्टॉल बनता है।", ar: "المجموعة هي كل من في قائمة الانتظار. الفوز بالسحب هو ما يعتمد البائعة ويُنشئ كشكها." },
+      { en: "Press Play for one pick at a time, or Non-Stop to run until the target is reached.", ur: "ایک ایک پک کے لیے Play، یا ہدف تک چلانے کے لیے Non-Stop۔", "ur-roman": "Ek ek pick ke liye Play, ya target tak chalane ke liye Non-Stop.", hi: "एक-एक पिक हेतु Play, या लक्ष्य तक Non-Stop।", ar: "اضغط تشغيل لسحبة واحدة، أو بلا توقف حتى بلوغ الهدف." },
+      { en: "Go Live broadcasts the ceremony to every visitor on the watch page.", ur: "Go Live سے تقریب سب وزیٹرز کو دکھتی ہے۔", "ur-roman": "Go Live se ceremony sab visitors ko dikhti hai.", hi: "Go Live से समारोह सभी विज़िटर को दिखता है।", ar: "البث المباشر يعرض الحفل لكل الزوار." },
+      { en: "View selected lists every winner — remove one with ✕ and she returns to the waitlist, freeing her stall number for a fresh pick.", ur: "View selected میں ہر فاتح — ✕ سے ہٹائیں تو وہ ویٹ لسٹ میں واپس اور اس کا نمبر نئے ڈرا کے لیے خالی۔", "ur-roman": "View selected mein har faateh — ✕ se hataayein to wo waitlist mein wapas aur uska number naye draw ke liye khali.", hi: "View selected में हर विजेता — ✕ से हटाएँ तो वह वेटलिस्ट में वापस और उसका नंबर नए ड्रॉ हेतु ख़ाली।", ar: "عرض المختارات يسرد كل فائزة — أزلها بـ ✕ لتعود لقائمة الانتظار ويتحرر رقم كشكها لسحبة جديدة." },
+      { en: "When the target is met you can raise the total and keep drawing, or Finish & save to close the season's draw.", ur: "ہدف پورا ہونے پر کل تعداد بڑھا کر مزید ڈرا کریں، یا Finish & save سے ڈرا بند کریں۔", "ur-roman": "Target pura hone par kul tadaad barha kar mazeed draw karein, ya Finish & save se draw band karein.", hi: "लक्ष्य पूरा होने पर कुल बढ़ाकर और ड्रॉ करें, या Finish & save से ड्रॉ बंद करें।", ar: "عند بلوغ الهدف ارفع الإجمالي وواصل السحب، أو أنهِ واحفظ لإغلاق سحب الموسم." },
+    ],
+    tip: { en: "Reset undoes the WHOLE draw — every winner goes back to the waitlist and their stalls are deleted. To change just one, use ✕ in View selected instead. Countdown and sweep speed are set in Settings → Live draw pace.", ur: "Reset پورا ڈرا ختم کرتا ہے — سب فاتحین ویٹ لسٹ میں اور اسٹال حذف۔ صرف ایک بدلنی ہو تو View selected میں ✕ استعمال کریں۔ رفتار Settings → Live draw pace سے۔", "ur-roman": "Reset poora draw khatam karta hai — sab faateheen waitlist mein aur stalls delete. Sirf ek badalni ho to View selected mein ✕ use karein. Speed Settings → Live draw pace se.", hi: "Reset पूरा ड्रॉ हटाता है — सब विजेता वेटलिस्ट में व स्टॉल हटते हैं। केवल एक बदलनी हो तो View selected में ✕। गति Settings → Live draw pace से।", ar: "إعادة التعيين تلغي السحب كله — تعود كل الفائزات لقائمة الانتظار وتُحذف أكشاكهن. لتغيير واحدة فقط استخدم ✕ في عرض المختارات. السرعة من الإعدادات." },
+  },
+
   signup: {
     title: { en: "Sign up", ur: "سائن اپ", "ur-roman": "Sign up", hi: "साइन अप", ar: "إنشاء حساب" },
     route: "/signup",

@@ -63,6 +63,7 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
   "guide.subtitle":       { en: "What every screen does and how to use it — from sign up to the live draw.", ur: "ہر اسکرین کیا کرتی ہے اور کیسے استعمال کریں — سائن اپ سے لائیو ڈرا تک۔", "ur-roman": "Har screen kya karti hai aur kaise use karein — sign up se live draw tak.", hi: "हर स्क्रीन क्या करती है और कैसे उपयोग करें — साइन अप से लाइव ड्रॉ तक।", ar: "ما تفعله كل شاشة وكيفية استخدامها — من إنشاء الحساب إلى السحب المباشر." },
   "guide.jump":           { en: "Jump to a section", ur: "سیکشن پر جائیں", "ur-roman": "Section par jayein", hi: "अनुभाग पर जाएँ", ar: "انتقل إلى قسم" },
   "guide.grpStart":       { en: "Getting started", ur: "شروعات", "ur-roman": "Shuruaat", hi: "शुरुआत", ar: "البداية" },
+  "guide.grpBrowse":      { en: "Browsing", ur: "دیکھنا", "ur-roman": "Dekhna", hi: "ब्राउज़ करना", ar: "التصفّح" },
   "guide.grpManage":      { en: "Managing the bazaar", ur: "بازار چلانا", "ur-roman": "Bazaar chalana", hi: "बाज़ार चलाना", ar: "إدارة البازار" },
   "guide.help":           { en: "Guide", ur: "گائیڈ", "ur-roman": "Guide", hi: "गाइड", ar: "الدليل" },
   "guide.full":           { en: "Read the full guide", ur: "مکمل گائیڈ پڑھیں", "ur-roman": "Mukammal guide parhein", hi: "पूरी गाइड पढ़ें", ar: "اقرأ الدليل الكامل" },

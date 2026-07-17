@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { BarChart3, ClipboardList, CreditCard, LayoutDashboard, ListTree, Megaphone, Pencil, Settings as SettingsIcon, UserPlus } from "lucide-react";
+import { BarChart3, ClipboardList, CreditCard, Home, Image as ImageIcon, LayoutDashboard, ListTree, Megaphone, Pencil, Settings as SettingsIcon, Sparkles, Store, Tags, UserPlus } from "lucide-react";
 import type { ReactNode } from "react";
 import { PageHeader } from "@/components/site/page-header";
 import { SidebarSections, type NavGroup } from "@/components/site/sidebar-sections";
@@ -19,9 +19,14 @@ export const Route = createFileRoute("/guide")({
 });
 
 const ICONS: Record<string, ReactNode> = {
+  home: <Home className="h-4 w-4" />,
   signup: <UserPlus className="h-4 w-4" />,
   register: <ClipboardList className="h-4 w-4" />,
   reginfo: <Pencil className="h-4 w-4" />,
+  stalls: <Store className="h-4 w-4" />,
+  gallery: <ImageIcon className="h-4 w-4" />,
+  categories: <Tags className="h-4 w-4" />,
+  draw: <Sparkles className="h-4 w-4" />,
   admin: <LayoutDashboard className="h-4 w-4" />,
   seasons: <ListTree className="h-4 w-4" />,
   payments: <CreditCard className="h-4 w-4" />,
@@ -78,8 +83,9 @@ function GuidePage() {
   if (!isAdmin) return <Navigate to="/register" replace />;
 
   const groups: NavGroup[] = [
-    { label: t("guide.grpStart"), items: ["signup", "register", "reginfo"].map(item) },
-    { label: t("guide.grpManage"), items: ["admin", "seasons", "payments", "announcements", "reports", "settings"].map(item) },
+    { label: t("guide.grpStart"), items: ["home", "signup", "register", "reginfo"].map(item) },
+    { label: t("guide.grpBrowse"), items: ["stalls", "gallery", "categories"].map(item) },
+    { label: t("guide.grpManage"), items: ["draw", "admin", "seasons", "payments", "announcements", "reports", "settings"].map(item) },
   ];
 
   return (

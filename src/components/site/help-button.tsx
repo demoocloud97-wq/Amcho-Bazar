@@ -6,11 +6,17 @@ import { GUIDE, WHO_LABEL, gt, type Who } from "@/lib/guide-content";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth-context";
 
-// Map route → guide section. Screens not listed show no help button (e.g. draw/present).
+// Map route → guide section. Only /present is left out (it's the projected
+// watch screen — a floating button would show up on the projection).
 const ROUTE_SECTION: Record<string, string> = {
+  "/": "home",
   "/signup": "signup",
   "/register": "register",
   "/registration-info": "reginfo",
+  "/stalls": "stalls",
+  "/gallery": "gallery",
+  "/categories": "categories",
+  "/draw": "draw",
   "/admin": "admin",
   "/seasons": "seasons",
   "/payments": "payments",
@@ -27,10 +33,14 @@ export const PUBLIC_SECTIONS = ["signup", "register"];
 export function RouteHelp() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const { isAdmin } = useAuth();
+  const { isAdmin, loading } = useAuth();
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const section = ROUTE_SECTION[path];
+  // Tolerate a trailing slash (/admin/ === /admin) so the lookup never misses.
+  const section = ROUTE_SECTION[path.replace(/\/+$/, "") || "/"];
   if (!mounted || !section) return null;
+  // Wait for auth before applying the role gate — otherwise isAdmin is still
+  // false on first paint and the button would vanish on admin screens.
+  if (loading) return null;
   if (!isAdmin && !PUBLIC_SECTIONS.includes(section)) return null;
   return <HelpButton section={section} />;
 }
