@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, Flower2, Zap, ListChecks, Target, Search, Trophy, Radio, Download, CheckCircle2, Loader2 } from "lucide-react";
+import { friendlyAuthError } from "@/lib/firebase-errors";
+import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, Flower2, Zap, ListChecks, Target, Search, Trophy, Radio, Download, CheckCircle2, Loader2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { EVENT } from "@/lib/dummy-data";
@@ -11,7 +12,7 @@ import { getDrawNonStop, getDrawLive, setDrawLive, watchDrawCountdown, watchDraw
 import { useSeason } from "@/lib/season-context";
 import { watchRegistrationsForAdmin, updateRegistration, type Registration } from "@/lib/db";
 import { materializeRegistrationStalls, deleteStallForRegistration } from "@/lib/stalls-db";
-import { getDrawResultsBySeasonId, saveDrawResult, clearDrawResultsBySeasonId, type DrawResult } from "@/lib/draw-results-db";
+import { getDrawResultsBySeasonId, saveDrawResult, clearDrawResultsBySeasonId, deleteDrawResultByCandidate, type DrawResult } from "@/lib/draw-results-db";
 import { updateSeason, type Season } from "@/lib/seasons-db";
 import { publishDrawPool, setPoolSpinning } from "@/lib/draw-pool-db";
 import { RequireAdmin } from "@/components/site/require-admin";
@@ -53,6 +54,17 @@ export type Selected = {
 
 // Fallback if no season is loaded yet.
 const DEFAULT_TARGET = EVENT.totalWinners; // 45
+
+// The lowest stall number not in use. On a fresh draw this is just 1,2,3…; after a
+// winner is removed it reuses that freed number instead of running past the target.
+function nextStallNo(cur: Selected[]): number {
+  const used = new Set(cur.map((s) => s.stallNo));
+  let n = 1;
+  while (used.has(n)) n++;
+  return n;
+}
+// Draw order always moves forward so the live feed keeps its sequence.
+const nextOrder = (cur: Selected[]) => cur.reduce((m, s) => Math.max(m, s.order), 0) + 1;
 
 type Candidate = { id: string; seller: string; business: string; category: string; avatar: string };
 
@@ -280,8 +292,8 @@ function DrawPage() {
       const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const reg = regByIdRef.current.get(winner.id); // full registration → tagline / products for the reveal
       const s: Selected = {
-        order: cur.length + 1,
-        stallNo: cur.length + 1, // sequential stall number, kept for the directory
+        order: nextOrder(cur),
+        stallNo: nextStallNo(cur), // lowest free number — refills a removed winner's slot
         seller: winner.seller,
         business: winner.business,
         category: winner.category,
@@ -313,6 +325,25 @@ function DrawPage() {
         if (runningRef.current) { setCurrent(null); addTimer(runOne, 800); }
       }, HOLD + showMs);
     }, spinMs); // spin lasts the admin-set countdown so the public count reaches 1 at reveal
+  }
+
+  // Drop one winner from the draw: their result is deleted, they go back to the
+  // waitlist pool (stall removed), and their stall number frees up for a re-draw.
+  async function removeWinner(s: Selected) {
+    if (!seasonId) return;
+    const next = selectedRef.current.filter((x) => x.id !== s.id);
+    selectedRef.current = next;
+    setSelected(next);
+    if (current?.id === s.id) setCurrent(null);
+    setPhase("idle"); // target is no longer met — the machine can draw again
+    try {
+      await deleteDrawResultByCandidate(seasonId, s.id);
+      await updateRegistration(s.id, { status: "waitlist", season: season?.seasonNumber });
+      await deleteStallForRegistration(s.id).catch(() => {});
+      toast.success(`${s.business} ${t("draw.removedBack")}`);
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    }
   }
 
   // Raise the target then reopen the machine so the extra winners can be drawn —
@@ -382,8 +413,8 @@ function DrawPage() {
     }
     const winner = avail[Math.floor(Math.random() * avail.length)];
     const s: Selected = {
-      order: cur.length + 1,
-      stallNo: cur.length + 1, // sequential stall number, kept for the directory
+      order: nextOrder(cur),
+      stallNo: nextStallNo(cur), // lowest free number — refills a removed winner's slot
       seller: winner.seller,
       business: winner.business,
       category: winner.category,
@@ -640,7 +671,7 @@ function DrawPage() {
         <div className="space-y-6 rounded-[36px] border border-white/15 bg-black/30 p-6 backdrop-blur-xl md:p-8">
           <ProgressRing value={progress} selected={selected.length} target={TARGET} />
           <div className="h-px bg-white/10" />
-          <SelectedPanel selected={selected} target={TARGET} />
+          <SelectedPanel selected={selected} target={TARGET} onRemove={removeWinner} />
         </div>
       </section>
 
@@ -899,9 +930,11 @@ export function StallArena({
   const centerStall = picks[44]; // 45th pick, centred
   const [arenaW, setArenaW] = useState(900); // wings max-width (px) — high = columns hug both edges
 
+  // No overflow-hidden on the card: booth hover tooltips must be able to escape it
+  // (edge booths were getting their name clipped). The dots overlay keeps the rounding.
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-gradient-to-b from-black/40 via-black/30 to-black/50 p-4 pt-3 backdrop-blur-xl md:p-6 md:pt-4">
-      <div className="pointer-events-none absolute inset-0 pattern-dots opacity-10" />
+    <div className="relative rounded-[28px] border border-white/15 bg-gradient-to-b from-black/40 via-black/30 to-black/50 p-4 pt-3 backdrop-blur-xl md:p-6 md:pt-4">
+      <div className="pointer-events-none absolute inset-0 rounded-[28px] pattern-dots opacity-10" />
 
       {/* Header */}
       <div className="relative mb-3">
@@ -1126,7 +1159,7 @@ function SimpleStallGrid({
                 </motion.div>
               )}
             </AnimatePresence>
-            <div className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-black/90 px-3 py-2 text-[11px] shadow-glow group-hover:block">
+            <div className="pointer-events-none absolute left-1/2 top-full z-40 mt-2 hidden w-max max-w-[60vw] -translate-x-1/2 rounded-lg bg-black/90 px-3 py-2 text-[11px] shadow-glow group-hover:block">
               <div className="font-semibold text-white">{r.business}</div>
               <div className="text-white/70">{r.seller}{won ? ` · ${t("draw.chipWinner")}` : ""}</div>
             </div>
@@ -1256,7 +1289,7 @@ function StallBooth({
 
       {/* Tooltip */}
       {info && (
-        <div className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-black/90 px-3 py-2 text-[11px] shadow-glow group-hover:block">
+        <div className="pointer-events-none absolute left-1/2 top-full z-40 mt-2 hidden w-max max-w-[60vw] -translate-x-1/2 rounded-lg bg-black/90 px-3 py-2 text-[11px] shadow-glow group-hover:block">
           <div className="font-semibold text-white">{info.business}</div>
           <div className="text-white/70">
             {info.seller} · {info.category}
@@ -1316,9 +1349,10 @@ function ProgressRing({ value, selected, target }: { value: number; selected: nu
 }
 
 /* ==== SELECTED PANEL ==== */
-function SelectedPanel({ selected, target }: { selected: Selected[]; target: number }) {
+function SelectedPanel({ selected, target, onRemove }: { selected: Selected[]; target: number; onRemove?: (s: Selected) => void }) {
   const { t } = useI18n();
   const [showAll, setShowAll] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState<Selected | null>(null);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string | null>(null);
   // Category chips with counts (draw order preserved elsewhere).
@@ -1468,6 +1502,17 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
                         <div className="text-sm font-bold text-foreground/70">#{s.order}</div>
                         <div>{s.at}</div>
                       </div>
+                      {onRemove && (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmRemove(s)}
+                          aria-label={`${t("draw.removeWinner")} — ${s.business}`}
+                          title={t("draw.removeWinner")}
+                          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
                     </li>
                   );
                 })}
@@ -1476,6 +1521,15 @@ function SelectedPanel({ selected, target }: { selected: Selected[]; target: num
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!confirmRemove}
+        onOpenChange={(o) => !o && setConfirmRemove(null)}
+        title={t("draw.removeTitle")}
+        description={confirmRemove ? t("draw.removeDesc").replace("{b}", confirmRemove.business).replace("{n}", String(confirmRemove.stallNo)) : ""}
+        confirmLabel={t("draw.removeWinner")}
+        onConfirm={() => { if (confirmRemove) onRemove?.(confirmRemove); setConfirmRemove(null); }}
+      />
 
       {selected.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center text-sm text-white/75">

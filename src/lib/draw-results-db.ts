@@ -57,6 +57,14 @@ export function watchDrawResultsBySeasonId(seasonId: string, cb: (results: DrawR
   });
 }
 
+// Drop one winner from a season's draw (frees their stall number for a re-draw).
+export async function deleteDrawResultByCandidate(seasonId: string, candidateId: string) {
+  const snap = await getDocs(
+    query(collection(db, COL), where("seasonId", "==", seasonId), where("candidateId", "==", candidateId))
+  );
+  await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, COL, d.id))));
+}
+
 export async function clearDrawResultsBySeasonId(seasonId: string) {
   const snap = await getDocs(query(collection(db, COL), where("seasonId", "==", seasonId)));
   await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, COL, d.id))));
