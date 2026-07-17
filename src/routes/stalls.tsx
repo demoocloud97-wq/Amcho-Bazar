@@ -56,8 +56,14 @@ function StallsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmClearSel, setConfirmClearSel] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
-  function toggleSelected(id: string) {
-    setSelectedIds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  // Selecting a card selects every stall doc behind it (one per category).
+  function toggleSelected(ids: string[]) {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      const on = ids.every((id) => n.has(id));
+      ids.forEach((id) => (on ? n.delete(id) : n.add(id)));
+      return n;
+    });
   }
   function exitSelect() { setSelectMode(false); setSelectedIds(new Set()); }
   async function clearSeasonStalls() {
@@ -158,17 +164,35 @@ function StallsPage() {
     const override = NAME_CATEGORY[name.trim().toLowerCase()];
     return override ? canonical(override) : guessCategory(name);
   };
-  const catOptions = useMemo(
-    () => [...new Set(stalls.map((s) => resolveCat(s.categoryId, s.name)).filter(Boolean))].sort(),
+  // A seller gets one stall doc PER category, so the same business would list
+  // once per category. Group them back into one card per seller (registration),
+  // carrying every category it belongs to.
+  const groups = useMemo(() => {
+    const m = new Map<string, { stall: Stall; cats: Set<string>; ids: string[] }>();
+    for (const s of stalls) {
+      const key = s.registrationId || s.id!;
+      const cname = resolveCat(s.categoryId, s.name);
+      const e = m.get(key);
+      if (e) {
+        if (cname) e.cats.add(cname);
+        if (s.id) e.ids.push(s.id);
+      } else {
+        m.set(key, { stall: s, cats: new Set(cname ? [cname] : []), ids: s.id ? [s.id] : [] });
+      }
+    }
+    return [...m.entries()].map(([key, v]) => ({ key, stall: v.stall, cats: [...v.cats].sort(), ids: v.ids }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [stalls, catName, catByName]
+  }, [stalls, catName, catByName]);
+
+  const catOptions = useMemo(
+    () => [...new Set(groups.flatMap((g) => g.cats))].sort(),
+    [groups]
   );
 
-  const filtered = stalls.filter((s) => {
-    const cname = resolveCat(s.categoryId, s.name);
-    if (cat !== "All" && cname !== cat) return false;
+  const filtered = groups.filter((g) => {
+    if (cat !== "All" && !g.cats.includes(cat)) return false;
     if (!q) return true;
-    return `${s.name} ${s.owner} ${cname}`.toLowerCase().includes(q.toLowerCase());
+    return `${g.stall.name} ${g.stall.owner} ${g.cats.join(" ")}`.toLowerCase().includes(q.toLowerCase());
   });
 
   return (
@@ -292,16 +316,17 @@ function StallsPage() {
           </div>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((s, i) => {
-              const selected = selectMode && !!s.id && selectedIds.has(s.id);
+            {filtered.map((g, i) => {
+              const s = g.stall;
+              const selected = selectMode && g.ids.length > 0 && g.ids.every((id) => selectedIds.has(id));
               return (
               <motion.div
-                key={s.id}
+                key={g.key}
                 initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
                 transition={{ duration: 0.35, delay: (i % 12) * 0.03 }}
-                onClick={selectMode && s.id ? () => toggleSelected(s.id!) : undefined}
+                onClick={selectMode ? () => toggleSelected(g.ids) : undefined}
                 className={`group relative overflow-hidden rounded-3xl border bg-card shadow-card transition-all hover:-translate-y-1 hover:shadow-glow ${selectMode ? "cursor-pointer" : ""} ${selected ? "border-primary ring-2 ring-primary" : "border-border"}`}
               >
                 {selectMode && (
@@ -312,9 +337,10 @@ function StallsPage() {
                 <StallImage src={s.imageUrl} alt={s.name} />
                 <div className="p-5">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-                      {resolveCat(s.categoryId, s.name) || t("stalls.uncat")}
-                    </span>
+                    {/* Every category this seller registered in — one card, not one per category */}
+                    {(g.cats.length ? g.cats : [t("stalls.uncat")]).map((c) => (
+                      <span key={c} className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">{c}</span>
+                    ))}
                     <span className="rounded-full bg-accent/20 px-2.5 py-1 text-[11px] font-semibold text-primary">
                       Season {s.season}
                     </span>
