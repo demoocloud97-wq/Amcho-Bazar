@@ -590,6 +590,7 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
   "pay.ledger":    { en: "Payment ledger", ur: "ادائیگی کھاتہ", "ur-roman": "Adaigi khata", hi: "भुगतान बहीखाता", ar: "دفتر المدفوعات" },
   "pay.searchPh":  { en: "Search name or business…", ur: "نام یا کاروبار تلاش کریں…", "ur-roman": "Naam ya business talash karein…", hi: "नाम या व्यवसाय खोजें…", ar: "ابحث عن الاسم أو العمل…" },
   "pay.noMatch":   { en: "No matches.", ur: "کوئی نتیجہ نہیں۔", "ur-roman": "Koi nateeja nahi.", hi: "कोई मेल नहीं।", ar: "لا نتائج." },
+  "pay.close":     { en: "Close", ur: "بند کریں", "ur-roman": "Band karein", hi: "बंद करें", ar: "إغلاق" },
   "pay.noPayments":{ en: "No payments recorded yet.", ur: "ابھی کوئی ادائیگی درج نہیں۔", "ur-roman": "Abhi koi adaigi darj nahi.", hi: "अभी कोई भुगतान दर्ज नहीं।", ar: "لا مدفوعات مسجّلة بعد." },
   "pay.record":    { en: "Record", ur: "درج کریں", "ur-roman": "Darj karein", hi: "दर्ज करें", ar: "تسجيل" },
   "pay.recorded":  { en: "Payment recorded —", ur: "ادائیگی درج ہو گئی —", "ur-roman": "Adaigi darj ho gayi —", hi: "भुगतान दर्ज हुआ —", ar: "تم تسجيل الدفع —" },

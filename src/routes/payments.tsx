@@ -208,7 +208,7 @@ function PaymentsPage() {
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  {outstandingShown.map((r) => <OutstandingRow key={r.id} reg={r} fee={fee} onRecord={record} />)}
+                  {outstandingShown.map((r) => <OutstandingRow key={r.id} reg={r} fee={fee} onRecord={record} onProof={setProof} />)}
                 </div>
               )}
             </div>
@@ -270,12 +270,20 @@ function PaymentsPage() {
             </a>
           )}
           <div className="mt-4 flex justify-end gap-2">
-            <button type="button" onClick={() => setRejectTarget(proof)} disabled={verifying} className="rounded-full border border-destructive/40 px-4 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50">
-              {t("pay.reject")}
-            </button>
-            <button type="button" onClick={() => proof && verify(proof)} disabled={verifying} className="inline-flex items-center gap-2 rounded-full bg-festive px-5 py-2 text-sm font-bold text-white shadow-soft disabled:opacity-50">
-              {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} {t("pay.verify")}
-            </button>
+            {proof?.status === "pending" ? (
+              <>
+                <button type="button" onClick={() => setRejectTarget(proof)} disabled={verifying} className="rounded-full border border-destructive/40 px-4 py-2 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50">
+                  {t("pay.reject")}
+                </button>
+                <button type="button" onClick={() => proof && verify(proof)} disabled={verifying} className="inline-flex items-center gap-2 rounded-full bg-festive px-5 py-2 text-sm font-bold text-white shadow-soft disabled:opacity-50">
+                  {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} {t("pay.verify")}
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={() => setProof(null)} className="rounded-full border border-border px-5 py-2 text-sm font-semibold transition-colors hover:bg-muted">
+                {t("pay.close")}
+              </button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -327,7 +335,7 @@ function SearchBox({ value, onChange }: { value: string; onChange: (v: string) =
   );
 }
 
-function OutstandingRow({ reg, fee, onRecord }: { reg: Registration; fee: number; onRecord: (r: Registration, amount: number, method: PaymentMethod) => Promise<void> }) {
+function OutstandingRow({ reg, fee, onRecord, onProof }: { reg: Registration; fee: number; onRecord: (r: Registration, amount: number, method: PaymentMethod) => Promise<void>; onProof: (r: Registration) => void }) {
   const { t } = useI18n();
   const [amount, setAmount] = useState(fee);
   const [method, setMethod] = useState<PaymentMethod>("cash");
@@ -341,6 +349,11 @@ function OutstandingRow({ reg, fee, onRecord }: { reg: Registration; fee: number
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-background/50 p-3">
+      {reg.paymentProofUrl && (
+        <button type="button" onClick={() => onProof(reg)} className="shrink-0" title={t("pay.viewProof")}>
+          <img src={reg.paymentProofUrl} alt="" className="h-11 w-9 rounded-lg border border-border object-cover transition-transform hover:scale-105" />
+        </button>
+      )}
       <div className="min-w-0 flex-1">
         <div className="truncate font-semibold">{reg.business}</div>
         <div className="truncate text-xs text-muted-foreground">{reg.seller} · {reg.category}</div>
