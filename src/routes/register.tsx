@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, ImagePlus, Loader2, PartyPopper, Sparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ClipboardCheck, Copy, ImagePlus, Loader2, PartyPopper, Sparkles, Store, Tags, User, Wallet, X } from "lucide-react";
 import { uploadToCloudinary, cloudinaryReady } from "@/lib/cloudinary";
 import { CATEGORIES, EVENT, type CategoryKey } from "@/lib/dummy-data";
 import { createRegistration, getRegistrationsBySeasonId } from "@/lib/db";
@@ -422,7 +422,21 @@ function Field({ label, children, hint, required = false }: { label: string; chi
   );
 }
 
-const inputCls = "w-full rounded-2xl border border-border bg-white/70 px-4 py-3 text-sm outline-none ring-primary/20 transition-all focus:ring-4";
+// Shared section header — an icon chip + title + subtitle, so every step reads as
+// its own labelled card and the flow feels cohesive.
+function StepHeader({ icon, title, sub }: { icon: React.ReactNode; title: string; sub?: string }) {
+  return (
+    <div className="flex items-start gap-3.5">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/15">{icon}</span>
+      <div className="min-w-0">
+        <h2 className="font-display text-2xl font-bold leading-tight">{title}</h2>
+        {sub && <p className="mt-1 text-sm text-muted-foreground">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+const inputCls = "w-full rounded-2xl border border-border bg-white/70 px-4 py-3 text-sm outline-none ring-primary/20 transition-all hover:border-primary/30 focus:border-primary/40 focus:ring-4";
 
 function StepPersonal({ data, update, labels = {} }: any) {
   const { t } = useI18n();
@@ -430,10 +444,7 @@ function StepPersonal({ data, update, labels = {} }: any) {
   const [phoneTouched, setPhoneTouched] = useState(false);
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-2xl font-bold">{t("reg.personal.h2")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("reg.personal.sub")}</p>
-      </div>
+      <StepHeader icon={<User className="h-5 w-5" />} title={t("reg.personal.h2")} sub={t("reg.personal.sub")} />
       <div className="grid gap-4 md:grid-cols-2">
         <Field label={L("fullName", "reg.f.fullName")} required>
           <input value={data.fullName} onChange={(e) => update("fullName", e.target.value)} autoComplete="given-name" className={inputCls} placeholder="Enter your first name" />
@@ -480,10 +491,7 @@ function StepBusiness({ data, update, customFields = [], labels = {} }: any) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-2xl font-bold">{t("reg.business.h2")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("reg.business.sub")}</p>
-      </div>
+      <StepHeader icon={<Store className="h-5 w-5" />} title={t("reg.business.h2")} sub={t("reg.business.sub")} />
       <div className="grid gap-4 md:grid-cols-2">
         <Field label={L("business", "reg.f.business")} required>
           <input value={data.business} onChange={(e) => update("business", e.target.value)} className={inputCls} placeholder="Enter your business name" />
@@ -568,10 +576,11 @@ function StepCategory({ data, update, toggleCategory, toggleSubcategory, counts,
 
   return (
     <div>
-      <h2 className="font-display text-2xl font-bold">{t("reg.category.h2")}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t("reg.category.pick")}{data.categories.length ? ` ${data.categories.length} ${t("reg.category.selected")}` : ""}{seasonName ? ` ${t("reg.category.countsFor")} ${seasonName}.` : ""}
-      </p>
+      <StepHeader
+        icon={<Tags className="h-5 w-5" />}
+        title={t("reg.category.h2")}
+        sub={`${t("reg.category.pick")}${data.categories.length ? ` ${data.categories.length} ${t("reg.category.selected")}` : ""}${seasonName ? ` ${t("reg.category.countsFor")} ${seasonName}.` : ""}`}
+      />
       <div className="mt-6 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
         {grid.map((c) => {
           const active = data.categories.includes(c.key);
@@ -652,28 +661,28 @@ function StepPayment({ data, update, info, fee }: any) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-2xl font-bold">{t("reg.pay.h2")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("reg.pay.sub")}</p>
-      </div>
+      <StepHeader icon={<Wallet className="h-5 w-5" />} title={t("reg.pay.h2")} sub={t("reg.pay.sub")} />
 
       {fee ? (
-        <div className="flex items-baseline gap-2 rounded-2xl bg-festive px-5 py-4 text-white shadow-soft">
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/80">{t("reg.pay.amount")}</span>
-          <span className="font-display text-2xl font-black tabular-nums">Rs {fee}</span>
+        <div className="relative overflow-hidden rounded-2xl bg-festive px-5 py-4 text-white shadow-glow">
+          <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10 blur-xl" />
+          <div className="relative flex items-center justify-between gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-white/85">{t("reg.pay.amount")}</span>
+            <span className="font-display text-3xl font-black tabular-nums">Rs {fee}</span>
+          </div>
         </div>
       ) : null}
 
       {rows.length > 0 ? (
-        <div className="divide-y divide-border rounded-2xl border border-border">
+        <div className="overflow-hidden rounded-2xl border border-border bg-white/50">
           {rows.map((r) => (
-            <div key={r.label} className="flex items-center justify-between gap-3 px-4 py-3">
+            <div key={r.label} className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 last:border-b-0">
               <div className="min-w-0">
-                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{r.label}</div>
-                <div className="truncate font-medium">{r.value}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{r.label}</div>
+                <div className="truncate font-semibold tabular-nums">{r.value}</div>
               </div>
-              <button type="button" onClick={() => copy(r.value)} className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-muted">
-                {copied === r.value ? t("reg.pay.copied") : t("reg.pay.copy")}
+              <button type="button" onClick={() => copy(r.value)} className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${copied === r.value ? "border-teal/40 bg-teal/10 text-teal" : "border-border text-primary hover:bg-muted"}`}>
+                {copied === r.value ? <><Check className="h-3.5 w-3.5" /> {t("reg.pay.copied")}</> : <><Copy className="h-3.5 w-3.5" /> {t("reg.pay.copy")}</>}
               </button>
             </div>
           ))}
@@ -690,23 +699,23 @@ function StepPayment({ data, update, info, fee }: any) {
         <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           {t("reg.pay.proof")} <span className="text-destructive">*</span>
         </span>
-        <div className="flex items-center gap-4">
-          {data.paymentProofUrl ? (
-            <div className="relative">
-              <img src={data.paymentProofUrl} alt="" className="h-28 w-24 rounded-2xl border border-border object-cover" />
-              <button type="button" onClick={() => update("paymentProofUrl", "")} aria-label={t("reg.pay.remove")} className="absolute -right-2 -top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-white shadow-soft">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ) : (
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-border bg-white/70 px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-              {uploading ? t("reg.f.logoUploading") : t("reg.pay.upload")}
-              <input type="file" accept="image/*" onChange={onProof} disabled={uploading} className="hidden" />
-            </label>
-          )}
-        </div>
-        <span className="mt-1 block text-xs text-muted-foreground/80">{t("reg.pay.proofHint")}</span>
+        {data.paymentProofUrl ? (
+          <div className="relative inline-block">
+            <img src={data.paymentProofUrl} alt="" className="h-40 w-32 rounded-2xl border border-border object-cover shadow-soft" />
+            <button type="button" onClick={() => update("paymentProofUrl", "")} aria-label={t("reg.pay.remove")} className="absolute -right-2 -top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-white shadow-soft transition-transform hover:scale-110">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-white/60 px-4 py-8 text-center text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.03] hover:text-primary">
+            <span className="grid h-11 w-11 place-items-center rounded-full bg-primary/10 text-primary">
+              {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ImagePlus className="h-5 w-5" />}
+            </span>
+            {uploading ? t("reg.f.logoUploading") : t("reg.pay.upload")}
+            <span className="text-xs font-normal text-muted-foreground/80">{t("reg.pay.proofHint")}</span>
+            <input type="file" accept="image/*" onChange={onProof} disabled={uploading} className="hidden" />
+          </label>
+        )}
       </div>
     </div>
   );
@@ -720,13 +729,21 @@ function StepReview({ data, agreed = false, setAgreed, onOpenTerms }: any) {
     [t("reg.row.products"), data.products], [t("reg.row.categories"), (data.categories || []).join(", ")], [t("reg.row.subcategory"), (data.subcategories || []).join(", ") || data.subcategory],
   ];
   return (
-    <div>
-      <h2 className="font-display text-2xl font-bold">{t("reg.review.h2")}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">{t("reg.review.sub")}</p>
-      <div className="mt-6 divide-y divide-border rounded-2xl border border-border">
+    <div className="space-y-6">
+      <StepHeader icon={<ClipboardCheck className="h-5 w-5" />} title={t("reg.review.h2")} sub={t("reg.review.sub")} />
+      {data.logoUrl && (
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-white/50 p-3">
+          <img src={data.logoUrl} alt="" className="h-14 w-14 rounded-xl border border-border object-cover" />
+          <div className="min-w-0">
+            <div className="truncate font-display text-lg font-bold leading-tight">{data.business || "—"}</div>
+            {data.tagline && <div className="truncate text-xs text-muted-foreground">{data.tagline}</div>}
+          </div>
+        </div>
+      )}
+      <div className="overflow-hidden rounded-2xl border border-border bg-white/50">
         {rows.map(([k, v]) => (
-          <div key={k} className="flex items-start justify-between gap-4 px-4 py-3 text-sm">
-            <div className="w-28 shrink-0 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{k}</div>
+          <div key={k} className="flex items-start justify-between gap-4 border-b border-border px-4 py-3 text-sm last:border-b-0 odd:bg-muted/20">
+            <div className="w-28 shrink-0 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{k}</div>
             <div className="flex-1 text-right font-medium text-foreground">{v || <span className="italic text-muted-foreground">{t("reg.review.notProvided")}</span>}</div>
           </div>
         ))}

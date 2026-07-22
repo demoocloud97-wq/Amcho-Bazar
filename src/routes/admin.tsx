@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { getRegistrationsForAdmin, watchRegistrationsForAdmin, getRegistrationsBySeasonId, createRegistration, updateRegistration, deleteRegistration, type Registration } from "@/lib/db";
+import { getPaymentsBySeasonId } from "@/lib/payments-db";
 import { getCategories, fillDefaultSubcategories, type Category } from "@/lib/categories-db";
 import { deleteStallForRegistration, materializeRegistrationStalls } from "@/lib/stalls-db";
 import { seedApprovedRegistrations, clearSeededRegistrations } from "@/lib/seed-registrations";
@@ -102,7 +103,14 @@ function AdminPage() {
   const [cats, setCats] = useState<Category[]>([]);
   const [customFields, setCustomFields] = useState<CustomRegField[]>([]);
   const [prevCount, setPrevCount] = useState<number | null>(null);
+  const [paidIds, setPaidIds] = useState<Set<string>>(new Set());
   useEffect(() => { getCategories().then(setCats).catch(() => {}); }, []);
+  // Ledger truth: which registrations actually have a recorded payment. Drives the
+  // "Payments received" / "Approved owners" cards so they match the Payments page.
+  useEffect(() => {
+    if (!seasonId) { setPaidIds(new Set()); return; }
+    getPaymentsBySeasonId(seasonId).then((ps) => setPaidIds(new Set(ps.map((p) => p.registrationId)))).catch(() => {});
+  }, [seasonId, registrations]);
   useEffect(() => { getCustomRegFields().then(setCustomFields).catch(() => {}); }, []);
   // Previous season's registration count — used for a real trend %, hidden if none.
   useEffect(() => {
@@ -329,9 +337,12 @@ function AdminPage() {
   }
 
   const totalRegistrations = registrations.length;
-  const approved = registrations.filter((r) => r.status === "approved").length;
   const waitingList = registrations.filter((r) => r.status === "waitlist").length;
-  const paid = registrations.filter((r) => r.status === "paid").length;
+  // Paid = confirmed winners with an actual ledger payment; approved = the rest of
+  // the winners (still owe the fee). Matches the Payments page and Reports exactly.
+  const confirmed = registrations.filter((r) => r.status === "approved" || r.status === "paid");
+  const paid = confirmed.filter((r) => paidIds.has(r.id!)).length;
+  const approved = confirmed.length - paid;
 
   // Live breakdown of drawn winners (approved/paid) per category — fills as the draw
   // approves sellers and empties on reset (winners revert to waitlist).
@@ -925,16 +936,15 @@ function BarChart({ data }: { data: { name: string; emoji: string; count: number
     return <div className="flex h-56 items-center justify-center text-sm text-muted-foreground">—</div>;
   }
   return (
-    <div className="flex h-56 items-end gap-2 md:gap-3">
+    <div className="flex h-56 items-stretch gap-2 md:gap-3">
       {top.map((c, i) => {
         const h = (c.count / max) * 100;
         return (
           <div key={c.name} className="group flex flex-1 flex-col items-center gap-2">
-            <div className="relative flex h-full w-full items-end">
+            <div className="relative flex w-full flex-1 items-end">
               <motion.div
                 initial={{ height: 0 }}
-                whileInView={{ height: `${Math.max(2, h)}%` }}
-                viewport={{ once: true }}
+                animate={{ height: `${Math.max(2, h)}%` }}
                 transition={{ duration: 0.8, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
                 className="w-full rounded-t-2xl bg-festive shadow-soft"
               />

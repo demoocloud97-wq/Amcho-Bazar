@@ -72,8 +72,17 @@ function SeasonsPage() {
       ? s.recordedRegistrations // admin-entered display value (archived seasons with no reg docs)
       : regs.filter((r) => r.seasonId === s.id || Number(r.season) === Number(s.seasonNumber)).length;
   // Match the stall directory: by seasonId OR legacy numeric season, so old Season
-  // 1/2 stalls (numeric-only, or a stale seasonId) still count.
-  const sellersFor = (s: Season) => stalls.filter((st) => st.seasonId === s.id || Number(st.season) === Number(s.seasonNumber)).length;
+  // 1/2 stalls (numeric-only, or a stale seasonId) still count. Count UNIQUE sellers,
+  // not stall docs — a multi-category seller has one doc per category (reg_<id>_<cat>),
+  // so de-dupe by registration (fallback: seller name) to get the real owner count.
+  const sellersFor = (s: Season) => {
+    const seen = new Set<string>();
+    for (const st of stalls) {
+      if (st.seasonId !== s.id && Number(st.season) !== Number(s.seasonNumber)) continue;
+      seen.add(st.registrationId || st.name || st.id!);
+    }
+    return seen.size;
+  };
 
   async function migrate() {
     setMigrating(true);

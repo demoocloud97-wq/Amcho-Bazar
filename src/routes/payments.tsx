@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Banknote, Loader2, Receipt, Search, ShieldCheck, Trash2, Wallet, TrendingUp } from "lucide-react";
+import { Banknote, Clock3, Image as ImageIcon, Loader2, Receipt, Search, ShieldCheck, Trash2, Wallet, TrendingUp } from "lucide-react";
+import { colorFor } from "@/lib/category-colors";
 import { PageHeader } from "@/components/site/page-header";
 import { RequireAdmin } from "@/components/site/require-admin";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
@@ -87,6 +88,8 @@ function PaymentsPage() {
   }
 
   const paidRegIds = useMemo(() => new Set(payments.map((p) => p.registrationId)), [payments]);
+  // registrationId → business logo + category, so ledger rows can show the seller's logo.
+  const regMeta = useMemo(() => new Map(regs.map((r) => [r.id!, { logoUrl: r.logoUrl, category: r.category as string }])), [regs]);
   // Confirmed sellers (approved/paid) who have no payment on record yet.
   const outstanding = useMemo(
     () => regs.filter((r) => (r.status === "approved" || r.status === "paid") && !paidRegIds.has(r.id!)),
@@ -142,7 +145,7 @@ function PaymentsPage() {
         subtitle={t("pay.subtitle").replace("{season}", season?.seasonName ?? "the season")}
       />
 
-      <section className="mx-auto max-w-7xl px-4 pb-24 md:px-8">
+      <section className="mx-auto max-w-7xl px-4 pb-24 pt-8 md:px-8 md:pt-12">
         {/* Summary */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryCard icon={<Wallet className="h-5 w-5" />} label={t("pay.collected")} value={rupee(collected)} tone="green" />
@@ -192,61 +195,63 @@ function PaymentsPage() {
         ) : (
           <div className="mt-8 grid gap-6 lg:grid-cols-2">
             {/* Awaiting payment */}
-            <div className="rounded-3xl border border-border bg-card p-6 shadow-card">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="font-display text-lg font-bold">{t("pay.awaiting")}</h2>
-                <CountPill n={outstandingShown.length} total={outstanding.length} tone="secondary" />
+            <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-card">
+              <div className="border-b border-border/70 bg-gradient-to-br from-secondary/[0.07] to-transparent p-5 md:p-6">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-secondary/15 text-secondary"><Clock3 className="h-5 w-5" /></span>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-display text-lg font-bold leading-tight">{t("pay.awaiting")}</h2>
+                    <p className="truncate text-xs text-muted-foreground">{rupee(outstanding.length * fee)} · {t("pay.outstanding").toLowerCase()}</p>
+                  </div>
+                  <CountPill n={outstandingShown.length} total={outstanding.length} tone="secondary" />
+                </div>
+                {outstanding.length > 0 && <div className="mt-4"><SearchBox value={awaitQ} onChange={setAwaitQ} bare /></div>}
               </div>
-              {outstanding.length > 0 && <SearchBox value={awaitQ} onChange={setAwaitQ} />}
-              {outstanding.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-                  {t("pay.allPaid")}
-                </div>
-              ) : outstandingShown.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-                  {t("pay.noMatch")}
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {outstandingShown.map((r) => <OutstandingRow key={r.id} reg={r} fee={fee} onRecord={record} onProof={setProof} />)}
-                </div>
-              )}
+              <div className="p-4 md:p-5">
+                {outstanding.length === 0 ? (
+                  <Empty>{t("pay.allPaid")}</Empty>
+                ) : outstandingShown.length === 0 ? (
+                  <Empty>{t("pay.noMatch")}</Empty>
+                ) : (
+                  <div className="max-h-[30rem] space-y-2.5 overflow-y-auto pe-0.5">
+                    {outstandingShown.map((r) => <OutstandingRow key={r.id} reg={r} fee={fee} onRecord={record} onProof={setProof} />)}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Ledger */}
-            <div className="rounded-3xl border border-border bg-card p-6 shadow-card">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="font-display text-lg font-bold">{t("pay.ledger")}</h2>
-                <div className="flex shrink-0 items-center gap-2">
+            <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-card">
+              <div className="border-b border-border/70 bg-gradient-to-br from-teal/[0.07] to-transparent p-5 md:p-6">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-teal/15 text-teal"><Receipt className="h-5 w-5" /></span>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-display text-lg font-bold leading-tight">{t("pay.ledger")}</h2>
+                    <p className="truncate text-xs text-muted-foreground">{rupee(collected)} · {t("pay.collected").toLowerCase()}</p>
+                  </div>
                   <CountPill n={paymentsShown.length} total={payments.length} tone="teal" />
-                  <span className="rounded-full bg-teal/15 px-2.5 py-1 text-xs font-semibold text-teal tabular-nums">{rupee(collected)}</span>
                 </div>
+                {payments.length > 0 && <div className="mt-4"><SearchBox value={ledgerQ} onChange={setLedgerQ} bare /></div>}
               </div>
-              {payments.length > 0 && <SearchBox value={ledgerQ} onChange={setLedgerQ} />}
-              {payments.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-                  {t("pay.noPayments")}
-                </div>
-              ) : paymentsShown.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
-                  {t("pay.noMatch")}
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {paymentsShown.map((p) => (
-                    <div key={p.id} className="flex items-center gap-3 rounded-2xl border border-border bg-background/50 p-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal/15 text-teal">
-                        <Receipt className="h-5 w-5" />
-                      </div>
+              <div className="p-4 md:p-5">
+                {payments.length === 0 ? (
+                  <Empty>{t("pay.noPayments")}</Empty>
+                ) : paymentsShown.length === 0 ? (
+                  <Empty>{t("pay.noMatch")}</Empty>
+                ) : (
+                  <div className="max-h-[30rem] space-y-2.5 overflow-y-auto pe-0.5">
+                    {paymentsShown.map((p) => (
+                    <div key={p.id} className="group flex items-center gap-3 rounded-2xl border border-border bg-background/60 p-3 transition-colors hover:border-teal/40 hover:bg-teal/[0.04]">
+                      <LogoAvatar logoUrl={regMeta.get(p.registrationId)?.logoUrl} name={p.business} category={regMeta.get(p.registrationId)?.category} />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-semibold">{p.business}</div>
-                        <div className="text-xs text-muted-foreground">{p.seller} · <span className="uppercase">{p.method}</span> · {p.at}</div>
+                        <div className="truncate font-semibold leading-tight">{p.business}</div>
+                        <div className="mt-0.5 truncate text-xs text-muted-foreground">{p.seller} · <span className="uppercase">{p.method}</span> · {p.at}</div>
                       </div>
-                      <div className="shrink-0 font-display font-bold tabular-nums">{rupee(p.amount)}</div>
+                      <div className="shrink-0 rounded-full bg-teal/10 px-3 py-1 font-display text-sm font-bold tabular-nums text-teal">{rupee(p.amount)}</div>
                       <button
                         onClick={() => setDelTarget(p)}
                         aria-label="Delete payment"
-                        className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -254,6 +259,7 @@ function PaymentsPage() {
                   ))}
                 </div>
               )}
+            </div>
             </div>
           </div>
         )}
@@ -319,19 +325,49 @@ function CountPill({ n, total, tone }: { n: number; total: number; tone: "second
   );
 }
 
-function SearchBox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function SearchBox({ value, onChange, bare = false }: { value: string; onChange: (v: string) => void; bare?: boolean }) {
   const { t } = useI18n();
   return (
-    <div className="relative mb-4">
+    <div className={`relative ${bare ? "" : "mb-4"}`}>
       <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={t("pay.searchPh")}
         aria-label={t("pay.searchPh")}
-        className="min-h-10 w-full rounded-full border border-border bg-background py-2 ps-9 pe-3 text-sm outline-none ring-primary/20 focus:ring-2"
+        className="min-h-10 w-full rounded-full border border-border bg-background/80 py-2 ps-9 pe-3 text-sm outline-none ring-primary/20 transition focus:ring-2"
       />
     </div>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+      {children}
+    </div>
+  );
+}
+
+// Business logo if uploaded, else a category-tinted initial — the row's leading avatar.
+function LogoAvatar({ logoUrl, name, category }: { logoUrl?: string; name: string; category?: string }) {
+  const c = colorFor(category ?? "Others");
+  if (logoUrl) {
+    return <img src={logoUrl} alt="" referrerPolicy="no-referrer" className="h-10 w-10 shrink-0 rounded-xl border border-border object-cover" />;
+  }
+  return (
+    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl font-display text-sm font-bold" style={{ backgroundColor: `${c.bg}24`, color: c.canopy }}>
+      {(name.trim()[0] ?? "?").toUpperCase()}
+    </span>
+  );
+}
+
+// Small button to open a seller's uploaded payment receipt.
+function ProofButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button type="button" onClick={onClick} title={label} aria-label={label} className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <ImageIcon className="h-4 w-4" />
+    </button>
   );
 }
 
@@ -348,16 +384,13 @@ function OutstandingRow({ reg, fee, onRecord, onProof }: { reg: Registration; fe
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-background/50 p-3">
-      {reg.paymentProofUrl && (
-        <button type="button" onClick={() => onProof(reg)} className="shrink-0" title={t("pay.viewProof")}>
-          <img src={reg.paymentProofUrl} alt="" className="h-11 w-9 rounded-lg border border-border object-cover transition-transform hover:scale-105" />
-        </button>
-      )}
+    <div className="group flex flex-wrap items-center gap-2.5 rounded-2xl border border-border bg-background/60 p-3 transition-colors hover:border-secondary/40 hover:bg-secondary/[0.04]">
+      <LogoAvatar logoUrl={reg.logoUrl} name={reg.business} category={reg.category} />
       <div className="min-w-0 flex-1">
-        <div className="truncate font-semibold">{reg.business}</div>
-        <div className="truncate text-xs text-muted-foreground">{reg.seller} · {reg.category}</div>
+        <div className="truncate font-semibold leading-tight">{reg.business}</div>
+        <div className="mt-0.5 truncate text-xs text-muted-foreground">{reg.seller} · {reg.category}</div>
       </div>
+      {reg.paymentProofUrl && <ProofButton onClick={() => onProof(reg)} label={t("pay.viewProof")} />}
       <div className="relative">
         <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">Rs</span>
         <input
@@ -366,7 +399,7 @@ function OutstandingRow({ reg, fee, onRecord, onProof }: { reg: Registration; fe
           value={amount}
           onChange={(e) => setAmount(Number(e.target.value))}
           aria-label="Amount"
-          className="w-28 rounded-full border border-border bg-background py-2 ps-9 pe-2 text-sm outline-none ring-primary/20 focus:ring-2"
+          className="w-24 rounded-full border border-border bg-background py-2 ps-9 pe-2 text-sm tabular-nums outline-none ring-primary/20 focus:ring-2"
         />
       </div>
       <select

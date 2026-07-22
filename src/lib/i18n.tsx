@@ -787,7 +787,7 @@ const T: Record<string, Partial<Record<Lang, string>>> = {
   "adm.dummyCleared":    { en: "{n} dummy owners removed", ur: "{n} ڈمی سیلر ہٹا دیے گئے", "ur-roman": "{n} dummy owner hata diye gaye", hi: "{n} डमी विक्रेता हटाए गए", ar: "تمت إزالة {n} بائعة تجريبية" },
   "adm.stallDir":     { en: "Stall directory", ur: "اسٹال ڈائرکٹری", "ur-roman": "Stall directory", hi: "स्टॉल निर्देशिका", ar: "دليل الأكشاك" },
   "adm.mRegistrations":{ en: "Registrations", ur: "رجسٹریشنز", "ur-roman": "Registrations", hi: "पंजीकरण", ar: "التسجيلات" },
-  "adm.mApproved":    { en: "Approved owners", ur: "منظور شدہ بیچنے والیاں", "ur-roman": "Manzoor shuda bechne waliyan", hi: "स्वीकृत विक्रेता", ar: "بائعات موافق عليهن" },
+  "adm.mApproved":    { en: "Approved owners / unpaid fee", ur: "منظور شدہ بیچنے والیاں / فیس باقی", "ur-roman": "Manzoor shuda / fee baqi", hi: "स्वीकृत विक्रेता / शुल्क बाकी", ar: "بائعات موافق عليهن / رسوم غير مدفوعة" },
   "adm.mPayments":    { en: "Payments received", ur: "موصولہ ادائیگیاں", "ur-roman": "Mausoola adaigiyan", hi: "प्राप्त भुगतान", ar: "المدفوعات المستلمة" },
   "adm.mWaiting":     { en: "Waiting list", ur: "ویٹنگ لسٹ", "ur-roman": "Waiting list", hi: "प्रतीक्षा सूची", ar: "قائمة الانتظار" },
   "adm.mRemaining":   { en: "Remaining stalls", ur: "باقی اسٹال", "ur-roman": "Baqi stall", hi: "शेष स्टॉल", ar: "الأكشاك المتبقية" },
