@@ -384,6 +384,41 @@ export async function setTerms(text: string): Promise<void> {
   await setDoc(doc(db, SETTINGS, SITE), { terms: text, updatedAt: serverTimestamp() }, { merge: true });
 }
 
+/* ---- Payment account details shown on the registration payment step. ---- */
+export type PaymentInfo = { bankName: string; accountTitle: string; accountNumber: string; instructions: string };
+export const DEFAULT_PAYMENT: PaymentInfo = { bankName: "", accountTitle: "", accountNumber: "", instructions: "" };
+
+function readPayment(d: Record<string, unknown> | undefined): PaymentInfo {
+  return {
+    bankName: ((d?.payBankName as string) ?? "").trim(),
+    accountTitle: ((d?.payAccountTitle as string) ?? "").trim(),
+    accountNumber: ((d?.payAccountNumber as string) ?? "").trim(),
+    instructions: ((d?.payInstructions as string) ?? "").trim(),
+  };
+}
+export async function getPaymentInfo(): Promise<PaymentInfo> {
+  try {
+    const snap = await getDoc(doc(db, SETTINGS, SITE));
+    return readPayment(snap.exists() ? snap.data() : undefined);
+  } catch {
+    return DEFAULT_PAYMENT;
+  }
+}
+export async function setPaymentInfo(p: PaymentInfo): Promise<void> {
+  await setDoc(
+    doc(db, SETTINGS, SITE),
+    { payBankName: p.bankName.trim(), payAccountTitle: p.accountTitle.trim(), payAccountNumber: p.accountNumber.trim(), payInstructions: p.instructions.trim(), updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+}
+export function watchPaymentInfo(cb: (p: PaymentInfo) => void) {
+  return onSnapshot(
+    doc(db, SETTINGS, SITE),
+    (snap) => cb(readPayment(snap.exists() ? snap.data() : undefined)),
+    () => cb(DEFAULT_PAYMENT)
+  );
+}
+
 /* ---- Sign up on/off. Registration works without an account, so the admin can
        switch account sign-up off entirely and keep it direct. Default: on. ---- */
 const asBool = (v: unknown, fallback: boolean) => (typeof v === "boolean" ? v : fallback);

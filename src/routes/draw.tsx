@@ -5,7 +5,7 @@ import confetti from "canvas-confetti";
 import { toast } from "sonner";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, Flower2, Zap, ListChecks, Target, Search, Trophy, Radio, Download, CheckCircle2, Loader2, X } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { EVENT } from "@/lib/dummy-data";
 import { getDrawNonStop, getDrawLive, setDrawLive, watchDrawCountdown, watchDrawSpinMs, watchRevealFields, watchRevealHold, DEFAULT_REVEAL, type RevealFields } from "@/lib/settings-db";
@@ -54,6 +54,59 @@ export type Selected = {
 
 // Fallback if no season is loaded yet.
 const DEFAULT_TARGET = EVENT.totalWinners; // 45
+
+/* ponytail: one-time Season-3 reconciliation. The agreed final allotment — the
+   draw's selected list is set to exactly this, everyone else goes back to the
+   waitlist (merged businesses share a stall but are NOT separately approved).
+   Delete this block, applyFinalList() and its button/dialog once run. */
+const FINAL_STALLS: { n: number; o: string; b: string; p: boolean }[] = [
+  { n: 1, o: "Mrs. Waqas", b: "Shan-e-Mithas by Shiror's", p: true },
+  { n: 2, o: "Saima zain", b: "Abaan Nawati Tradition", p: true },
+  { n: 3, o: "Javeriya Riaz Maddas", b: "Paper Joy", p: true },
+  { n: 4, o: "Safia", b: "First Come, First Serve", p: false },
+  { n: 5, o: "Irfana jewelry", b: "Irfana jewelry", p: false },
+  { n: 6, o: "Ayesha Siddiqa", b: "Chatpatta Point", p: false },
+  { n: 7, o: "Madiha Munif", b: "Diya's cuisine", p: true },
+  { n: 8, o: "Saba", b: "Saba's kitchen", p: true },
+  { n: 9, o: "HURIYA EMAN", b: "S and H crochet", p: true },
+  { n: 10, o: "Wareesha muntaha Khattal", b: "Gurlzzz. Stop", p: true },
+  { n: 11, o: "Binte Abdul Qadir HajiAmeen", b: "Zeenat", p: true },
+  { n: 12, o: "Farah Jabir Muhammad Husaina", b: "Chatpata Chaat Inn", p: true },
+  { n: 13, o: "Umme bara", b: "oven charm", p: false },
+  { n: 14, o: "Iqra shaikh", b: "Khawsuey by walk n roll", p: true },
+  { n: 15, o: "Asmat Ismail", b: "Asmat's food Corner", p: true },
+  { n: 16, o: "Mrs. Faisal Khattal", b: "P for Pizza,P for Papri Chaat", p: true },
+  { n: 17, o: "umme huzaifa", b: "choco magic", p: false },
+  { n: 18, o: "duha irfan", b: "Jewellerystore.pk", p: true },
+  { n: 19, o: "Hafsa Mehmood", b: "Fun Space", p: true },
+  { n: 20, o: "Sadia Adil", b: "Gems and glow", p: true },
+  { n: 21, o: "Ummewaqad Khattal", b: "Sip and Crunch", p: false },
+  { n: 22, o: "Hafiza Taqwa", b: "Hafiza's mart", p: true },
+  { n: 23, o: "Zohra", b: "Zohra's Kitchen", p: true },
+  { n: 24, o: "ROQaiya aijaz Chadkhan", b: "Umar garments", p: false },
+  { n: 25, o: "Umme Abuhuraira", b: "The little shine collection", p: true },
+  { n: 26, o: "Ume Sehar Humair Ali", b: "Mantasha's food stall", p: true },
+  { n: 27, o: "Sakina Ismail", b: "I S jewelery &hair accessories", p: true },
+  { n: 28, o: "Shumaila asif", b: "Shumaila s kitchen", p: true },
+  { n: 29, o: "Sunny Adnan", b: "Hooriya mini Mart", p: false },
+  { n: 30, o: "Darakhshan Nishat", b: "Biryani Spot (By Umm-e-Usman)", p: true },
+  { n: 31, o: "nayab", b: "Wrapped With Love", p: true },
+  { n: 32, o: "Durrah Sohail", b: "Chatpata pocket", p: false },
+  { n: 33, o: "Abeer yasir sidi ali", b: "Spice n slice", p: false },
+  { n: 34, o: "Fatima Shaheen", b: "Khatta Meetha corner", p: true },
+  { n: 35, o: "Mehrun nisa mazhar shingati", b: "Mix item", p: false },
+  { n: 36, o: "Azra nigar", b: "Khana pinaa", p: true },
+  { n: 37, o: "Hawwa Tufail Bidchol", b: "Khausay station season 3", p: true },
+  { n: 38, o: "Aunbreen mairaj", b: "Adan Jewels", p: true },
+  { n: 39, o: "Umme salar", b: "Khana peena", p: false },
+  { n: 40, o: "Kulsoom Muhammad aslam", b: "Traditional bites", p: true },
+  { n: 41, o: "Umm e Mohammed Hegday", b: "Food n mood", p: false },
+  { n: 42, o: "Khoula Usama", b: "M/S Store", p: false },
+  { n: 43, o: "Umama Wahab", b: "Gehna Fashion and Foods", p: true },
+  { n: 44, o: "Hajiameen ali", b: "Little stars", p: false },
+  { n: 45, o: "Dua Faizan", b: "Twinkle charms", p: true },
+];
+const fnKey = (s?: string) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
 // The lowest stall number not in use. On a fresh draw this is just 1,2,3…; after a
 // winner is removed it reuses that freed number instead of running past the target.
@@ -178,9 +231,10 @@ function DrawPage() {
       const toCand = (r: Registration): Candidate => ({ id: r.id!, seller: r.seller, business: r.business, category: r.category as string, avatar: avatarFor(r.id!) });
       // Every applicant is a cell on the venue map (stable order by id so cells don't jump).
       setAllRegs([...map.values()].map(toCand).sort((a, b) => a.id.localeCompare(b.id)));
-      // Waitlisted (and any legacy pending) applicants enter the draw; winning is what
-      // approves them. Already-approved/paid are past winners — excluded from the pool.
-      setCandidates([...map.values()].filter((r) => r.status === "waitlist" || r.status === "pending").map(toCand));
+      // Only waitlisted applicants enter the draw; winning is what approves them.
+      // "pending" = payment proof not verified yet (on hold), so it stays out, and
+      // already-approved/paid are past winners — both excluded from the pool.
+      setCandidates([...map.values()].filter((r) => r.status === "waitlist").map(toCand));
     });
     return unsub;
   }, [seasonId, season?.seasonNumber]);
@@ -325,6 +379,73 @@ function DrawPage() {
         if (runningRef.current) { setCurrent(null); addTimer(runOne, 800); }
       }, HOLD + showMs);
     }, spinMs); // spin lasts the admin-set countdown so the public count reaches 1 at reveal
+  }
+
+  // One-time: match the agreed final list to real registrations. Business+owner
+  // first, then a unique business, then a unique owner — so duplicate business
+  // names (e.g. several "Hafiza's mart") can't grab the wrong registration.
+  const [finalOpen, setFinalOpen] = useState(false);
+  const [finalBusy, setFinalBusy] = useState(false);
+  // Stall no → registration id, picked by hand when the names don't match
+  // (e.g. the business was registered under a different spelling).
+  const [manual, setManual] = useState<Record<number, string>>({});
+  const finalPlan = useMemo(() => {
+    const byBiz = new Map<string, Candidate[]>();
+    const byOwner = new Map<string, Candidate[]>();
+    const push = (m: Map<string, Candidate[]>, k: string, c: Candidate) => { const l = m.get(k); l ? l.push(c) : m.set(k, [c]); };
+    allRegs.forEach((c) => { push(byBiz, fnKey(c.business), c); push(byOwner, fnKey(c.seller), c); });
+    const used = new Set<string>();
+    const matched: { row: (typeof FINAL_STALLS)[number]; cand: Candidate }[] = [];
+    const unmatched: (typeof FINAL_STALLS)[number][] = [];
+    const free = (l?: Candidate[]) => (l ?? []).filter((c) => !used.has(c.id));
+    const byId = new Map(allRegs.map((c) => [c.id, c]));
+    // A hand-picked registration wins over name matching, so claim those first.
+    for (const row of FINAL_STALLS) { const c = manual[row.n] && byId.get(manual[row.n]); if (c) used.add(c.id); }
+    for (const row of FINAL_STALLS) {
+      let cand = manual[row.n] ? byId.get(manual[row.n]) : undefined;
+      if (!cand) cand = free(byBiz.get(fnKey(row.b))).find((c) => fnKey(c.seller) === fnKey(row.o));
+      if (!cand) { const l = free(byBiz.get(fnKey(row.b))); if (l.length === 1) cand = l[0]; }
+      if (!cand) { const l = free(byOwner.get(fnKey(row.o))); if (l.length === 1) cand = l[0]; }
+      if (cand) { used.add(cand.id); matched.push({ row, cand }); } else unmatched.push(row);
+    }
+    return { matched, unmatched, toWaitlist: allRegs.filter((c) => !used.has(c.id)) };
+  }, [allRegs, manual]);
+
+  // Set the draw to exactly the final list: rewrite results, approve those 45,
+  // and put every other applicant back on the waitlist (their stall removed).
+  async function applyFinalList() {
+    if (!seasonId) return;
+    setFinalBusy(true);
+    try {
+      await clearDrawResultsBySeasonId(seasonId);
+      const now = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      let order = 0;
+      for (const { row, cand } of finalPlan.matched) {
+        order++;
+        await saveDrawResult({ seasonId, order, stallNo: row.n, candidateId: cand.id, seller: cand.seller, business: cand.business, category: cand.category, at: now });
+        // Paid in the agreed list → status "paid" (still a winner, just settled).
+        await updateRegistration(cand.id, { status: row.p ? "paid" : "approved", seasonId, season: season?.seasonNumber });
+        const reg = regByIdRef.current.get(cand.id);
+        if (reg) await materializeRegistrationStalls(reg, seasonId, season?.seasonNumber).catch(() => {});
+      }
+      for (const c of finalPlan.toWaitlist) {
+        await updateRegistration(c.id, { status: "waitlist", season: season?.seasonNumber });
+        await deleteStallForRegistration(c.id).catch(() => {});
+      }
+      const picks: Selected[] = finalPlan.matched.map(({ row, cand }, i) => ({
+        order: i + 1, stallNo: row.n, seller: cand.seller, business: cand.business,
+        category: cand.category, avatar: cand.avatar, id: cand.id, at: now,
+      })).sort((a, b) => b.order - a.order);
+      selectedRef.current = picks;
+      setSelected(picks);
+      setPhase("done");
+      setFinalOpen(false);
+      toast.success(`${finalPlan.matched.length} stalls set · ${finalPlan.toWaitlist.length} back on waitlist`);
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setFinalBusy(false);
+    }
   }
 
   // Drop one winner from the draw: their result is deleted, they go back to the
@@ -615,6 +736,13 @@ function DrawPage() {
 
           {/* Broadcast: when ON, every visitor sees a "watch live" banner → /present */}
           <div className="flex flex-wrap items-center justify-center gap-3">
+          {/* ponytail: one-time — apply the agreed final allotment, then remove. */}
+          <button
+            onClick={() => setFinalOpen(true)}
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-accent/50 bg-accent/15 px-5 py-3 text-sm font-bold text-white backdrop-blur transition-colors hover:bg-accent/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70 active:scale-95"
+          >
+            <ListChecks className="h-4 w-4" /> Apply final list ({finalPlan.matched.length}/45)
+          </button>
           <button
             onClick={() => setViewOpen(true)}
             title={t("draw.viewDraws")}
@@ -694,6 +822,55 @@ function DrawPage() {
       />
 
       <DrawsViewer open={viewOpen} onOpenChange={setViewOpen} seasons={seasons} currentSeasonId={seasonId} />
+
+      {/* ponytail: one-time final-allotment preview + apply. */}
+      <Dialog open={finalOpen} onOpenChange={(o) => !o && !finalBusy && setFinalOpen(false)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Apply final stall list</DialogTitle></DialogHeader>
+          <div className="max-h-[60vh] space-y-4 overflow-y-auto text-sm">
+            <ul className="space-y-1 rounded-xl border border-border bg-muted/40 p-3">
+              <li>✅ <b>{finalPlan.matched.length}</b> stalls matched → set as the draw (#1–45)</li>
+              <li>💰 <b>{finalPlan.matched.filter((m) => m.row.p).length}</b> marked <b>Paid</b>, {finalPlan.matched.filter((m) => !m.row.p).length} approved (unpaid)</li>
+              <li>↩️ <b>{finalPlan.toWaitlist.length}</b> others → back to Waitlist (stalls removed)</li>
+            </ul>
+            {finalPlan.unmatched.length > 0 && (
+              <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3">
+                <div className="font-semibold text-destructive">⚠ {finalPlan.unmatched.length} not matched by name — pick the registration, or they are SKIPPED:</div>
+                <ul className="mt-2 space-y-2">
+                  {finalPlan.unmatched.map((r) => (
+                    <li key={r.n}>
+                      <div className="text-xs font-medium">#{r.n} {r.b} — {r.o}</div>
+                      <select
+                        value={manual[r.n] ?? ""}
+                        onChange={(e) => setManual((m) => ({ ...m, [r.n]: e.target.value }))}
+                        className="mt-1 w-full rounded-lg border border-border bg-white/80 px-2 py-1.5 text-xs"
+                      >
+                        <option value="">— skip —</option>
+                        {/* every applicant, not just the waitlist — a skipped seller may already be approved */}
+                        {allRegs.map((c) => <option key={c.id} value={c.id}>{c.business} — {c.seller}</option>)}
+                      </select>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div>
+              <div className="mb-1 font-semibold">Back to waitlist</div>
+              <ul className="max-h-40 space-y-0.5 overflow-y-auto rounded-xl border border-border bg-muted/40 p-3 text-xs">
+                {finalPlan.toWaitlist.map((c) => <li key={c.id} className="truncate">{c.business} — {c.seller}</li>)}
+                {finalPlan.toWaitlist.length === 0 && <li className="text-muted-foreground">—</li>}
+              </ul>
+            </div>
+            <p className="text-xs text-muted-foreground">This rewrites the season's draw results and every applicant's status. Merged businesses are not approved separately.</p>
+          </div>
+          <DialogFooter>
+            <button type="button" onClick={() => setFinalOpen(false)} disabled={finalBusy} className="rounded-full border border-border px-4 py-2 text-sm font-medium disabled:opacity-50">Cancel</button>
+            <button type="button" onClick={applyFinalList} disabled={finalBusy || finalPlan.matched.length === 0} className="inline-flex items-center gap-2 rounded-full bg-festive px-5 py-2 text-sm font-semibold text-white shadow-soft disabled:opacity-50">
+              {finalBusy && <Loader2 className="h-4 w-4 animate-spin" />} Apply
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -924,7 +1101,7 @@ export function StallArena({
   const winnersById = useMemo(() => new Map(selected.map((s) => [s.id, s])), [selected]); // winning applicant cells
   // The arena shows the SELECTED stall numbers (sorted) laid out in the pattern:
   // left wing (first 22) · right wing (next 22) · last one centred below.
-  const picks = useMemo(() => selected.map((s) => s.stallNo).sort((a, b) => a - b), [selected]);
+  const picks = useMemo(() => [...new Set(selected.map((s) => s.stallNo))].sort((a, b) => a - b), [selected]);
   const leftStalls = picks.slice(0, 22);
   const rightStalls = picks.slice(22, 44);
   const centerStall = picks[44]; // 45th pick, centred

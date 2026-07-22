@@ -7,7 +7,7 @@ import { ArrowLeft, ArrowRight, Check, ImagePlus, Loader2, PartyPopper, Sparkles
 import { uploadToCloudinary, cloudinaryReady } from "@/lib/cloudinary";
 import { CATEGORIES, EVENT, type CategoryKey } from "@/lib/dummy-data";
 import { createRegistration, getRegistrationsBySeasonId } from "@/lib/db";
-import { getCustomRegFields, getRegFieldLabels, getTerms, watchSignupEnabled, type CustomRegField } from "@/lib/settings-db";
+import { getCustomRegFields, getRegFieldLabels, getTerms, watchSignupEnabled, watchPaymentInfo, DEFAULT_PAYMENT, type CustomRegField, type PaymentInfo } from "@/lib/settings-db";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getCategories, getSubCategories, type Category, type SubCategory } from "@/lib/categories-db";
 import { getUserProfile } from "@/lib/profile-db";
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/register")({
   component: RegisterPage, // open to everyone — no login required to become a seller
 });
 
-const STEPS = ["reg.step.personal", "reg.step.business", "reg.step.category", "reg.step.review", "reg.step.submitted"];
+const STEPS = ["reg.step.personal", "reg.step.business", "reg.step.category", "reg.step.payment", "reg.step.review", "reg.step.submitted"];
 
 // Valid Pakistani mobile: 03XXXXXXXXX (11 digits) or +92 / 92 3XXXXXXXXX.
 // Spaces, dashes and parens are ignored before checking.
@@ -52,7 +52,7 @@ function RegisterPage() {
   const { t } = useI18n();
   const [step, setStep] = useState(() => {
     const s = loadDraft()?.step; // restore where they left off (never the submitted screen)
-    return typeof s === "number" && s >= 0 && s < 4 ? s : 0;
+    return typeof s === "number" && s >= 0 && s < 5 ? s : 0;
   });
   const [submitting, setSubmitting] = useState(false);
   const [catCounts, setCatCounts] = useState<Record<string, number>>({});
@@ -62,6 +62,8 @@ function RegisterPage() {
   useEffect(() => { getCustomRegFields().then(setCustomFields).catch(() => {}); }, []);
   const [regLabels, setRegLabels] = useState<Record<string, string>>({});
   useEffect(() => { getRegFieldLabels().then(setRegLabels).catch(() => {}); }, []);
+  const [payInfo, setPayInfo] = useState<PaymentInfo>(DEFAULT_PAYMENT);
+  useEffect(() => watchPaymentInfo(setPayInfo), []);
   const [terms, setTerms] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
@@ -110,6 +112,7 @@ function RegisterPage() {
       subcategories: [] as string[],
       subcategoryIds: [] as string[],
       custom: {} as Record<string, string>, // admin-defined extra field values (id → value)
+      paymentProofUrl: "", // screenshot of the fee transfer
     };
     const saved = loadDraft()?.data; // restore a refreshed draft, keeping the shape above
     return saved ? { ...base, ...saved } : base;
@@ -122,7 +125,7 @@ function RegisterPage() {
   // Auto-save the draft on every change so a refresh mid-flow doesn't lose anything.
   // (Skip the final "submitted" step — the draft is cleared on success below.)
   useEffect(() => {
-    if (step >= 4) return;
+    if (step >= 5) return;
     try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ data, step })); } catch { /* storage full/blocked */ }
   }, [data, step]);
 
@@ -179,12 +182,14 @@ function RegisterPage() {
 
   async function next() {
     // On the Review step, save the registration to Firestore before advancing.
-    if (step === 3) {
+    if (step === 4) {
       setSubmitting(true);
       try {
         await createRegistration({
           uid: user?.uid,
-          status: "waitlist", // new flow: everyone waits; live-draw winners get approved
+          // On hold until an admin verifies the payment proof; verifying moves
+          // them to "waitlist", which is what enters the live draw.
+          status: "pending",
           seasonId: activeSeason?.id,
           season: activeSeason?.seasonNumber ?? EVENT.seasonNumber,
           seller: `${data.fullName} ${data.surname}`.trim(),
@@ -209,6 +214,7 @@ function RegisterPage() {
             .split(",")
             .map((p) => p.trim())
             .filter(Boolean),
+          paymentProofUrl: data.paymentProofUrl || undefined,
           customFields: (() => {
             const entries = customFields
               .map((f) => [f.id, (data.custom[f.id] ?? "").trim()] as const)
@@ -219,7 +225,7 @@ function RegisterPage() {
         try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ } // draft submitted — clear it
         confetti({ particleCount: 160, spread: 90, origin: { y: 0.4 }, colors: ["#7A1E3D", "#F26B2A", "#FFC94A", "#1FA7A6"] });
         toast.success(t("reg.toast.submitted"));
-        setStep(4);
+        setStep(5);
       } catch (err) {
         toast.error(friendlyAuthError(err));
       } finally {
@@ -239,7 +245,8 @@ function RegisterPage() {
     (step === 0 && data.fullName.trim() && data.surname.trim() && isValidPhone(data.phone)) ||
     (step === 1 && data.business.trim() && data.yearsRunning.trim() && data.products.trim() && customFields.filter((f) => f.required).every((f) => (data.custom[f.id] ?? "").trim())) ||
     (step === 2 && data.categories.length > 0 && (selCatSubs.length === 0 || data.subcategoryIds.length > 0)) ||
-    (step === 3 && agreed);
+    (step === 3 && data.paymentProofUrl.trim()) ||
+    (step === 4 && agreed);
 
   // Registration follows the active season's status: open only when RegistrationOpen.
   // No active season ⇒ don't gate (legacy/dummy fallback).
@@ -354,12 +361,13 @@ function RegisterPage() {
               {step === 2 && (
                 <StepCategory data={data} update={update} toggleCategory={toggleCategory} toggleSubcategory={toggleSubcategory} counts={catCounts} seasonName={activeSeason?.seasonName} fsCats={fsCats} subs={subs} />
               )}
-              {step === 3 && <StepReview data={data} agreed={agreed} setAgreed={setAgreed} onOpenTerms={() => setTermsOpen(true)} />}
-              {step === 4 && <StepSubmitted />}
+              {step === 3 && <StepPayment data={data} update={update} info={payInfo} fee={activeSeason?.registrationFee} />}
+              {step === 4 && <StepReview data={data} agreed={agreed} setAgreed={setAgreed} onOpenTerms={() => setTermsOpen(true)} />}
+              {step === 5 && <StepSubmitted />}
             </motion.div>
           </AnimatePresence>
 
-          {step < 4 && (
+          {step < 5 && (
             <div className="mt-8 flex items-center justify-between border-t border-border pt-6">
               <button
                 onClick={back}
@@ -373,7 +381,7 @@ function RegisterPage() {
                 disabled={!canContinue || submitting}
                 className="inline-flex items-center gap-2 rounded-full bg-festive px-6 py-3 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
               >
-                {step === 3 ? (submitting ? t("reg.submitting") : t("reg.submit")) : t("reg.continue")} <ArrowRight className="h-4 w-4" />
+                {step === 4 ? (submitting ? t("reg.submitting") : t("reg.submit")) : t("reg.continue")} <ArrowRight className="h-4 w-4" />
               </button>
             </div>
           )}
@@ -612,6 +620,94 @@ function StepCategory({ data, update, toggleCategory, toggleSubcategory, counts,
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Fee transfer step: show the admin-set account details, take a screenshot of the
+// transfer. The registration stays on hold until an admin verifies that proof.
+function StepPayment({ data, update, info, fee }: any) {
+  const { t } = useI18n();
+  const [uploading, setUploading] = useState(false);
+  const [copied, setCopied] = useState("");
+
+  async function onProof(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try { update("paymentProofUrl", await uploadToCloudinary(file)); }
+    catch (err) { toast.error(friendlyAuthError(err)); }
+    finally { setUploading(false); }
+  }
+  function copy(v: string) {
+    navigator.clipboard?.writeText(v).then(() => { setCopied(v); setTimeout(() => setCopied(""), 1500); }).catch(() => {});
+  }
+
+  const rows = [
+    { label: t("reg.pay.bank"), value: info?.bankName },
+    { label: t("reg.pay.title"), value: info?.accountTitle },
+    { label: t("reg.pay.number"), value: info?.accountNumber },
+  ].filter((r) => r.value);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display text-2xl font-bold">{t("reg.pay.h2")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("reg.pay.sub")}</p>
+      </div>
+
+      {fee ? (
+        <div className="flex items-baseline gap-2 rounded-2xl bg-festive px-5 py-4 text-white shadow-soft">
+          <span className="text-xs font-semibold uppercase tracking-wider text-white/80">{t("reg.pay.amount")}</span>
+          <span className="font-display text-2xl font-black tabular-nums">Rs {fee}</span>
+        </div>
+      ) : null}
+
+      {rows.length > 0 ? (
+        <div className="divide-y divide-border rounded-2xl border border-border">
+          {rows.map((r) => (
+            <div key={r.label} className="flex items-center justify-between gap-3 px-4 py-3">
+              <div className="min-w-0">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{r.label}</div>
+                <div className="truncate font-medium">{r.value}</div>
+              </div>
+              <button type="button" onClick={() => copy(r.value)} className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-muted">
+                {copied === r.value ? t("reg.pay.copied") : t("reg.pay.copy")}
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">{t("reg.pay.noAccount")}</p>
+      )}
+
+      {info?.instructions && (
+        <p className="whitespace-pre-wrap rounded-2xl bg-accent/10 p-4 text-sm text-foreground/80 ring-1 ring-inset ring-accent/25">{info.instructions}</p>
+      )}
+
+      <div>
+        <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {t("reg.pay.proof")} <span className="text-destructive">*</span>
+        </span>
+        <div className="flex items-center gap-4">
+          {data.paymentProofUrl ? (
+            <div className="relative">
+              <img src={data.paymentProofUrl} alt="" className="h-28 w-24 rounded-2xl border border-border object-cover" />
+              <button type="button" onClick={() => update("paymentProofUrl", "")} aria-label={t("reg.pay.remove")} className="absolute -right-2 -top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-white shadow-soft">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-dashed border-border bg-white/70 px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+              {uploading ? t("reg.f.logoUploading") : t("reg.pay.upload")}
+              <input type="file" accept="image/*" onChange={onProof} disabled={uploading} className="hidden" />
+            </label>
+          )}
+        </div>
+        <span className="mt-1 block text-xs text-muted-foreground/80">{t("reg.pay.proofHint")}</span>
+      </div>
     </div>
   );
 }

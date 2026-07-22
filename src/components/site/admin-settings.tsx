@@ -20,6 +20,7 @@ import {
   BUILTIN_REG_FIELDS, getRegFieldLabels, setRegFieldLabels,
   getTerms, setTerms,
   getSignupEnabled, setSignupEnabled,
+  getPaymentInfo, setPaymentInfo, DEFAULT_PAYMENT, type PaymentInfo,
 } from "@/lib/settings-db";
 
 // Reusable on/off switch used by the toggle settings below.
@@ -587,6 +588,50 @@ export function FaqEditor() {
         </button>
       </div>
       <p className="text-xs text-muted-foreground">{t("adm.faqNote")}</p>
+    </div>
+  );
+}
+
+// Bank/account details shown on the registration payment step, where the seller
+// uploads a screenshot of the transfer for an admin to verify.
+export function PaymentInfoEditor() {
+  const { t } = useI18n();
+  const [f, setF] = useState<PaymentInfo>(DEFAULT_PAYMENT);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { getPaymentInfo().then(setF).catch(() => {}); }, []);
+  const upd = (k: keyof PaymentInfo) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
+  async function save() {
+    setBusy(true);
+    try {
+      await setPaymentInfo(f);
+      toast.success(t("adm.payInfoSaved"));
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  const fields: { k: keyof PaymentInfo; label: string; ph: string }[] = [
+    { k: "bankName", label: t("adm.payBank"), ph: "Meezan Bank" },
+    { k: "accountTitle", label: t("adm.payTitle"), ph: "Amcho Bazar" },
+    { k: "accountNumber", label: t("adm.payNumber"), ph: "PK00 MEZN 0000 0000 0000 0000" },
+  ];
+  return (
+    <div className="space-y-3">
+      {fields.map(({ k, label, ph }) => (
+        <div key={k} className="space-y-1.5">
+          <label htmlFor={`pay-${k}`} className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+          <input id={`pay-${k}`} value={f[k]} onChange={upd(k)} placeholder={ph} className="w-full rounded-xl border border-border bg-white/70 px-3 py-2.5 text-sm outline-none ring-primary/20 focus:ring-4" />
+        </div>
+      ))}
+      <div className="space-y-1.5">
+        <label htmlFor="pay-instructions" className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("adm.payInstructions")}</label>
+        <textarea id="pay-instructions" value={f.instructions} onChange={upd("instructions")} placeholder={t("adm.payInstructionsPh")} className="min-h-[90px] w-full rounded-xl border border-border bg-white/70 px-3 py-2.5 text-sm outline-none ring-primary/20 focus:ring-4" />
+      </div>
+      <button type="button" onClick={save} disabled={busy} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-festive px-5 py-2 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-[1.02] disabled:opacity-50">
+        {busy && <Loader2 className="h-4 w-4 animate-spin" />} {t("adm.payInfoSave")}
+      </button>
+      <p className="text-xs text-muted-foreground">{t("adm.payInfoNote")}</p>
     </div>
   );
 }

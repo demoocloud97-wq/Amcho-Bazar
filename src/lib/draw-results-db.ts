@@ -1,8 +1,8 @@
 import {
   collection,
-  addDoc,
   getDocs,
   doc,
+  setDoc,
   deleteDoc,
   query,
   where,
@@ -33,19 +33,34 @@ export type DrawResult = {
 
 const COL = "drawResults";
 
+// A winner can end up with more than one result doc (a re-run, or a normal draw
+// followed by Apply-final-list). Collapse to one row per registration — keep the
+// lowest order — so the draw never lists the same seller twice.
+function dedupe(list: DrawResult[]): DrawResult[] {
+  const byCand = new Map<string, DrawResult>();
+  for (const r of list) {
+    const prev = byCand.get(r.candidateId);
+    if (!prev || r.order < prev.order) byCand.set(r.candidateId, r);
+  }
+  return [...byCand.values()].sort((a, b) => a.order - b.order);
+}
+
 export async function getDrawResultsBySeasonId(seasonId: string): Promise<DrawResult[]> {
   const snap = await getDocs(query(collection(db, COL), where("seasonId", "==", seasonId)));
   const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as DocumentData) })) as DrawResult[];
-  return list.sort((a, b) => a.order - b.order);
+  return dedupe(list);
 }
 
 export async function saveDrawResult(r: Omit<DrawResult, "id" | "createdAt" | "eventId">) {
-  const ref = await addDoc(collection(db, COL), {
+  // Deterministic id per season+winner: saving the same winner again overwrites
+  // their row instead of creating a duplicate.
+  const id = `${r.seasonId}_${r.candidateId}`;
+  await setDoc(doc(db, COL, id), {
     ...r,
     eventId: AMCHO_BAZAR_EVENT_ID,
     createdAt: serverTimestamp(),
   } as DocumentData);
-  return ref.id;
+  return id;
 }
 
 // Live subscription — the presentation screen mirrors the admin's draw in
@@ -53,7 +68,7 @@ export async function saveDrawResult(r: Omit<DrawResult, "id" | "createdAt" | "e
 export function watchDrawResultsBySeasonId(seasonId: string, cb: (results: DrawResult[]) => void) {
   return onSnapshot(query(collection(db, COL), where("seasonId", "==", seasonId)), (snap) => {
     const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as DocumentData) })) as DrawResult[];
-    cb(list.sort((a, b) => a.order - b.order));
+    cb(dedupe(list));
   });
 }
 

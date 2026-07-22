@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { HelpCircle, Eye, EyeOff, Gauge, Image as ImageIcon, KeyRound, ListChecks, Loader2, Lock, LogOut, Mail, MapPin, Phone, Shield, ShieldCheck, Sparkles, User, UserCircle, UserPlus, Video, Zap } from "lucide-react";
+import { Banknote, HelpCircle, Eye, EyeOff, Gauge, Image as ImageIcon, KeyRound, ListChecks, Loader2, Lock, LogOut, Mail, MapPin, Phone, Shield, ShieldCheck, Sparkles, User, UserCircle, UserPlus, Video, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
 import { RequireAuth } from "@/components/site/require-auth";
-import { HeroImageEditor, DrawNonStopToggle, LiveDrawPace, RevealFieldsEditor, FillSubcatsToggle, FaqEditor, FooterContactEditor, FbLiveEditor, EventLocationEditor, SignupToggle } from "@/components/site/admin-settings";
+import { HeroImageEditor, DrawNonStopToggle, LiveDrawPace, RevealFieldsEditor, FillSubcatsToggle, FaqEditor, FooterContactEditor, FbLiveEditor, EventLocationEditor, SignupToggle, PaymentInfoEditor } from "@/components/site/admin-settings";
 import { SidebarSections, type NavGroup } from "@/components/site/sidebar-sections";
 import { useAuth } from "@/lib/auth-context";
 import { changePassword, hasPasswordProvider, logout } from "@/lib/auth";
@@ -33,6 +33,7 @@ function SettingsPage() {
   ];
   if (isAdmin) groups.push({ label: t("settings.grpAdmin"), items: [
     { id: "signup", icon: <UserPlus className="h-4 w-4" />, title: t("adm.signupTitle"), desc: t("adm.signupDesc"), node: <SignupToggle /> },
+    { id: "payinfo", icon: <Banknote className="h-4 w-4" />, title: t("adm.payInfoTitle"), desc: t("adm.payInfoDesc"), node: <PaymentInfoEditor /> },
     { id: "location", icon: <MapPin className="h-4 w-4" />, title: t("adm.locTitle"), desc: t("adm.locDesc"), node: <EventLocationEditor /> },
     { id: "hero", icon: <ImageIcon className="h-4 w-4" />, title: t("adm.heroTitle"), desc: t("adm.heroDesc"), node: <HeroImageEditor /> },
     { id: "nonstop", icon: <Zap className="h-4 w-4" />, title: t("adm.nonstopTitle"), desc: t("adm.nonstopDesc"), node: <DrawNonStopToggle /> },

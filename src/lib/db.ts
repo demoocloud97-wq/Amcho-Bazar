@@ -43,6 +43,9 @@ export type Registration = {
   logoUrl?: string; // Cloudinary URL of the business logo, if uploaded
   products: string[];
   customFields?: Record<string, string>; // admin-defined extra fields (id → value)
+  paymentProofUrl?: string; // screenshot of the fee transfer, uploaded at registration
+  // "pending" = on hold: fee paid but an admin hasn't verified the proof yet, so
+  // the applicant is NOT in the draw pool. Verifying moves them to "waitlist".
   status: "pending" | "approved" | "waitlist" | "paid";
   stall?: number | null;
   createdAt?: unknown;
@@ -84,6 +87,7 @@ export async function createRegistration(
   if (data.city) payload.city = data.city;
   if (data.logoUrl) payload.logoUrl = data.logoUrl;
   if (data.customFields && Object.keys(data.customFields).length) payload.customFields = data.customFields;
+  if (data.paymentProofUrl) payload.paymentProofUrl = data.paymentProofUrl;
   const ref = await addDoc(collection(db, REGISTRATIONS), payload);
   return ref.id;
 }
