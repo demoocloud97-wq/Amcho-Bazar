@@ -21,6 +21,7 @@ import {
   getTerms, setTerms,
   getSignupEnabled, setSignupEnabled,
   getPaymentInfo, setPaymentInfo, DEFAULT_PAYMENT, type PaymentInfo,
+  getDrawOptions, setDrawOptions, DRAW_OPTION_KEYS, DEFAULT_DRAW_OPTIONS, type DrawOptions, type DrawOptionKey,
 } from "@/lib/settings-db";
 
 // Reusable on/off switch used by the toggle settings below.
@@ -296,6 +297,40 @@ export function DrawNonStopToggle() {
     }
   }
   return <Switch on={on} busy={busy} onToggle={toggle} label="Toggle Non-Stop button on the Live Draw screen" />;
+}
+
+// Show/hide the optional Live Draw buttons. Play/Continue and Reset are always shown
+// and never listed here.
+export function DrawOptionsEditor() {
+  const { t } = useI18n();
+  const [opts, setOpts] = useState<DrawOptions>(DEFAULT_DRAW_OPTIONS);
+  const [busy, setBusy] = useState<DrawOptionKey | null>(null);
+  useEffect(() => { getDrawOptions().then(setOpts).catch(() => {}); }, []);
+  async function toggle(k: DrawOptionKey) {
+    const next = { ...opts, [k]: !opts[k] };
+    setBusy(k);
+    try {
+      await setDrawOptions(next);
+      setOpts(next);
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+  return (
+    <div className="space-y-2.5">
+      {DRAW_OPTION_KEYS.map((k) => (
+        <div key={k} className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card/60 p-3.5">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">{t(`adm.drawOpt.${k}`)}</div>
+            <div className="text-xs text-muted-foreground">{t(`adm.drawOpt.${k}.h`)}</div>
+          </div>
+          <Switch on={opts[k]} busy={busy === k} onToggle={() => toggle(k)} label={t(`adm.drawOpt.${k}`)} />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // One live-draw control: icon + label/hint, with a segmented pill picker. Laid out as

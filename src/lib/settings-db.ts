@@ -98,6 +98,29 @@ export async function setDrawNonStop(enabled: boolean): Promise<void> {
   );
 }
 
+/* ---- Live Draw optional controls: admin can hide any of these buttons on the
+   draw screen. Play/Continue and Reset are always shown and not toggleable. ---- */
+export type DrawOptionKey = "raise" | "finish" | "viewDraws" | "goLive" | "applyFinal";
+export const DRAW_OPTION_KEYS: DrawOptionKey[] = ["raise", "finish", "viewDraws", "goLive", "applyFinal"];
+export type DrawOptions = Record<DrawOptionKey, boolean>;
+export const DEFAULT_DRAW_OPTIONS: DrawOptions = { raise: true, finish: true, viewDraws: true, goLive: true, applyFinal: true };
+
+function readDrawOptions(d: Record<string, unknown> | undefined): DrawOptions {
+  const o = (d?.drawOptions ?? {}) as Partial<DrawOptions>;
+  const out = { ...DEFAULT_DRAW_OPTIONS };
+  for (const k of DRAW_OPTION_KEYS) if (typeof o[k] === "boolean") out[k] = o[k] as boolean;
+  return out;
+}
+export async function getDrawOptions(): Promise<DrawOptions> {
+  try { const snap = await getDoc(doc(db, SETTINGS, SITE)); return readDrawOptions(snap.data()); } catch { return { ...DEFAULT_DRAW_OPTIONS }; }
+}
+export async function setDrawOptions(o: DrawOptions): Promise<void> {
+  await setDoc(doc(db, SETTINGS, SITE), { drawOptions: o, updatedAt: serverTimestamp() }, { merge: true });
+}
+export function watchDrawOptions(cb: (o: DrawOptions) => void) {
+  return onSnapshot(doc(db, SETTINGS, SITE), (snap) => cb(readDrawOptions(snap.data())));
+}
+
 /* ---- Live Draw broadcast: when ON, everyone sees a "watch live" link ---- */
 export async function getDrawLive(): Promise<boolean> {
   try {

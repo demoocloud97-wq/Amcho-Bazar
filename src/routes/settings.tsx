@@ -4,7 +4,7 @@ import { Banknote, HelpCircle, Eye, EyeOff, Gauge, Image as ImageIcon, KeyRound,
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
 import { RequireAuth } from "@/components/site/require-auth";
-import { HeroImageEditor, DrawNonStopToggle, LiveDrawPace, RevealFieldsEditor, FillSubcatsToggle, FaqEditor, FooterContactEditor, FbLiveEditor, EventLocationEditor, SignupToggle, PaymentInfoEditor } from "@/components/site/admin-settings";
+import { HeroImageEditor, DrawNonStopToggle, DrawOptionsEditor, LiveDrawPace, RevealFieldsEditor, FillSubcatsToggle, FaqEditor, FooterContactEditor, FbLiveEditor, EventLocationEditor, SignupToggle, PaymentInfoEditor } from "@/components/site/admin-settings";
 import { SidebarSections, type NavGroup } from "@/components/site/sidebar-sections";
 import { useAuth } from "@/lib/auth-context";
 import { changePassword, hasPasswordProvider, logout } from "@/lib/auth";
@@ -38,6 +38,7 @@ function SettingsPage() {
     { id: "hero", icon: <ImageIcon className="h-4 w-4" />, title: t("adm.heroTitle"), desc: t("adm.heroDesc"), node: <HeroImageEditor /> },
     { id: "nonstop", icon: <Zap className="h-4 w-4" />, title: t("adm.nonstopTitle"), desc: t("adm.nonstopDesc"), node: <DrawNonStopToggle /> },
     { id: "drawpace", icon: <Gauge className="h-4 w-4" />, title: t("adm.drawPaceTitle"), desc: t("adm.drawPaceDesc"), node: <LiveDrawPace /> },
+    { id: "drawopts", icon: <ListChecks className="h-4 w-4" />, title: t("adm.drawOptsTitle"), desc: t("adm.drawOptsDesc"), node: <DrawOptionsEditor /> },
     { id: "reveal", icon: <Sparkles className="h-4 w-4" />, title: t("adm.revealTitle"), desc: t("adm.revealDesc"), node: <RevealFieldsEditor /> },
     { id: "fblive", icon: <Video className="h-4 w-4" />, title: t("adm.fbLiveTitle"), desc: t("adm.fbLiveDesc"), node: <FbLiveEditor /> },
     { id: "fillsub", icon: <ListChecks className="h-4 w-4" />, title: t("adm.fillTitle"), desc: t("adm.fillDesc"), node: <FillSubcatsToggle /> },

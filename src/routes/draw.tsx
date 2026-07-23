@@ -8,7 +8,7 @@ import { Award, PartyPopper, Play, Pause, RotateCcw, Sparkles, Store, DoorOpen, 
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { EVENT } from "@/lib/dummy-data";
-import { getDrawNonStop, getDrawLive, setDrawLive, watchDrawCountdown, watchDrawSpinMs, watchRevealFields, watchRevealHold, DEFAULT_REVEAL, type RevealFields } from "@/lib/settings-db";
+import { getDrawNonStop, getDrawLive, setDrawLive, watchDrawCountdown, watchDrawSpinMs, watchRevealFields, watchRevealHold, watchDrawOptions, DEFAULT_REVEAL, DEFAULT_DRAW_OPTIONS, type RevealFields, type DrawOptions } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
 import { watchRegistrationsForAdmin, updateRegistration, type Registration } from "@/lib/db";
 import { materializeRegistrationStalls, deleteStallForRegistration } from "@/lib/stalls-db";
@@ -165,6 +165,9 @@ function DrawPage() {
   // Admin-set sweep speed + which winner details to reveal (Settings → Live Draw).
   const spinMsRef = useRef(150); // admin-set hop time (ms) — free value, not a preset
   useEffect(() => watchDrawSpinMs((ms) => { spinMsRef.current = ms; }), []);
+  // Admin can hide optional draw buttons (all default ON). Play/Continue + Reset stay.
+  const [drawOpts, setDrawOpts] = useState<DrawOptions>(DEFAULT_DRAW_OPTIONS);
+  useEffect(() => watchDrawOptions(setDrawOpts), []);
   const [revealFields, setRevealFields] = useState<RevealFields>(DEFAULT_REVEAL);
   useEffect(() => watchRevealFields(setRevealFields), []);
   const revealHoldRef = useRef(3); // seconds the winner card stays up (Settings → Live Draw)
@@ -612,12 +615,14 @@ function DrawPage() {
           <h1 className="mt-3 font-display text-4xl font-black leading-tight md:text-5xl">{t("draw.completedTitle")}</h1>
           <p className="mt-2 text-white/70">{season.seasonName} · <span className="font-semibold text-white">{selected.length}</span> {t("draw.winnersWord")}</p>
           <div className="mt-7 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
+            {drawOpts.viewDraws && (
             <button
               onClick={() => setViewOpen(true)}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-festive px-6 py-3 text-sm font-bold text-white shadow-glow transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-95"
             >
               <ListChecks className="h-4 w-4" /> {t("draw.viewDraws")}
             </button>
+            )}
             <button
               onClick={reopenDraw}
               disabled={finishBusy}
@@ -698,12 +703,13 @@ function DrawPage() {
         </div>
 
           {/* Draw complete → raise the count & keep drawing, or finish & save. */}
-          {phase === "done" && (
+          {phase === "done" && (drawOpts.raise || drawOpts.finish) && (
             <div className="w-full max-w-md rounded-2xl border border-accent/30 bg-white/[0.04] p-3.5">
               <div className="flex items-center justify-center gap-2 text-[11px] font-semibold uppercase tracking-widest text-accent">
                 <Target className="h-3.5 w-3.5" /> {t("draw.targetReached").replace("{n}", String(selected.length))}
               </div>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                {drawOpts.raise && (
                 <div className="flex flex-1 items-stretch overflow-hidden rounded-full border border-white/20 bg-black/20">
                   <input
                     type="number"
@@ -723,6 +729,8 @@ function DrawPage() {
                     <Play className="h-4 w-4" /> {t("draw.continueDraw")}
                   </button>
                 </div>
+                )}
+                {drawOpts.finish && (
                 <button
                   onClick={finishDraw}
                   disabled={finishBusy}
@@ -730,6 +738,7 @@ function DrawPage() {
                 >
                   {finishBusy ? <Sparkles className="h-4 w-4 animate-pulse" /> : <CheckCircle2 className="h-4 w-4" />} {t("draw.finishSave")}
                 </button>
+                )}
               </div>
             </div>
           )}
@@ -737,12 +746,15 @@ function DrawPage() {
           {/* Broadcast: when ON, every visitor sees a "watch live" banner → /present */}
           <div className="flex flex-wrap items-center justify-center gap-3">
           {/* ponytail: one-time — apply the agreed final allotment, then remove. */}
+          {drawOpts.applyFinal && (
           <button
             onClick={() => setFinalOpen(true)}
             className="inline-flex min-h-11 items-center gap-2 rounded-full border border-accent/50 bg-accent/15 px-5 py-3 text-sm font-bold text-white backdrop-blur transition-colors hover:bg-accent/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/70 active:scale-95"
           >
             <ListChecks className="h-4 w-4" /> Apply final list ({finalPlan.matched.length}/45)
           </button>
+          )}
+          {drawOpts.viewDraws && (
           <button
             onClick={() => setViewOpen(true)}
             title={t("draw.viewDraws")}
@@ -750,6 +762,8 @@ function DrawPage() {
           >
             <ListChecks className="h-4 w-4 transition-transform group-hover:scale-110" /> {t("draw.viewDraws")}
           </button>
+          )}
+          {drawOpts.goLive && (
           <button
             onClick={toggleLive}
             disabled={liveBusy}
@@ -771,6 +785,7 @@ function DrawPage() {
             )}
             {live ? t("draw.liveOnBtn") : t("draw.goLive")}
           </button>
+          )}
           </div>
         </div>
       </section>
