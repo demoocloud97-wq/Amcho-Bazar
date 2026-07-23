@@ -72,6 +72,15 @@ export function watchDrawResultsBySeasonId(seasonId: string, cb: (results: DrawR
   });
 }
 
+// Sync edited seller details onto their saved draw result(s), so a name/business
+// change in admin reflects on the Live Draw + View-draws lists too.
+export async function updateDrawResultByCandidate(seasonId: string, candidateId: string, patch: { seller?: string; business?: string; category?: string }) {
+  const snap = await getDocs(
+    query(collection(db, COL), where("seasonId", "==", seasonId), where("candidateId", "==", candidateId))
+  );
+  await Promise.all(snap.docs.map((d) => setDoc(doc(db, COL, d.id), patch, { merge: true })));
+}
+
 // Drop one winner from a season's draw (frees their stall number for a re-draw).
 export async function deleteDrawResultByCandidate(seasonId: string, candidateId: string) {
   const snap = await getDocs(

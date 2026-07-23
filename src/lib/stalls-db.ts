@@ -99,6 +99,18 @@ export async function deleteStallForRegistration(registrationId: string) {
   await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, STALLS, d.id))));
 }
 
+// Push edited seller details onto every stall doc materialised from a registration,
+// so a name/business/logo change in admin reflects in the stall directory too.
+export async function updateStallsForRegistration(registrationId: string, patch: { name?: string; owner?: string; imageUrl?: string | null }) {
+  const snap = await getDocs(query(collection(db, STALLS), where("registrationId", "==", registrationId)));
+  if (snap.empty) return;
+  const clean: DocumentData = { updatedAt: serverTimestamp() };
+  if (patch.name !== undefined) clean.name = patch.name;
+  if (patch.owner !== undefined) clean.owner = patch.owner;
+  if (patch.imageUrl !== undefined) clean.imageUrl = patch.imageUrl ?? null;
+  await Promise.all(snap.docs.map((d) => setDoc(doc(db, STALLS, d.id), clean, { merge: true })));
+}
+
 const STALLS = "stalls";
 
 export async function createStall(data: Omit<Stall, "id" | "createdAt" | "updatedAt">) {

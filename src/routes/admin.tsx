@@ -12,7 +12,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { getRegistrationsForAdmin, watchRegistrationsForAdmin, getRegistrationsBySeasonId, createRegistration, updateRegistration, deleteRegistration, type Registration } from "@/lib/db";
 import { getPaymentsBySeasonId } from "@/lib/payments-db";
 import { getCategories, fillDefaultSubcategories, type Category } from "@/lib/categories-db";
-import { deleteStallForRegistration, materializeRegistrationStalls } from "@/lib/stalls-db";
+import { deleteStallForRegistration, materializeRegistrationStalls, updateStallsForRegistration } from "@/lib/stalls-db";
+import { updateDrawResultByCandidate } from "@/lib/draw-results-db";
 import { seedApprovedRegistrations, clearSeededRegistrations } from "@/lib/seed-registrations";
 import { getFillSubcatsEnabled, getCustomRegFields, type CustomRegField } from "@/lib/settings-db";
 import { useSeason } from "@/lib/season-context";
@@ -824,6 +825,10 @@ function EditRegistrationDialog({ reg, onClose, onSaved }: { reg: Registration |
         ...rest,
         products: (productsText ?? "").split(",").map((p) => p.trim()).filter(Boolean),
       } as Partial<Registration>);
+      // Propagate the edit to the seller's derived copies so it reflects everywhere:
+      // the stall directory (name/owner/logo) and any saved draw result (seller/business).
+      await updateStallsForRegistration(reg.id!, { name: form.business, owner: form.seller, imageUrl: form.logoUrl || null }).catch(() => {});
+      if (reg.seasonId) await updateDrawResultByCandidate(reg.seasonId, reg.id!, { seller: form.seller, business: form.business }).catch(() => {});
       toast.success(t("adm.editSaved"));
       onSaved();
       onClose();
