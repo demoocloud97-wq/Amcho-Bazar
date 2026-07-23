@@ -1,0 +1,1 @@
+import{M as e}from"./firebase-Ba9ge-rU.js";import{t}from"./require-admin-ZKqwA2u8.js";import{zn as n}from"./index-BIp2AUmp.js";var r=e(),i=()=>(0,r.jsx)(t,{children:(0,r.jsx)(n,{})});export{i as component};
