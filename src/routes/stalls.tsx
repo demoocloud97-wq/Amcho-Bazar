@@ -1,13 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Search, Store, Loader2, Trash2, Upload, X, CheckSquare, Check, MoreVertical } from "lucide-react";
+import { Search, Store, Loader2, Trash2, Upload, X, CheckSquare, Check, MoreVertical, Download, ImagePlus } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
-import { getStallsBySeasonId, getStallsBySeason, createStall, deleteStallsBySeason, deleteStall, type Stall } from "@/lib/stalls-db";
+import { getStallsBySeasonId, getStallsBySeason, createStall, deleteStallsBySeason, deleteStall, updateStall, type Stall } from "@/lib/stalls-db";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import { getCategories, type Category } from "@/lib/categories-db";
 import { useSeason } from "@/lib/season-context";
 import { useAuth } from "@/lib/auth-context";
@@ -94,6 +95,37 @@ function StallsPage() {
       toast.error(friendlyAuthError(e));
     } finally {
       setClearing(false);
+    }
+  }
+
+  // Set the same image on every stall doc behind a card (one per category), so the
+  // seller's photo updates everywhere at once.
+  const [imgBusy, setImgBusy] = useState<string | null>(null);
+  async function updateCardImage(ids: string[], file: File) {
+    if (ids.length === 0) return;
+    setImgBusy(ids[0]);
+    try {
+      const url = await uploadToCloudinary(file);
+      await Promise.all(ids.map((id) => updateStall(id, { imageUrl: url })));
+      toast.success(t("stalls.imgUpdated"));
+      setRefresh((x) => x + 1);
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setImgBusy(null);
+    }
+  }
+  async function deleteCardImage(ids: string[]) {
+    if (ids.length === 0) return;
+    setImgBusy(ids[0]);
+    try {
+      await Promise.all(ids.map((id) => updateStall(id, { imageUrl: null })));
+      toast.success(t("stalls.imgDeleted"));
+      setRefresh((x) => x + 1);
+    } catch (e) {
+      toast.error(friendlyAuthError(e));
+    } finally {
+      setImgBusy(null);
     }
   }
 
@@ -194,6 +226,25 @@ function StallsPage() {
     if (!q) return true;
     return `${g.stall.name} ${g.stall.owner} ${g.cats.join(" ")}`.toLowerCase().includes(q.toLowerCase());
   });
+
+  // Download a stall's image file. Fetch to a blob so it saves instead of opening
+  // (cross-origin CDN links ignore the anchor `download` attr); fall back to a new tab.
+  async function downloadImage(src: string, name: string) {
+    const safe = (name.trim() || "stall").replace(/[^\w-]+/g, "-");
+    try {
+      const res = await fetch(normalizeDrive(src), { referrerPolicy: "no-referrer" });
+      const blob = await res.blob();
+      const ext = (blob.type.split("/")[1] || "jpg").split("+")[0];
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${safe}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(normalizeDrive(src), "_blank", "noopener");
+    }
+  }
 
   return (
     <div>
@@ -334,7 +385,18 @@ function StallsPage() {
                     <Check className="h-4 w-4" />
                   </div>
                 )}
-                <StallImage src={s.imageUrl} alt={s.name} />
+                <div className="relative">
+                  <StallImage src={s.imageUrl} alt={s.name} />
+                  {isAdmin && !selectMode && g.ids.length > 0 && (
+                    <StallImageMenu
+                      hasImage={!!s.imageUrl}
+                      busy={imgBusy === g.ids[0]}
+                      onUpload={(f) => updateCardImage(g.ids, f)}
+                      onDownload={() => s.imageUrl && downloadImage(s.imageUrl, s.name)}
+                      onDelete={() => deleteCardImage(g.ids)}
+                    />
+                  )}
+                </div>
                 <div className="p-5">
                   <div className="flex flex-wrap items-center gap-1.5">
                     {/* Every category this seller registered in — one card, not one per category */}
@@ -374,6 +436,53 @@ function StallsPage() {
       />
 
       {tab && <BulkImportStalls tab={tab} open={bulkOpen} onOpenChange={setBulkOpen} onDone={() => setRefresh((x) => x + 1)} />}
+    </div>
+  );
+}
+
+// Admin per-card ⋮ menu over the stall image: update / download / delete image.
+// Holds its own hidden file input so the Update item can open the picker.
+function StallImageMenu({ hasImage, busy, onUpload, onDownload, onDelete }: { hasImage: boolean; busy: boolean; onUpload: (f: File) => void; onDownload: () => void; onDelete: () => void }) {
+  const { t } = useI18n();
+  const inputRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="absolute end-2 top-2" onClick={(e) => e.stopPropagation()}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) onUpload(f); }}
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={t("stalls.actions")}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white opacity-0 shadow-soft backdrop-blur transition-all hover:bg-black/75 focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreVertical className="h-4 w-4" />}
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem onSelect={() => inputRef.current?.click()}>
+            <ImagePlus className="h-4 w-4" /> {t("stalls.updateImg")}
+          </DropdownMenuItem>
+          {hasImage && (
+            <DropdownMenuItem onSelect={onDownload}>
+              <Download className="h-4 w-4" /> {t("stalls.download")}
+            </DropdownMenuItem>
+          )}
+          {hasImage && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
+                <Trash2 className="h-4 w-4" /> {t("stalls.deleteImg")}
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
