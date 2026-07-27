@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowUpDown, Calendar, ChevronLeft, ChevronRight, Check, Loader2,
-  Pencil, Plus, Search, Store, Tag, Trash2, X,
+  ArrowUpDown, Calendar, ChevronDown, ChevronLeft, ChevronRight, Check, Loader2,
+  Pencil, Plus, Search, Store, Tag, Trash2, Users, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
@@ -188,39 +188,66 @@ function CategoryDetailPage() {
 
 /* ======================= Registered sellers section ========================= */
 
+const REG_PREVIEW = 8; // rows shown before "Show all"
 function RegisteredSellers({ regs }: { regs: Registration[] }) {
   const { t } = useI18n();
+  const [expanded, setExpanded] = useState(false);
   const badge = (s: Registration["status"]) =>
     s === "approved" || s === "paid" ? "bg-teal/15 text-teal" : s === "pending" ? "bg-accent/25 text-primary" : "bg-secondary/15 text-secondary";
+  const shown = expanded ? regs : regs.slice(0, REG_PREVIEW);
+  const canToggle = regs.length > REG_PREVIEW;
   return (
-    <div className="mt-6 rounded-3xl border border-border bg-card p-6 shadow-card md:p-8">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h3 className="font-display text-lg font-bold">{t("catd.regSellers")}</h3>
-          <p className="text-sm text-muted-foreground">{t("catd.regSellersSub")}</p>
+    <div className="mt-6 overflow-hidden rounded-3xl border border-border bg-card shadow-card">
+      <div className="flex items-center gap-3 border-b border-border/70 bg-gradient-to-br from-primary/[0.06] to-transparent p-5 md:p-6">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary"><Users className="h-5 w-5" /></span>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display text-lg font-bold leading-tight">{t("catd.regSellers")}</h3>
+          <p className="truncate text-sm text-muted-foreground">{t("catd.regSellersSub")}</p>
         </div>
-        <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{regs.length}</span>
+        <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold tabular-nums text-primary">{regs.length}</span>
       </div>
-      {regs.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
-          {t("catd.noRegs")}
-        </div>
-      ) : (
-        <div className="grid gap-2 sm:grid-cols-2">
-          {regs.map((r) => (
-            <div key={r.id} className="flex items-center gap-3 rounded-2xl border border-border bg-background/50 p-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-festive text-xs font-bold text-white">
-                {(r.seller || "?").charAt(0).toUpperCase()}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-semibold">{r.business || r.seller}</div>
-                <div className="truncate text-xs text-muted-foreground">{r.seller}</div>
-              </div>
-              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${badge(r.status)}`}>{t(`myreg.status.${r.status}`)}</span>
+
+      <div className="p-4 md:p-5">
+        {regs.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border py-10 text-center text-sm text-muted-foreground">
+            {t("catd.noRegs")}
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {shown.map((r) => (
+                <div key={r.id} className="flex items-center gap-3 rounded-2xl border border-border bg-background/50 p-3 transition-colors hover:border-primary/30 hover:bg-primary/[0.03]">
+                  {r.logoUrl ? (
+                    <img src={r.logoUrl} alt="" referrerPolicy="no-referrer" className="h-9 w-9 shrink-0 rounded-full border border-border object-cover" />
+                  ) : (
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-festive text-xs font-bold text-white">
+                      {(r.business || r.seller || "?").charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold">{r.business || r.seller}</div>
+                    <div className="truncate text-xs text-muted-foreground">{r.seller}</div>
+                  </div>
+                  <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${badge(r.status)}`}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+                    {t(`myreg.status.${r.status}`)}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+            {canToggle && (
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-border bg-background/50 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-muted"
+              >
+                {expanded ? t("catd.showLess") : t("catd.showAll").replace("{n}", String(regs.length))}
+                <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+              </button>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

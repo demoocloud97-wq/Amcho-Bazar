@@ -11,6 +11,7 @@ import {
   Search,
   Trash2,
   ListTree,
+  Store,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/site/page-header";
@@ -18,6 +19,7 @@ import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { getFillSubcatsEnabled, normalizeImageUrl } from "@/lib/settings-db";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 import { useI18n } from "@/lib/i18n";
+import { useSeason } from "@/lib/season-context";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +39,7 @@ import {
   type CategoryStatus,
   type SubCategory,
 } from "@/lib/categories-db";
+import { getAllStalls, type Stall } from "@/lib/stalls-db";
 
 export const Route = createFileRoute("/categories/")({
   head: () => ({
@@ -50,8 +53,10 @@ const PAGE_SIZE = 8;
 
 function CategoriesListPage() {
   const { t } = useI18n();
+  const { seasonId, activeSeason } = useSeason();
   const [categories, setCategories] = useState<Category[]>([]);
   const [subs, setSubs] = useState<SubCategory[]>([]);
+  const [stalls, setStalls] = useState<Stall[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
@@ -84,9 +89,10 @@ function CategoriesListPage() {
   async function load() {
     setLoading(true);
     try {
-      const [c, s] = await Promise.all([getCategories(), getSubCategories()]);
+      const [c, s, st] = await Promise.all([getCategories(), getSubCategories(), getAllStalls()]);
       setCategories(c);
       setSubs(s);
+      setStalls(st);
     } catch (e) {
       console.error(e);
       toast.error(friendlyAuthError(e));
@@ -105,6 +111,21 @@ function CategoriesListPage() {
     subs.forEach((s) => { m[s.categoryId] = (m[s.categoryId] ?? 0) + 1; });
     return m;
   }, [subs]);
+
+  // Assigned stalls per category, for the ACTIVE season only. A seller can have more
+  // than one doc in a category, so de-dupe by registration to get the real count.
+  const stallCount = useMemo(() => {
+    const seen: Record<string, Set<string>> = {};
+    for (const s of stalls) {
+      if (!s.categoryId || s.status !== "assigned") continue;
+      const inSeason = seasonId ? (s.seasonId === seasonId || Number(s.season) === Number(activeSeason?.seasonNumber)) : true;
+      if (!inSeason) continue;
+      (seen[s.categoryId] ??= new Set()).add(s.registrationId || s.id!);
+    }
+    const m: Record<string, number> = {};
+    for (const k in seen) m[k] = seen[k].size;
+    return m;
+  }, [stalls, seasonId, activeSeason?.seasonNumber]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -220,6 +241,7 @@ function CategoriesListPage() {
                         </button>
                       </th>
                       <th className="px-4 py-4">{t("cat.thSubcats")}</th>
+                      <th className="px-4 py-4">{t("cat.thStalls")}</th>
                       <th className="px-4 py-4">
                         <button onClick={() => toggleSort("status")} className="inline-flex items-center gap-1 hover:text-primary">
                           {t("cat.thStatus")} <ArrowUpDown className="h-3 w-3" />
@@ -246,6 +268,11 @@ function CategoriesListPage() {
                           </Link>
                         </td>
                         <td className="px-4 py-4 text-muted-foreground">{subCount[c.id!] ?? 0}</td>
+                        <td className="px-4 py-4">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-primary">
+                            <Store className="h-3 w-3" /> {stallCount[c.id!] ?? 0}
+                          </span>
+                        </td>
                         <td className="px-4 py-4"><StatusBadge status={c.status} /></td>
                         <td className="px-4 py-4 text-muted-foreground">{formatTimestamp(c.createdAt)}</td>
                         <td className="px-6 py-4">

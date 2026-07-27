@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, Heart, Sparkles, Sparkle, Users, Store, Gift, ShieldCheck, PartyPopper, ChevronDown, Flower2, Star, Sprout, HandHeart, GraduationCap, Megaphone, CalendarDays, MapPin, Navigation, CalendarPlus, Clock, Car, Landmark, Phone, Utensils, Shirt, Gem, Smile, NotebookPen, Home as HomeIcon, Palette, type LucideIcon } from "lucide-react";
+import { ArrowRight, Heart, Sparkles, Sparkle, Users, Store, Gift, ShieldCheck, PartyPopper, ChevronDown, ChevronLeft, ChevronRight, Flower2, Star, Sprout, HandHeart, GraduationCap, Megaphone, CalendarDays, MapPin, Navigation, CalendarPlus, Clock, Car, Landmark, Phone, Utensils, Shirt, Gem, Smile, NotebookPen, Home as HomeIcon, Palette, type LucideIcon } from "lucide-react";
 import { Countdown } from "@/components/site/countdown";
 import { AnimatedCounter } from "@/components/site/animated-counter";
 import { SectionHeading } from "@/components/site/section-heading";
@@ -9,12 +9,14 @@ import { OrganizedWithPurpose } from "@/components/site/organized-with-purpose";
 import { Reveal } from "@/components/site/reveal";
 import { FestiveDivider } from "@/components/site/festive-divider";
 import { EVENT } from "@/lib/dummy-data";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
 import { useHomeData, type HomeData } from "@/lib/home-data";
 import { getFaqs, type Faq as FaqItem, getHeroImage, normalizeImageUrl, DEFAULT_HERO_IMAGE } from "@/lib/settings-db";
-import { getAnnouncements, type Announcement } from "@/lib/announcements-db";
+import { getAnnouncementsForSeason, type Announcement } from "@/lib/announcements-db";
+import { useSeason } from "@/lib/season-context";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -232,10 +234,15 @@ function annDate(ts: unknown): string {
 
 function AnnouncementsHome() {
   const { t } = useI18n();
+  const { activeSeason } = useSeason();
   const [items, setItems] = useState<Announcement[]>([]);
-  useEffect(() => { getAnnouncements().then((a) => setItems(a.slice(0, 3))).catch(() => {}); }, []);
+  const [open, setOpen] = useState<Announcement | null>(null); // clicked post → image popup
+  useEffect(() => {
+    getAnnouncementsForSeason(activeSeason?.id, activeSeason?.seasonNumber).then((a) => setItems(a.slice(0, 6))).catch(() => {});
+  }, [activeSeason?.id, activeSeason?.seasonNumber]);
   if (items.length === 0) return null;
   const single = items.length === 1;
+  const slide = items.length >= 3; // only auto-slide when there's enough to cycle
   return (
     <section className="mx-auto max-w-7xl px-4 py-20 md:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -250,13 +257,17 @@ function AnnouncementsHome() {
         </Link>
       </div>
 
-      {single ? (
+      {slide ? (
+        /* Three or more — an auto-advancing slider. */
+        <AnnouncementSlider items={items} onOpen={setOpen} />
+      ) : single ? (
         /* One announcement — a wide card. */
-        <Link
-          to="/announcements"
-          className="group mt-8 grid overflow-hidden rounded-3xl border border-border bg-card shadow-card transition-shadow hover:shadow-glow md:grid-cols-2"
+        <button
+          type="button"
+          onClick={() => setOpen(items[0])}
+          className="group mt-8 grid w-full overflow-hidden rounded-3xl border border-border bg-card text-start shadow-card transition-shadow hover:shadow-glow md:grid-cols-2"
         >
-          <div className="relative min-h-[220px] overflow-hidden">
+          <div className="relative min-h-[220px] overflow-hidden bg-muted/40">
             {items[0].imageUrl ? (
               <img src={normalizeImageUrl(items[0].imageUrl)} alt={items[0].title} loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
             ) : (
@@ -270,23 +281,23 @@ function AnnouncementsHome() {
             <h3 className="mt-1.5 font-display text-2xl font-bold leading-tight">{items[0].title}</h3>
             {items[0].body && <p className="mt-2 line-clamp-4 text-sm text-muted-foreground">{items[0].body}</p>}
           </div>
-        </Link>
+        </button>
       ) : (
         /* A few announcements — a clean grid, each shown once. */
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((a) => (
-            <Link
+            <button
               key={a.id}
-              to="/announcements"
-              className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow"
+              type="button"
+              onClick={() => setOpen(a)}
+              className="group flex flex-col overflow-hidden rounded-3xl border border-border bg-card text-start shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-glow"
             >
-              <div className="relative h-44 w-full overflow-hidden">
+              <div className="relative h-44 w-full overflow-hidden bg-muted/40">
                 {a.imageUrl ? (
                   <img src={normalizeImageUrl(a.imageUrl)} alt={a.title} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-hero"><Megaphone className="h-8 w-8 text-white/80" /></div>
                 )}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
               </div>
               <div className="flex flex-1 flex-col p-5">
                 {annDate(a.createdAt) && (
@@ -295,11 +306,158 @@ function AnnouncementsHome() {
                 <h3 className="mt-1.5 line-clamp-1 font-display text-lg font-bold leading-tight">{a.title}</h3>
                 {a.body && <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">{a.body}</p>}
               </div>
-            </Link>
+            </button>
           ))}
         </div>
       )}
+
+      <AnnouncementDialog item={open} onClose={() => setOpen(null)} />
     </section>
+  );
+}
+
+// Auto-advancing announcement slider (one wide card at a time). Only mounted when
+// there are 3+ posts. Has an auto-advance progress bar, swipe, and keyboard support.
+const SLIDE_MS = 3500;
+function AnnouncementSlider({ items, onOpen }: { items: Announcement[]; onOpen: (a: Announcement) => void }) {
+  const { t } = useI18n();
+  const [i, setI] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const n = items.length;
+  const go = (next: number) => setI(((next % n) + n) % n);
+  // Advance on a timer; pause on hover/focus so a reader isn't rushed.
+  useEffect(() => {
+    if (paused) return;
+    const id = window.setInterval(() => setI((c) => (c + 1) % n), SLIDE_MS);
+    return () => window.clearInterval(id);
+  }, [paused, n, i]);
+  // Touch/mouse swipe.
+  const down = useRef<number | null>(null);
+  function onDown(e: React.PointerEvent) { down.current = e.clientX; }
+  function onUp(e: React.PointerEvent) {
+    if (down.current == null) return;
+    const dx = e.clientX - down.current;
+    down.current = null;
+    if (Math.abs(dx) > 50) go(i + (dx < 0 ? 1 : -1));
+  }
+  const active = items[i];
+  return (
+    <div
+      className="relative mt-8"
+      role="group"
+      aria-roledescription="carousel"
+      tabIndex={0}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+      onKeyDown={(e) => { if (e.key === "ArrowLeft") go(i - 1); else if (e.key === "ArrowRight") go(i + 1); }}
+    >
+      <div className="relative overflow-hidden rounded-[28px] border border-border bg-card shadow-card ring-1 ring-black/[0.03]">
+        {/* Auto-advance progress bar (restarts each slide; freezes while paused). */}
+        <div className="absolute inset-x-0 top-0 z-20 h-1 bg-black/5">
+          <div
+            key={`${i}-${paused}`}
+            className="ann-progress h-full bg-festive"
+            style={{ animationDuration: `${SLIDE_MS}ms`, animationPlayState: paused ? "paused" : "running" }}
+          />
+        </div>
+
+        <div className="flex transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ transform: `translateX(-${i * 100}%)` }}>
+          {items.map((a, d) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => onOpen(a)}
+              onPointerDown={onDown}
+              onPointerUp={onUp}
+              aria-hidden={d !== i}
+              tabIndex={d === i ? 0 : -1}
+              className="group relative block aspect-[16/9] w-full shrink-0 select-none overflow-hidden text-start"
+            >
+              {a.imageUrl ? (
+                <>
+                  {/* Blurred fill so a poster of any shape reads as colour, never cropped or grey-boxed. */}
+                  <img src={normalizeImageUrl(a.imageUrl)} alt="" aria-hidden loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-125 object-cover blur-2xl" />
+                  <img src={normalizeImageUrl(a.imageUrl)} alt={a.title} loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full object-contain" />
+                </>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-hero"><Megaphone className="h-12 w-12 text-white/80" /></div>
+              )}
+              {/* Caption overlay */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent p-5 pt-16 md:p-7 md:pt-24">
+                {annDate(a.createdAt) && (
+                  <div className="inline-flex items-center gap-1.5 text-[11px] font-medium text-white/80"><CalendarDays className="h-3.5 w-3.5" /> {annDate(a.createdAt)}</div>
+                )}
+                <h3 className="mt-1 line-clamp-2 font-display text-xl font-bold leading-tight text-white drop-shadow md:text-2xl">{a.title}</h3>
+                <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-white/95 underline-offset-4 group-hover:underline">
+                  {t("ann.seeMore")} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </div>
+              <span className="absolute start-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur">
+                <Megaphone className="h-3 w-3" /> {t("ann.eyebrow")}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Slide counter */}
+        <div className="absolute end-3 top-3 z-20 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-white backdrop-blur">
+          {i + 1} / {n}
+        </div>
+      </div>
+
+      {/* Prev / next — glass pills that fill festive on hover */}
+      <button
+        type="button" onClick={() => go(i - 1)} aria-label="Previous announcement"
+        className="group/nav absolute start-3 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-2xl border border-white/30 bg-white/25 text-white shadow-lg ring-1 ring-black/5 backdrop-blur-md transition-all duration-200 hover:-translate-x-0.5 hover:-translate-y-1/2 hover:bg-festive hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 active:scale-90 md:start-5"
+      >
+        <ChevronLeft className="h-5 w-5 transition-transform group-hover/nav:-translate-x-0.5" />
+      </button>
+      <button
+        type="button" onClick={() => go(i + 1)} aria-label="Next announcement"
+        className="group/nav absolute end-3 top-1/2 z-20 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-2xl border border-white/30 bg-white/25 text-white shadow-lg ring-1 ring-black/5 backdrop-blur-md transition-all duration-200 hover:translate-x-0.5 hover:-translate-y-1/2 hover:bg-festive hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 active:scale-90 md:end-5"
+      >
+        <ChevronRight className="h-5 w-5 transition-transform group-hover/nav:translate-x-0.5" />
+      </button>
+
+      {/* Dots */}
+      <div className="mt-5 flex items-center justify-center gap-2" aria-hidden>
+        {items.map((a, d) => (
+          <button
+            key={a.id} type="button" onClick={() => go(d)} aria-label={`Go to announcement ${d + 1}`}
+            className={`h-2 rounded-full transition-all ${d === i ? "w-7 bg-festive" : "w-2 bg-border hover:w-3 hover:bg-muted-foreground/40"}`}
+          />
+        ))}
+      </div>
+      <span className="sr-only" aria-live="polite">{active?.title}</span>
+    </div>
+  );
+}
+
+// Image-first popup shown when a home announcement post is clicked (no navigation).
+function AnnouncementDialog({ item, onClose }: { item: Announcement | null; onClose: () => void }) {
+  return (
+    <Dialog open={!!item} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] max-w-2xl gap-0 overflow-y-auto p-0">
+        {/* Fixed-height media area so the dialog doesn't jump when the image loads. */}
+        {item?.imageUrl ? (
+          <div className="relative h-[44vh] w-full overflow-hidden bg-black/5">
+            <img src={normalizeImageUrl(item.imageUrl)} alt="" aria-hidden referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-125 object-cover opacity-40 blur-2xl" />
+            <img src={normalizeImageUrl(item.imageUrl)} alt={item.title} referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full object-contain" />
+          </div>
+        ) : (
+          <div className="flex h-56 w-full items-center justify-center bg-hero"><Megaphone className="h-12 w-12 text-white/80" /></div>
+        )}
+        <div className="p-6 md:p-7">
+          {item && annDate(item.createdAt) && (
+            <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /> {annDate(item.createdAt)}</div>
+          )}
+          <h3 className="mt-1.5 font-display text-2xl font-bold leading-tight">{item?.title}</h3>
+          {item?.body && <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{item.body}</p>}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

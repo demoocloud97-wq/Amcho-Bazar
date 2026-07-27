@@ -620,6 +620,7 @@ function AdminPage() {
                   <th className="px-3">{t("adm.thCategory")}</th>
                   <th className="px-3">{t("adm.thPhone")}</th>
                   <th className="px-3">{t("adm.thStatus")}</th>
+                  <th className="px-3 whitespace-nowrap">{t("adm.thCreated")}</th>
                   <th className="px-3 text-right">{t("adm.thActions")}</th>
                 </tr>
               </thead>
@@ -668,6 +669,7 @@ function AdminPage() {
                         {t(`myreg.status.${r.status}`)}
                       </span>
                     </td>
+                    <td className="px-3 py-3.5 align-middle whitespace-nowrap text-muted-foreground">{fmtCreated(r.createdAt)}</td>
                     <td className="px-3 py-3.5 align-middle">
                       <div className="flex justify-end">
                         <DropdownMenu>
@@ -924,6 +926,12 @@ function toDate(ts: unknown): Date | null {
   if (typeof any.toDate === "function") return any.toDate();
   if (typeof any.seconds === "number") return new Date(any.seconds * 1000);
   return null;
+}
+
+// "12 Jul 2026" for the Created column; em-dash when a row has no timestamp.
+function fmtCreated(ts: unknown): string {
+  const d = toDate(ts);
+  return d ? d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—";
 }
 
 function timeAgo(d: Date): string {

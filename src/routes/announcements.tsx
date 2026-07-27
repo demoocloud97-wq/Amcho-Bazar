@@ -6,8 +6,9 @@ import { PageHeader } from "@/components/site/page-header";
 import { ConfirmDialog } from "@/components/site/confirm-dialog";
 import { useAuth } from "@/lib/auth-context";
 import { useI18n } from "@/lib/i18n";
-import { createAnnouncement, updateAnnouncement, getAnnouncements, deleteAnnouncement, type Announcement } from "@/lib/announcements-db";
+import { createAnnouncement, updateAnnouncement, getAnnouncementsForSeason, deleteAnnouncement, type Announcement } from "@/lib/announcements-db";
 import { normalizeImageUrl } from "@/lib/settings-db";
+import { useSeason } from "@/lib/season-context";
 import { friendlyAuthError } from "@/lib/firebase-errors";
 
 export const Route = createFileRoute("/announcements")({
@@ -24,6 +25,7 @@ function fmtDate(ts: unknown): string {
 function AnnouncementsPage() {
   const { isAdmin } = useAuth();
   const { t } = useI18n();
+  const { activeSeason } = useSeason();
   const [items, setItems] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [delTarget, setDelTarget] = useState<Announcement | null>(null);
@@ -31,11 +33,11 @@ function AnnouncementsPage() {
 
   async function load() {
     setLoading(true);
-    try { setItems(await getAnnouncements()); }
+    try { setItems(await getAnnouncementsForSeason(activeSeason?.id, activeSeason?.seasonNumber)); }
     catch (e) { toast.error(friendlyAuthError(e)); }
     finally { setLoading(false); }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [activeSeason?.id, activeSeason?.seasonNumber]);
 
   async function remove() {
     if (!delTarget) return;
@@ -52,6 +54,8 @@ function AnnouncementsPage() {
           <ComposeForm
             key={editing?.id ?? "new"}
             editing={editing}
+            seasonId={activeSeason?.id}
+            season={activeSeason?.seasonNumber}
             onDone={async () => { await load(); setEditing(null); }}
             onCancel={() => setEditing(null)}
           />
@@ -117,7 +121,7 @@ function AnnouncementsPage() {
   );
 }
 
-function ComposeForm({ editing, onDone, onCancel }: { editing: Announcement | null; onDone: () => Promise<void>; onCancel: () => void }) {
+function ComposeForm({ editing, seasonId, season, onDone, onCancel }: { editing: Announcement | null; seasonId?: string; season?: number; onDone: () => Promise<void>; onCancel: () => void }) {
   const { t } = useI18n();
   const isEdit = !!editing;
   const [title, setTitle] = useState(editing?.title ?? "");
@@ -132,7 +136,7 @@ function ComposeForm({ editing, onDone, onCancel }: { editing: Announcement | nu
     try {
       const payload = { title: title.trim(), body: body.trim(), imageUrl: imageUrl.trim() || undefined };
       if (isEdit) await updateAnnouncement(editing!.id!, payload);
-      else await createAnnouncement(payload);
+      else await createAnnouncement({ ...payload, seasonId, season });
       toast.success(isEdit ? t("ann.updated") : t("ann.posted"));
       if (!isEdit) { setTitle(""); setBody(""); setImageUrl(""); }
       await onDone();

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Banknote, Clock3, Image as ImageIcon, Loader2, Receipt, Search, ShieldCheck, Trash2, Wallet, TrendingUp } from "lucide-react";
+import { Banknote, ChevronLeft, ChevronRight, Clock3, Image as ImageIcon, Loader2, Receipt, Search, ShieldCheck, Trash2, Wallet, TrendingUp } from "lucide-react";
 import { colorFor } from "@/lib/category-colors";
 import { PageHeader } from "@/components/site/page-header";
 import { RequireAdmin } from "@/components/site/require-admin";
@@ -24,6 +24,26 @@ export const Route = createFileRoute("/payments")({
 });
 
 const rupee = (n: number) => `Rs ${n.toLocaleString("en-PK")}`;
+const PAY_PAGE = 8; // rows per page in the Awaiting / Ledger lists
+
+// Prev / next pager shown under a paginated list.
+function Pager({ page, pageCount, total, onPage }: { page: number; pageCount: number; total: number; onPage: (p: number) => void }) {
+  if (total <= PAY_PAGE) return null;
+  return (
+    <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+      <span className="text-xs tabular-nums text-muted-foreground">{page * PAY_PAGE + 1}–{Math.min(total, page * PAY_PAGE + PAY_PAGE)} / {total}</span>
+      <div className="flex items-center gap-2">
+        <button onClick={() => onPage(page - 1)} disabled={page === 0} aria-label="Previous" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border transition-colors hover:bg-muted disabled:opacity-40">
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="text-xs font-semibold tabular-nums">{page + 1} / {pageCount}</span>
+        <button onClick={() => onPage(page + 1)} disabled={page >= pageCount - 1} aria-label="Next" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border transition-colors hover:bg-muted disabled:opacity-40">
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function PaymentsPage() {
   const { season, seasonId } = useSeason();
@@ -110,6 +130,18 @@ function PaymentsPage() {
     return n ? payments.filter((p) => `${p.business} ${p.seller} ${p.method}`.toLowerCase().includes(n)) : payments;
   }, [payments, ledgerQ]);
 
+  // Pagination for each list.
+  const [awaitPage, setAwaitPage] = useState(0);
+  const [ledgerPage, setLedgerPage] = useState(0);
+  useEffect(() => { setAwaitPage(0); }, [awaitQ]);
+  useEffect(() => { setLedgerPage(0); }, [ledgerQ]);
+  const awaitPageCount = Math.max(1, Math.ceil(outstandingShown.length / PAY_PAGE));
+  const ledgerPageCount = Math.max(1, Math.ceil(paymentsShown.length / PAY_PAGE));
+  const awaitPg = Math.min(awaitPage, awaitPageCount - 1);
+  const ledgerPg = Math.min(ledgerPage, ledgerPageCount - 1);
+  const outstandingPaged = outstandingShown.slice(awaitPg * PAY_PAGE, awaitPg * PAY_PAGE + PAY_PAGE);
+  const paymentsPaged = paymentsShown.slice(ledgerPg * PAY_PAGE, ledgerPg * PAY_PAGE + PAY_PAGE);
+
   async function record(reg: Registration, amount: number, method: PaymentMethod) {
     if (!seasonId) return;
     try {
@@ -145,7 +177,7 @@ function PaymentsPage() {
         subtitle={t("pay.subtitle").replace("{season}", season?.seasonName ?? "the season")}
       />
 
-      <section className="mx-auto max-w-7xl px-4 pb-24 pt-8 md:px-8 md:pt-12">
+      <section className="mx-auto max-w-[100rem] px-4 pb-24 pt-8 md:px-8 md:pt-12">
         {/* Summary */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryCard icon={<Wallet className="h-5 w-5" />} label={t("pay.collected")} value={rupee(collected)} tone="green" />
@@ -213,9 +245,21 @@ function PaymentsPage() {
                 ) : outstandingShown.length === 0 ? (
                   <Empty>{t("pay.noMatch")}</Empty>
                 ) : (
-                  <div className="max-h-[30rem] space-y-2.5 overflow-y-auto pe-0.5">
-                    {outstandingShown.map((r) => <OutstandingRow key={r.id} reg={r} fee={fee} onRecord={record} onProof={setProof} />)}
+                  <>
+                  <div className="overflow-hidden rounded-2xl border border-border">
+                    <div className="hidden items-center gap-2.5 border-b border-border bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:flex">
+                      <span className="w-10 shrink-0" aria-hidden />
+                      <span className="flex-1">{t("pay.colBusiness")}</span>
+                      <span className="w-24 shrink-0">{t("reg.pay.amount")}</span>
+                      <span className="w-28 shrink-0">{t("pay.colMethod")}</span>
+                      <span className="w-[7.5rem] shrink-0 text-center">{t("pay.colAction")}</span>
+                    </div>
+                    <div className="divide-y divide-border">
+                      {outstandingPaged.map((r) => <OutstandingRow key={r.id} reg={r} fee={fee} onRecord={record} onProof={setProof} />)}
+                    </div>
                   </div>
+                  <Pager page={awaitPg} pageCount={awaitPageCount} total={outstandingShown.length} onPage={setAwaitPage} />
+                  </>
                 )}
               </div>
             </div>
@@ -239,25 +283,44 @@ function PaymentsPage() {
                 ) : paymentsShown.length === 0 ? (
                   <Empty>{t("pay.noMatch")}</Empty>
                 ) : (
-                  <div className="max-h-[30rem] space-y-2.5 overflow-y-auto pe-0.5">
-                    {paymentsShown.map((p) => (
-                    <div key={p.id} className="group flex items-center gap-3 rounded-2xl border border-border bg-background/60 p-3 transition-colors hover:border-teal/40 hover:bg-teal/[0.04]">
-                      <LogoAvatar logoUrl={regMeta.get(p.registrationId)?.logoUrl} name={p.business} category={regMeta.get(p.registrationId)?.category} />
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-semibold leading-tight">{p.business}</div>
-                        <div className="mt-0.5 truncate text-xs text-muted-foreground">{p.seller} · <span className="uppercase">{p.method}</span> · {p.at}</div>
-                      </div>
-                      <div className="shrink-0 rounded-full bg-teal/10 px-3 py-1 font-display text-sm font-bold tabular-nums text-teal">{rupee(p.amount)}</div>
-                      <button
-                        onClick={() => setDelTarget(p)}
-                        aria-label="Delete payment"
-                        className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                  <>
+                  <div className="overflow-hidden rounded-2xl border border-border">
+                    {/* Column headers (desktop only) */}
+                    <div className="hidden items-center gap-3 border-b border-border bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:flex">
+                      <span className="w-10 shrink-0" aria-hidden />
+                      <span className="flex-1">{t("pay.colBusiness")}</span>
+                      <span className="w-20 shrink-0">{t("pay.colMethod")}</span>
+                      <span className="w-28 shrink-0">{t("pay.colPaidDate")}</span>
+                      <span className="w-24 shrink-0 text-right">{t("pay.colAmount")}</span>
+                      <span className="w-8 shrink-0" aria-hidden />
                     </div>
-                  ))}
-                </div>
+                    <div className="divide-y divide-border">
+                      {paymentsPaged.map((p) => (
+                        <div key={p.id} className="group flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-teal/[0.05]">
+                          <LogoAvatar logoUrl={regMeta.get(p.registrationId)?.logoUrl} name={p.business} category={regMeta.get(p.registrationId)?.category} />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-semibold leading-tight">{p.business}</div>
+                            <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                              {p.seller}
+                              <span className="sm:hidden"> · <span className="uppercase">{p.method}</span> · {p.at}</span>
+                            </div>
+                          </div>
+                          <span className="hidden w-20 shrink-0 text-xs font-medium uppercase text-muted-foreground sm:block">{p.method}</span>
+                          <span className="hidden w-28 shrink-0 text-xs tabular-nums text-muted-foreground sm:block">{p.at}</span>
+                          <span className="w-auto shrink-0 rounded-full bg-teal/10 px-3 py-1 font-display text-sm font-bold tabular-nums text-teal sm:w-24 sm:bg-transparent sm:px-0 sm:text-right">{rupee(p.amount)}</span>
+                          <button
+                            onClick={() => setDelTarget(p)}
+                            aria-label="Delete payment"
+                            className="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <Pager page={ledgerPg} pageCount={ledgerPageCount} total={paymentsShown.length} onPage={setLedgerPage} />
+                  </>
               )}
             </div>
             </div>
@@ -384,36 +447,38 @@ function OutstandingRow({ reg, fee, onRecord, onProof }: { reg: Registration; fe
   }
 
   return (
-    <div className="group flex flex-wrap items-center gap-2.5 rounded-2xl border border-border bg-background/60 p-3 transition-colors hover:border-secondary/40 hover:bg-secondary/[0.04]">
+    <div className="group flex flex-wrap items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-secondary/[0.04] sm:flex-nowrap">
       <LogoAvatar logoUrl={reg.logoUrl} name={reg.business} category={reg.category} />
-      <div className="min-w-0 flex-1">
-        <div className="truncate font-semibold leading-tight">{reg.business}</div>
-        <div className="mt-0.5 truncate text-xs text-muted-foreground">{reg.seller} · {reg.category}</div>
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-semibold leading-tight">{reg.business}</div>
+          <div className="mt-0.5 truncate text-xs text-muted-foreground">{reg.seller} · {reg.category}</div>
+        </div>
+        {reg.paymentProofUrl && <ProofButton onClick={() => onProof(reg)} label={t("pay.viewProof")} />}
       </div>
-      {reg.paymentProofUrl && <ProofButton onClick={() => onProof(reg)} label={t("pay.viewProof")} />}
-      <div className="relative">
+      <div className="relative w-24 shrink-0">
         <span className="pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">Rs</span>
         <input
           type="number"
           min={0}
           value={amount}
           onChange={(e) => setAmount(Number(e.target.value))}
-          aria-label="Amount"
-          className="w-24 rounded-full border border-border bg-background py-2 ps-9 pe-2 text-sm tabular-nums outline-none ring-primary/20 focus:ring-2"
+          aria-label={t("reg.pay.amount")}
+          className="w-full rounded-full border border-border bg-background py-2 ps-9 pe-2 text-sm tabular-nums outline-none ring-primary/20 focus:ring-2"
         />
       </div>
       <select
         value={method}
         onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-        aria-label="Payment method"
-        className="rounded-full border border-border bg-background px-3 py-2 text-sm capitalize outline-none ring-primary/20 focus:ring-2"
+        aria-label={t("pay.colMethod")}
+        className="w-28 shrink-0 rounded-full border border-border bg-background px-3 py-2 text-sm capitalize outline-none ring-primary/20 focus:ring-2"
       >
         {PAYMENT_METHODS.map((m) => <option key={m} value={m}>{t(`pay.method.${m}`)}</option>)}
       </select>
       <button
         onClick={submit}
         disabled={busy}
-        className="inline-flex items-center gap-1.5 rounded-full bg-festive px-4 py-2 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-[1.02] disabled:opacity-60"
+        className="inline-flex w-[7.5rem] shrink-0 items-center justify-center gap-1.5 rounded-full bg-festive px-4 py-2 text-sm font-semibold text-white shadow-soft transition-transform hover:scale-[1.02] disabled:opacity-60"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Receipt className="h-4 w-4" />} {t("pay.record")}
       </button>

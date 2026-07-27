@@ -165,6 +165,9 @@
   html {
     /* Keep anchored/focused content clear of the sticky header (h-~64px). */
     scroll-padding-top: 5rem;
+    /* Reserve the scrollbar gutter (right side only) so opening a modal — which
+       locks body scroll and hides the scrollbar — doesn't shift the page. */
+    scrollbar-gutter: stable;
   }
 
   /* Kill horizontal scroll app-wide: any decorative glow / off-canvas element
@@ -317,6 +320,20 @@
 .animate-spin-slow { animation: spin-slow 18s linear infinite; }
 .animate-marquee { animation: marquee 45s linear infinite; }
 .marquee-pause:hover .animate-marquee { animation-play-state: paused; }
+
+/* Radix (react-remove-scroll) pads the body to offset the hidden scrollbar when a
+   modal opens; scrollbar-gutter: stable already reserves that space, so the extra
+   padding double-compensates and jerks the page sideways. Cancel it while locked.
+   Must stay UNLAYERED with higher specificity than react-remove-scroll's own
+   unlayered `body[data-scroll-locked] { ... !important }` rule so it actually wins. */
+html body[data-scroll-locked] {
+  margin-right: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Announcement slider auto-advance progress bar (restarts per slide via React key). */
+@keyframes ann-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.ann-progress { transform-origin: left; animation: ann-progress linear forwards; }
 
 /* Organized-with-purpose section (ported from al-fajar-story) */
 @keyframes glow-drift {
