@@ -1,0 +1,1 @@
+import{M as e}from"./firebase-BpWUO5iw.js";import{t}from"./review-form-BzUVLpYC.js";import{t as n}from"./events-db-D6tSfqAe.js";var r=e(),i=()=>(0,r.jsx)(t,{businessId:n});export{i as component};

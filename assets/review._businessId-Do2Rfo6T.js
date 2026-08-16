@@ -1,0 +1,1 @@
+import{M as e}from"./firebase-BpWUO5iw.js";import{t}from"./review-form-BzUVLpYC.js";import{_ as n}from"./index-BZFJi2ny.js";var r=e();function i(){let{businessId:e}=n.useParams();return(0,r.jsx)(t,{businessId:e})}export{i as component};
