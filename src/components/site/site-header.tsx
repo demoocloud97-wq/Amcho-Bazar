@@ -18,6 +18,7 @@ const PRIMARY_NAV: NavItem[] = [
   { to: "/", tKey: "nav.home", show: "all" },
   { to: "/gallery", tKey: "nav.gallery", show: "all" },
   { to: "/stalls", tKey: "nav.stalls", show: "all" },
+  { to: "/reviews", tKey: "revs.title", show: "all" },
   { to: "/draw", tKey: "nav.liveDraw", show: "admin", highlight: true },
   { to: "/categories", tKey: "nav.categories", show: "admin" },
 ];

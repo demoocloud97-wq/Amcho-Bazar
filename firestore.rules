@@ -28,6 +28,44 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // ---- Customer reviews (QR feedback) ----
+    // The review page is public and signed-out, so anyone may CREATE — but only
+    // as a "pending" review with a valid rating, no moderation fields, and no
+    // extra keys. Reads are limited to the publishable statuses (the public page
+    // queries `status in ['approved','published']`, which satisfies this).
+    // Everything else — approving, replying, featuring, deleting — is admin-only.
+    function validNewReview() {
+      let d = request.resource.data;
+      return d.status == 'pending'
+        && d.adminRead == false
+        && d.featured == false
+        && d.ref is string && d.ref.size() <= 16
+        && d.overallRating is int && d.overallRating >= 1 && d.overallRating <= 5
+        && d.reviewText is string && d.reviewText.size() > 0 && d.reviewText.size() <= 2000
+        && (!('productRating' in d)  || (d.productRating is int  && d.productRating >= 1  && d.productRating <= 5))
+        && (!('staffRating' in d)    || (d.staffRating is int    && d.staffRating >= 1    && d.staffRating <= 5))
+        && (!('deliveryRating' in d) || (d.deliveryRating is int && d.deliveryRating >= 1 && d.deliveryRating <= 5))
+        && (!('customerName' in d) || d.customerName.size() <= 80)
+        && (!('email' in d)        || d.email.size() <= 120)
+        && (!('phone' in d)        || d.phone.size() <= 32)
+        && (!('orderId' in d)      || d.orderId.size() <= 40)
+        && (!('liked' in d)        || d.liked.size() <= 600)
+        && (!('improvement' in d)  || d.improvement.size() <= 600)
+        // Whitelist: a submitter cannot smuggle in adminResponse/adminNotes or junk.
+        && d.keys().hasOnly([
+             'ref', 'eventId', 'seasonId', 'businessId', 'businessName',
+             'overallRating', 'productRating', 'staffRating', 'deliveryRating',
+             'reviewText', 'liked', 'improvement', 'recommend', 'photoUrl',
+             'customerName', 'email', 'phone', 'orderId', 'anonymous',
+             'status', 'adminRead', 'featured', 'createdAt'
+           ]);
+    }
+    match /reviews/{docId} {
+      allow create: if validNewReview();
+      allow read:   if isAdmin() || resource.data.status in ['approved', 'published'];
+      allow update, delete: if isAdmin();
+    }
+
     // Public content — readable by anyone; writable by admins only.
     match /categories/{docId}    { allow read: if true; allow write: if isAdmin(); }
     match /subcategories/{docId} { allow read: if true; allow write: if isAdmin(); }

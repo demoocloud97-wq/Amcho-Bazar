@@ -137,6 +137,13 @@ export async function getStallsByCategory(categoryId: string): Promise<Stall[]> 
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as DocumentData) })) as Stall[];
 }
 
+// Public lookup used by the QR review page to greet a customer with the stall name.
+// Stalls are world-readable, unlike registrations, so this works signed-out.
+export async function getStallsForRegistration(registrationId: string): Promise<Stall[]> {
+  const snap = await getDocs(query(collection(db, STALLS), where("registrationId", "==", registrationId)));
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as DocumentData) })) as Stall[];
+}
+
 export async function getAllStalls(): Promise<Stall[]> {
   const snap = await getDocs(collection(db, STALLS));
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as DocumentData) })) as Stall[];

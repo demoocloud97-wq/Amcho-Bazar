@@ -90,6 +90,16 @@ function normalize(id: string, data: DocumentData): Season {
   };
 }
 
+/* True once the season's event is over — an explicit Completed/Archived status, or a
+   parseable eventDate already in the past. `eventDate` is a free-text label such as
+   "August 2, 2026 · 10:00 AM – 9:00 PM", so only the part before the "·" is parsed. */
+export function seasonHappened(s: Season): boolean {
+  if (s.status === "Completed" || s.status === "Archived") return true;
+  const raw = s.eventDate?.split("·")[0].trim();
+  const at = raw ? Date.parse(raw) : NaN;
+  return !Number.isNaN(at) && at < Date.now();
+}
+
 export async function getSeasons(eventId: string = AMCHO_BAZAR_EVENT_ID): Promise<Season[]> {
   // Single equality filter + client-side sort — avoids a composite index.
   const snap = await getDocs(query(collection(db, SEASONS), where("eventId", "==", eventId)));

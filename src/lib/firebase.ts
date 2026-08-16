@@ -16,35 +16,45 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Frontend-only demo: if Firebase env vars are missing, skip initialization
-// so the UI still renders instead of crashing with auth/invalid-api-key.
-const hasConfig = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+// True only when real credentials are present. Screens can use this to explain
+// why they have no data, rather than silently showing an empty state.
+export const firebaseReady = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
-let app: FirebaseApp | undefined;
-let _auth: Auth | undefined;
-let _db: Firestore | undefined;
-let _storage: FirebaseStorage | undefined;
+// Frontend-only demo: when the env vars are missing we still initialise, using a
+// placeholder config. Leaving `db`/`auth` undefined is what actually breaks the
+// app — `doc(undefined, …)` throws synchronously inside the effects that
+// SiteHeader and SeasonProvider run on every page, which tears down the whole
+// React tree. With a real (if useless) instance, calls fail asynchronously
+// instead, and every call site already handles that path.
+const config = firebaseReady
+  ? firebaseConfig
+  : {
+      apiKey: "demo-mode-no-credentials",
+      authDomain: "demo.firebaseapp.com",
+      projectId: "amcho-bazar-demo",
+      storageBucket: "demo.appspot.com",
+      messagingSenderId: "000000000000",
+      appId: "1:000000000000:web:demo",
+    };
 
-if (hasConfig) {
-  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  _auth = getAuth(app);
-  _db = getFirestore(app);
-  _storage = getStorage(app);
-} else if (typeof window !== "undefined") {
-  console.warn("[firebase] VITE_FIREBASE_* env vars missing — running in UI-only demo mode.");
+if (!firebaseReady && typeof window !== "undefined") {
+  console.warn(
+    "[firebase] VITE_FIREBASE_* env vars missing — running in UI-only demo mode. " +
+    "Pages render but no data loads or saves. Copy .env.example to .env and fill in your Firebase config."
+  );
 }
 
-// Exported as non-optional to preserve existing call sites; consumers only
-// touch these after user actions, which are no-ops in demo mode.
-export const auth = _auth as Auth;
-export const db = _db as Firestore;
-export const storage = _storage as FirebaseStorage;
+const app: FirebaseApp = getApps().length ? getApp() : initializeApp(config);
 
-// Analytics only works in the browser — guard so it never runs during SSR.
-// Analytics is non-critical — load it lazily so it stays out of the initial bundle.
-if (typeof window !== "undefined" && app) {
+export const auth: Auth = getAuth(app);
+export const db: Firestore = getFirestore(app);
+export const storage: FirebaseStorage = getStorage(app);
+
+// Analytics only works in the browser — guard so it never runs during SSR, and
+// skip it entirely in demo mode (a placeholder appId would only log errors).
+if (typeof window !== "undefined" && firebaseReady) {
   import("firebase/analytics")
-    .then(({ getAnalytics, isSupported }) => isSupported().then((ok) => { if (ok && app) getAnalytics(app); }))
+    .then(({ getAnalytics, isSupported }) => isSupported().then((ok) => { if (ok) getAnalytics(app); }))
     .catch(() => {});
 }
 

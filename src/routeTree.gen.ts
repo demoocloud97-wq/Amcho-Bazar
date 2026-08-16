@@ -29,7 +29,11 @@ import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ReviewsIndexRouteImport } from './routes/reviews.index'
+import { Route as ReviewIndexRouteImport } from './routes/review.index'
 import { Route as CategoriesIndexRouteImport } from './routes/categories.index'
+import { Route as ReviewsManageRouteImport } from './routes/reviews.manage'
+import { Route as ReviewBusinessIdRouteImport } from './routes/review.$businessId'
 import { Route as CategoriesCategoryIdRouteImport } from './routes/categories.$categoryId'
 
 const StallsRoute = StallsRouteImport.update({
@@ -132,10 +136,30 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReviewsIndexRoute = ReviewsIndexRouteImport.update({
+  id: '/reviews/',
+  path: '/reviews/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewIndexRoute = ReviewIndexRouteImport.update({
+  id: '/review/',
+  path: '/review/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CategoriesIndexRoute = CategoriesIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CategoriesRoute,
+} as any)
+const ReviewsManageRoute = ReviewsManageRouteImport.update({
+  id: '/reviews/manage',
+  path: '/reviews/manage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewBusinessIdRoute = ReviewBusinessIdRouteImport.update({
+  id: '/review/$businessId',
+  path: '/review/$businessId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const CategoriesCategoryIdRoute = CategoriesCategoryIdRouteImport.update({
   id: '/$categoryId',
@@ -165,7 +189,11 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/stalls': typeof StallsRoute
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
+  '/review/$businessId': typeof ReviewBusinessIdRoute
+  '/reviews/manage': typeof ReviewsManageRoute
   '/categories/': typeof CategoriesIndexRoute
+  '/review/': typeof ReviewIndexRoute
+  '/reviews/': typeof ReviewsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -188,7 +216,11 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/stalls': typeof StallsRoute
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
+  '/review/$businessId': typeof ReviewBusinessIdRoute
+  '/reviews/manage': typeof ReviewsManageRoute
   '/categories': typeof CategoriesIndexRoute
+  '/review': typeof ReviewIndexRoute
+  '/reviews': typeof ReviewsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -213,7 +245,11 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/stalls': typeof StallsRoute
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
+  '/review/$businessId': typeof ReviewBusinessIdRoute
+  '/reviews/manage': typeof ReviewsManageRoute
   '/categories/': typeof CategoriesIndexRoute
+  '/review/': typeof ReviewIndexRoute
+  '/reviews/': typeof ReviewsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -239,7 +275,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/stalls'
     | '/categories/$categoryId'
+    | '/review/$businessId'
+    | '/reviews/manage'
     | '/categories/'
+    | '/review/'
+    | '/reviews/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -262,7 +302,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/stalls'
     | '/categories/$categoryId'
+    | '/review/$businessId'
+    | '/reviews/manage'
     | '/categories'
+    | '/review'
+    | '/reviews'
   id:
     | '__root__'
     | '/'
@@ -286,7 +330,11 @@ export interface FileRouteTypes {
     | '/signup'
     | '/stalls'
     | '/categories/$categoryId'
+    | '/review/$businessId'
+    | '/reviews/manage'
     | '/categories/'
+    | '/review/'
+    | '/reviews/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -310,6 +358,10 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   StallsRoute: typeof StallsRoute
+  ReviewBusinessIdRoute: typeof ReviewBusinessIdRoute
+  ReviewsManageRoute: typeof ReviewsManageRoute
+  ReviewIndexRoute: typeof ReviewIndexRoute
+  ReviewsIndexRoute: typeof ReviewsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -454,12 +506,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reviews/': {
+      id: '/reviews/'
+      path: '/reviews'
+      fullPath: '/reviews/'
+      preLoaderRoute: typeof ReviewsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review/': {
+      id: '/review/'
+      path: '/review'
+      fullPath: '/review/'
+      preLoaderRoute: typeof ReviewIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/categories/': {
       id: '/categories/'
       path: '/'
       fullPath: '/categories/'
       preLoaderRoute: typeof CategoriesIndexRouteImport
       parentRoute: typeof CategoriesRoute
+    }
+    '/reviews/manage': {
+      id: '/reviews/manage'
+      path: '/reviews/manage'
+      fullPath: '/reviews/manage'
+      preLoaderRoute: typeof ReviewsManageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review/$businessId': {
+      id: '/review/$businessId'
+      path: '/review/$businessId'
+      fullPath: '/review/$businessId'
+      preLoaderRoute: typeof ReviewBusinessIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/categories/$categoryId': {
       id: '/categories/$categoryId'
@@ -506,6 +586,10 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   StallsRoute: StallsRoute,
+  ReviewBusinessIdRoute: ReviewBusinessIdRoute,
+  ReviewsManageRoute: ReviewsManageRoute,
+  ReviewIndexRoute: ReviewIndexRoute,
+  ReviewsIndexRoute: ReviewsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

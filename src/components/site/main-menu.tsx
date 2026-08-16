@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeftRight, BarChart3, ClipboardList, CreditCard, Image as ImageIcon,
   LayoutDashboard, ListTree, LogIn, LogOut, Megaphone, MoreVertical, Plus, Radio, Settings,
-  Store, Ticket, UserCircle,
+  Star, Store, Ticket, UserCircle,
 } from "lucide-react";
 import { watchDrawLive } from "@/lib/settings-db";
 import { toast } from "sonner";
@@ -182,6 +182,7 @@ export function MainMenu() {
                   <NavItem to="/reports" icon={<BarChart3 className="h-4 w-4" />} label={t("menu.reports")} />
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
+              <NavItem to="/reviews/manage" icon={<Star className="h-4 w-4" />} label={t("rv.title")} />
               <NavItem to="/announcements" icon={<Megaphone className="h-4 w-4" />} label={t("menu.announcements")} />
               <NavItem to="/stalls" icon={<Store className="h-4 w-4" />} label={t("nav.stalls")} />
               <NavItem to="/gallery" icon={<ImageIcon className="h-4 w-4" />} label={t("nav.gallery")} />
@@ -200,6 +201,7 @@ export function MainMenu() {
               <NavItem to="/registration-info" icon={<ClipboardList className="h-4 w-4" />} label={t("menu.regInfo")} />
               <NavItem to="/stalls" icon={<Store className="h-4 w-4" />} label={t("nav.stalls")} />
               <NavItem to="/gallery" icon={<ImageIcon className="h-4 w-4" />} label={t("nav.gallery")} />
+              <NavItem to="/reviews" icon={<Star className="h-4 w-4" />} label={t("revs.title")} />
               <NavItem to="/announcements" icon={<Megaphone className="h-4 w-4" />} label={t("menu.announcements")} />
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -214,6 +216,7 @@ export function MainMenu() {
             <NavItem to="/" icon={<LayoutDashboard className="h-4 w-4" />} label={t("nav.home")} />
             <NavItem to="/gallery" icon={<ImageIcon className="h-4 w-4" />} label={t("nav.gallery")} />
             <NavItem to="/stalls" icon={<Store className="h-4 w-4" />} label={t("nav.stalls")} />
+            <NavItem to="/reviews" icon={<Star className="h-4 w-4" />} label={t("revs.title")} />
             <DropdownMenuSeparator />
             {/* Primary CTA */}
             <DropdownMenuItem asChild className={`${ROW} bg-festive font-semibold text-white shadow-soft focus:bg-festive focus:text-white`}>
